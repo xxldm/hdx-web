@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Runtime / local data
+logs/
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
