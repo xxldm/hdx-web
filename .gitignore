@@ -7,6 +7,8 @@ build/
 out/
 .next/
 .nuxt/
+.output/
+.nuxt-preview/
 .svelte-kit/
 .vite/
 coverage/

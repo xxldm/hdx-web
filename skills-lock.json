@@ -102,6 +102,12 @@
       "sourceType": "github",
       "skillPath": "skills/web-design-guidelines/SKILL.md",
       "computedHash": "57cefa41cea390d412000acc24e5526034027ca46d4f7581ba8fa05777a8687f"
+    },
+    "ui-ux-pro-max": {
+      "source": ".codex/skills/ui-ux-pro-max",
+      "sourceType": "local",
+      "skillPath": ".codex/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "b4f16d368d4c22972e2523c9f5bf7e24f1d6230224899b18ff7d6001b10c6bf4"
     }
   }
 }

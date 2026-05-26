@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "HDX",
+    "subtitle": "Tool Workbench"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "workbench": {
+    "title": "HDX Tool Workbench",
+    "description": "Manage tools, runtime status, and local integration boundaries in one place.",
+    "runtime": "Runtime",
+    "tools": "Tool catalog",
+    "enabledTools": "Enabled tools",
+    "emptyTools": "No tool records yet.",
+    "loading": "Loading workbench data",
+    "unavailable": "Backend is unavailable, showing the local workbench shell.",
+    "loadFailed": "Workbench data could not be loaded.",
+    "topology": "Topology",
+    "application": "Application",
+    "javaVersion": "Java version",
+    "nativeImage": "Native Image",
+    "apiMode": "API mode",
+    "localeMode": "Locale state",
+    "themeMode": "Theme state",
+    "themeManaged": "Switchable"
+  }
+}

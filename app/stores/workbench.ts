@@ -1,0 +1,66 @@
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import { z } from 'zod'
+import { createToolRequestSchema, runtimeInfoSchema, toolRecordSchema, toolRecordsSchema, type CreateToolRequest, type RuntimeInfo, type ToolRecord } from '~/types/hdx-api'
+
+export const workbenchSnapshotSchema = z.object({
+  runtime: runtimeInfoSchema.nullable(),
+  tools: toolRecordsSchema
+})
+
+export type WorkbenchSnapshot = z.infer<typeof workbenchSnapshotSchema>
+
+export const useWorkbenchStore = defineStore('workbench', () => {
+  const runtime = ref<RuntimeInfo | null>(null)
+  const tools = ref<ToolRecord[]>([])
+  const loading = ref(false)
+  const errorKey = ref<string | null>(null)
+
+  const enabledTools = computed(() => tools.value.filter(tool => tool.enabled))
+  const snapshot = computed<WorkbenchSnapshot>(() => ({
+    runtime: runtime.value,
+    tools: tools.value
+  }))
+
+  async function loadOverview() {
+    loading.value = true
+    errorKey.value = null
+
+    try {
+      const [runtimeResponse, toolsResponse] = await Promise.all([
+        $fetch<unknown>('/api/hdx/v1/runtime'),
+        $fetch<unknown>('/api/hdx/v1/tools')
+      ])
+
+      runtime.value = runtimeInfoSchema.parse(runtimeResponse)
+      tools.value = toolRecordsSchema.parse(toolsResponse)
+    } catch {
+      errorKey.value = 'workbench.loadFailed'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function createTool(input: CreateToolRequest) {
+    const payload = createToolRequestSchema.parse(input)
+    const created = await $fetch<unknown>('/api/hdx/v1/tools', {
+      method: 'POST',
+      body: payload
+    })
+    const tool = toolRecordSchema.parse(created)
+
+    tools.value = [tool, ...tools.value]
+    return tool
+  }
+
+  return {
+    runtime,
+    tools,
+    loading,
+    errorKey,
+    enabledTools,
+    snapshot,
+    loadOverview,
+    createTool
+  }
+})

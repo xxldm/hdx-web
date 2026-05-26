@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "HDX",
+    "subtitle": "工具工作台"
+  },
+  "actions": {
+    "refresh": "刷新",
+    "language": "语言",
+    "theme": "主题"
+  },
+  "workbench": {
+    "title": "HDX 工具工作台",
+    "description": "集中管理工具、运行状态和本机集成边界。",
+    "runtime": "运行时",
+    "tools": "工具目录",
+    "enabledTools": "启用工具",
+    "emptyTools": "还没有工具记录。",
+    "loading": "正在加载工作台数据",
+    "unavailable": "后端暂时不可用，已显示本地工作台骨架。",
+    "loadFailed": "工作台数据暂时无法加载。",
+    "topology": "拓扑",
+    "application": "应用",
+    "javaVersion": "Java 版本",
+    "nativeImage": "Native Image",
+    "apiMode": "API 模式",
+    "localeMode": "语言状态",
+    "themeMode": "主题状态",
+    "themeManaged": "可切换"
+  }
+}

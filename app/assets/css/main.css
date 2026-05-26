@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-hdx-primary: #6366f1;
+  --color-hdx-secondary: #818cf8;
+  --color-hdx-accent: #10b981;
+  --color-hdx-ink: #1e1b4b;
+  --color-hdx-canvas: #f7f7fb;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  min-width: 320px;
+  background: var(--ui-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
