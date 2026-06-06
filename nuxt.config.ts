@@ -3,13 +3,44 @@ import { z } from 'zod'
 const serverConfigSchema = z.object({
   backendBaseUrl: z.string().url(),
   backendLocalTokenHeader: z.string().min(1).optional(),
-  backendLocalToken: z.string().min(1).optional()
+  backendLocalToken: z.string().min(1).optional(),
+  authSessionCookieName: z.string().min(1),
+  authSessionSecret: z.string().min(32),
+  authCsrfCookieName: z.string().min(1),
+  authCsrfHeaderName: z.string().min(1),
+  authCookieSecure: z.boolean(),
+  authSessionMaxAgeSeconds: z.number().int().positive(),
+  authRefreshSkewSeconds: z.number().int().nonnegative()
 })
+
+function parseBoolean(value: string | undefined, fallback: boolean) {
+  if (value === undefined || value === '') {
+    return fallback
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function parseInteger(value: string | undefined, fallback: number) {
+  if (value === undefined || value === '') {
+    return fallback
+  }
+
+  const parsed = Number(value)
+  return Number.isInteger(parsed) ? parsed : fallback
+}
 
 const parsedServerConfig = serverConfigSchema.parse({
   backendBaseUrl: process.env.NUXT_BACKEND_BASE_URL ?? 'http://localhost:18080',
   backendLocalTokenHeader: process.env.NUXT_BACKEND_LOCAL_TOKEN_HEADER || undefined,
-  backendLocalToken: process.env.NUXT_BACKEND_LOCAL_TOKEN || undefined
+  backendLocalToken: process.env.NUXT_BACKEND_LOCAL_TOKEN || undefined,
+  authSessionCookieName: process.env.NUXT_AUTH_SESSION_COOKIE_NAME || 'hdx_web_session',
+  authSessionSecret: process.env.NUXT_AUTH_SESSION_SECRET || 'dev-only-hdx-auth-session-secret-change-me-32',
+  authCsrfCookieName: process.env.NUXT_AUTH_CSRF_COOKIE_NAME || 'hdx_csrf',
+  authCsrfHeaderName: process.env.NUXT_AUTH_CSRF_HEADER_NAME || 'X-HDX-CSRF',
+  authCookieSecure: parseBoolean(process.env.NUXT_AUTH_COOKIE_SECURE, process.env.NODE_ENV === 'production'),
+  authSessionMaxAgeSeconds: parseInteger(process.env.NUXT_AUTH_SESSION_MAX_AGE_SECONDS, 60 * 60 * 24 * 7),
+  authRefreshSkewSeconds: parseInteger(process.env.NUXT_AUTH_REFRESH_SKEW_SECONDS, 60)
 })
 
 export default defineNuxtConfig({
@@ -38,6 +69,13 @@ export default defineNuxtConfig({
     backendBaseUrl: parsedServerConfig.backendBaseUrl,
     backendLocalTokenHeader: parsedServerConfig.backendLocalTokenHeader,
     backendLocalToken: parsedServerConfig.backendLocalToken,
+    authSessionCookieName: parsedServerConfig.authSessionCookieName,
+    authSessionSecret: parsedServerConfig.authSessionSecret,
+    authCsrfCookieName: parsedServerConfig.authCsrfCookieName,
+    authCsrfHeaderName: parsedServerConfig.authCsrfHeaderName,
+    authCookieSecure: parsedServerConfig.authCookieSecure,
+    authSessionMaxAgeSeconds: parsedServerConfig.authSessionMaxAgeSeconds,
+    authRefreshSkewSeconds: parsedServerConfig.authRefreshSkewSeconds,
     public: {
       appName: 'HDX'
     }

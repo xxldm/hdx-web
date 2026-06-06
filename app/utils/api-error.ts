@@ -1,4 +1,10 @@
-export type BoundaryErrorCode = 'invalid-config' | 'invalid-input' | 'invalid-response' | 'upstream-failed'
+export type BoundaryErrorCode =
+  | 'auth-required'
+  | 'csrf-invalid'
+  | 'invalid-config'
+  | 'invalid-input'
+  | 'invalid-response'
+  | 'upstream-failed'
 
 export class BoundaryError extends Error {
   constructor(
