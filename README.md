@@ -16,7 +16,7 @@
 - 页面入口：`app/pages/index.vue`。
 - 全局样式：`app/assets/css/main.css`。
 - Web API 边界：`server/api/hdx/v1/**`。
-- 后端默认地址：`NUXT_BACKEND_BASE_URL`，默认值为 `http://localhost:18080`。
+- 后端默认地址：优先读取 `NUXT_BACKEND_BASE_URL`，其次读取 `HDX_BACKEND_BASE_URL`，默认值为 `http://localhost:18080`。
 - 本机 all-in-one 令牌可通过 `NUXT_BACKEND_LOCAL_TOKEN_HEADER` 与 `NUXT_BACKEND_LOCAL_TOKEN` 注入，只能留在 Nuxt server 私有 `runtimeConfig` 中。
 - Web 登录态使用 Nuxt server 加密 `HttpOnly` cookie session。浏览器只持有同源 cookie 和 CSRF token，不能读取 access token 或 refresh token。
 
@@ -35,13 +35,13 @@
 
 加密 cookie session 使用以下私有运行时配置：
 
-- `NUXT_AUTH_SESSION_COOKIE_NAME`：默认 `hdx_web_session`。
+- `NUXT_AUTH_SESSION_COOKIE_NAME`：可选覆盖项，默认 `hdx_web_session`。
 - `NUXT_AUTH_SESSION_SECRET`：加密/签名 session 的稳定密钥，至少 32 字符；真实环境必须通过部署 Secret 注入。
-- `NUXT_AUTH_CSRF_COOKIE_NAME`：默认 `hdx_csrf`。
-- `NUXT_AUTH_CSRF_HEADER_NAME`：默认 `X-HDX-CSRF`。
-- `NUXT_AUTH_COOKIE_SECURE`：本地 HTTP 调试可为 `false`；HTTPS/生产环境必须为 `true`。
-- `NUXT_AUTH_SESSION_MAX_AGE_SECONDS`：默认 `604800`，即 7 天。
-- `NUXT_AUTH_REFRESH_SKEW_SECONDS`：access token 距离过期多少秒内由 BFF 提前 refresh，默认 `60`。
+- `NUXT_AUTH_CSRF_COOKIE_NAME`：可选覆盖项，默认 `hdx_csrf`。
+- `NUXT_AUTH_CSRF_HEADER_NAME`：可选覆盖项，默认 `X-HDX-CSRF`。
+- `NUXT_AUTH_COOKIE_SECURE`：可选覆盖项，默认在生产环境为 `true`，其他环境为 `false`。
+- `NUXT_AUTH_SESSION_MAX_AGE_SECONDS`：可选覆盖项，默认 `604800`，即 7 天。
+- `NUXT_AUTH_REFRESH_SKEW_SECONDS`：可选覆盖项，access token 距离过期多少秒内由 BFF 提前 refresh，默认 `60`。
 
 只要 `NUXT_AUTH_SESSION_SECRET` 不变，Nuxt 进程重启后可以从加密 cookie 恢复 Web 登录态。后端 refresh token 仍是 7 天滑动窗口的事实源；超过 7 天没有触发 refresh 时，用户需要重新登录。
 

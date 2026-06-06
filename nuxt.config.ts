@@ -31,7 +31,7 @@ function parseInteger(value: string | undefined, fallback: number) {
 }
 
 const parsedServerConfig = serverConfigSchema.parse({
-  backendBaseUrl: process.env.NUXT_BACKEND_BASE_URL ?? 'http://localhost:18080',
+  backendBaseUrl: process.env.NUXT_BACKEND_BASE_URL ?? process.env.HDX_BACKEND_BASE_URL ?? 'http://localhost:18080',
   backendLocalTokenHeader: process.env.NUXT_BACKEND_LOCAL_TOKEN_HEADER || undefined,
   backendLocalToken: process.env.NUXT_BACKEND_LOCAL_TOKEN || undefined,
   authSessionCookieName: process.env.NUXT_AUTH_SESSION_COOKIE_NAME || 'hdx_web_session',
