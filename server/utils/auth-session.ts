@@ -8,7 +8,7 @@ import {
   webAuthSessionDataSchema
 } from '~~/app/types/hdx-auth'
 import { BoundaryError } from '~~/app/utils/api-error'
-import { fetchBackend } from './backend-fetch'
+import { fetchAuthService } from './backend-fetch'
 import { getBackendConfig } from './backend-config'
 import { getOrCreateCsrfToken } from './auth-csrf'
 
@@ -98,7 +98,7 @@ export async function refreshAuthSession(event: HdxEvent) {
   }
 
   try {
-    const tokenResponse = await fetchBackend(event, '/api/auth/refresh', backendAuthTokenResponseSchema, {
+    const tokenResponse = await fetchAuthService(event, '/api/auth/refresh', backendAuthTokenResponseSchema, {
       method: 'POST',
       body: {
         refreshToken: data.refreshToken

@@ -136,7 +136,7 @@ describe('auth session projection', () => {
     const refreshed = await refreshAuthSession({} as never)
 
     expect(refreshed.refreshToken).toBe('new-refresh-token')
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:18080/api/auth/refresh', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:18082/api/auth/refresh', expect.objectContaining({
       body: {
         refreshToken: 'refresh-token'
       },
@@ -196,6 +196,7 @@ describe('auth session projection', () => {
 function stubRuntimeConfig() {
   vi.stubGlobal('useRuntimeConfig', () => ({
     backendBaseUrl: 'http://localhost:18080',
+    authBaseUrl: 'http://localhost:18082',
     authSessionCookieName: 'hdx_web_session',
     authSessionSecret: 'test-only-auth-session-secret-change-me-32',
     authCsrfCookieName: 'hdx_csrf',

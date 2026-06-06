@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 const serverConfigSchema = z.object({
   backendBaseUrl: z.string().url(),
+  authBaseUrl: z.string().url(),
   backendLocalTokenHeader: z.string().min(1).optional(),
   backendLocalToken: z.string().min(1).optional(),
   authSessionCookieName: z.string().min(1),
@@ -32,6 +33,7 @@ function parseInteger(value: string | undefined, fallback: number) {
 
 const parsedServerConfig = serverConfigSchema.parse({
   backendBaseUrl: process.env.NUXT_BACKEND_BASE_URL ?? process.env.HDX_BACKEND_BASE_URL ?? 'http://localhost:18080',
+  authBaseUrl: process.env.NUXT_AUTH_BASE_URL ?? process.env.HDX_AUTH_BASE_URL ?? 'http://localhost:18082',
   backendLocalTokenHeader: process.env.NUXT_BACKEND_LOCAL_TOKEN_HEADER || undefined,
   backendLocalToken: process.env.NUXT_BACKEND_LOCAL_TOKEN || undefined,
   authSessionCookieName: process.env.NUXT_AUTH_SESSION_COOKIE_NAME || 'hdx_web_session',
@@ -67,6 +69,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     backendBaseUrl: parsedServerConfig.backendBaseUrl,
+    authBaseUrl: parsedServerConfig.authBaseUrl,
     backendLocalTokenHeader: parsedServerConfig.backendLocalTokenHeader,
     backendLocalToken: parsedServerConfig.backendLocalToken,
     authSessionCookieName: parsedServerConfig.authSessionCookieName,

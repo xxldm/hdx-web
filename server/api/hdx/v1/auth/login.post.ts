@@ -4,7 +4,7 @@ import {
 } from '~~/app/types/hdx-auth'
 import { BoundaryError, normalizeBoundaryError } from '~~/app/utils/api-error'
 import { assertCsrfToken } from '~~/server/utils/auth-csrf'
-import { fetchBackend } from '~~/server/utils/backend-fetch'
+import { fetchAuthService } from '~~/server/utils/backend-fetch'
 import { getPublicAuthSession, saveAuthSession } from '~~/server/utils/auth-session'
 
 export default defineEventHandler(async (event) => {
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       throw new BoundaryError('invalid-input', '登录信息格式无效。', 400)
     }
 
-    const tokenResponse = await fetchBackend(event, '/api/auth/login', backendAuthTokenResponseSchema, {
+    const tokenResponse = await fetchAuthService(event, '/api/auth/login', backendAuthTokenResponseSchema, {
       method: 'POST',
       body: {
         ...parsed.data,

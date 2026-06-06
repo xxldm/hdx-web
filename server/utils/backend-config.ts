@@ -3,6 +3,7 @@ import { BoundaryError } from '~~/app/utils/api-error'
 
 export const backendConfigSchema = z.object({
   backendBaseUrl: z.string().url(),
+  authBaseUrl: z.string().url(),
   backendLocalTokenHeader: z.string().min(1).optional(),
   backendLocalToken: z.string().min(1).optional(),
   authSessionCookieName: z.string().min(1),

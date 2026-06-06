@@ -16,7 +16,8 @@
 - 页面入口：`app/pages/index.vue`。
 - 全局样式：`app/assets/css/main.css`。
 - Web API 边界：`server/api/hdx/v1/**`。
-- 后端默认地址：优先读取 `NUXT_BACKEND_BASE_URL`，其次读取 `HDX_BACKEND_BASE_URL`，默认值为 `http://localhost:18080`。
+- 后端 gateway 默认地址：优先读取 `NUXT_BACKEND_BASE_URL`，其次读取 `HDX_BACKEND_BASE_URL`，默认值为 `http://localhost:18080`。
+- 认证中心默认地址：优先读取 `NUXT_AUTH_BASE_URL`，其次读取 `HDX_AUTH_BASE_URL`，默认值为 `http://localhost:18082`。
 - 本机 all-in-one 令牌可通过 `NUXT_BACKEND_LOCAL_TOKEN_HEADER` 与 `NUXT_BACKEND_LOCAL_TOKEN` 注入，只能留在 Nuxt server 私有 `runtimeConfig` 中。
 - Web 登录态使用 Nuxt server 加密 `HttpOnly` cookie session。浏览器只持有同源 cookie 和 CSRF token，不能读取 access token 或 refresh token。
 
@@ -27,15 +28,16 @@
 当前已提供最小 BFF 接口：
 
 - `GET /api/hdx/v1/auth/session`：返回当前 public session 和 CSRF token；如果 access token 临近过期且 refresh token 仍有效，会自动刷新 Web session。
-- `POST /api/hdx/v1/auth/login`：校验 CSRF，调用后端 `/api/auth/login`，把 token 写入加密 `HttpOnly` cookie session。
-- `POST /api/hdx/v1/auth/refresh`：校验 CSRF，使用 session 内 refresh token 调用后端 `/api/auth/refresh`，轮换并更新 cookie session。
-- `POST /api/hdx/v1/auth/logout`：校验 CSRF，调用后端 `/api/auth/logout`，并清理 Web cookie session。
+- `POST /api/hdx/v1/auth/login`：校验 CSRF，调用认证中心 `/api/auth/login`，把 token 写入加密 `HttpOnly` cookie session。
+- `POST /api/hdx/v1/auth/refresh`：校验 CSRF，使用 session 内 refresh token 调用认证中心 `/api/auth/refresh`，轮换并更新 cookie session。
+- `POST /api/hdx/v1/auth/logout`：校验 CSRF，调用认证中心 `/api/auth/logout`，并清理 Web cookie session。
 
 状态变更请求必须带 `X-HDX-CSRF` header，值来自 `session` 接口返回的 `csrfToken` 或同名非 `HttpOnly` CSRF cookie。
 
 加密 cookie session 使用以下私有运行时配置：
 
 - `NUXT_AUTH_SESSION_COOKIE_NAME`：可选覆盖项，默认 `hdx_web_session`。
+- `NUXT_AUTH_BASE_URL`：可选覆盖项，认证中心基础地址；未设置时读取 `HDX_AUTH_BASE_URL`，默认 `http://localhost:18082`。
 - `NUXT_AUTH_SESSION_SECRET`：加密/签名 session 的稳定密钥，至少 32 字符；真实环境必须通过部署 Secret 注入。
 - `NUXT_AUTH_CSRF_COOKIE_NAME`：可选覆盖项，默认 `hdx_csrf`。
 - `NUXT_AUTH_CSRF_HEADER_NAME`：可选覆盖项，默认 `X-HDX-CSRF`。

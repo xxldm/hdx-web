@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { normalizeBoundaryError } from '~~/app/utils/api-error'
 import { assertCsrfToken } from '~~/server/utils/auth-csrf'
 import { clearAuthSession, getPublicAuthSession, readAuthSessionData } from '~~/server/utils/auth-session'
-import { fetchBackend } from '~~/server/utils/backend-fetch'
+import { fetchAuthService } from '~~/server/utils/backend-fetch'
 
 const logoutResponseSchema = z.unknown().optional()
 
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
 async function tryLogoutBackend(event: Parameters<typeof readAuthSessionData>[0], refreshToken: string) {
   try {
-    await fetchBackend(event, '/api/auth/logout', logoutResponseSchema, {
+    await fetchAuthService(event, '/api/auth/logout', logoutResponseSchema, {
       method: 'POST',
       body: {
         refreshToken

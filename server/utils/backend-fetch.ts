@@ -16,11 +16,33 @@ export async function fetchBackend<T>(
   options: BackendFetchOptions = {}
 ): Promise<T> {
   const config = getBackendConfig(event)
+  return await fetchHdxService(event, config.backendBaseUrl, path, schema, options, true)
+}
+
+export async function fetchAuthService<T>(
+  event: Parameters<typeof getBackendConfig>[0],
+  path: string,
+  schema: z.ZodType<T>,
+  options: BackendFetchOptions = {}
+): Promise<T> {
+  const config = getBackendConfig(event)
+  return await fetchHdxService(event, config.authBaseUrl, path, schema, options, false)
+}
+
+async function fetchHdxService<T>(
+  event: Parameters<typeof getBackendConfig>[0],
+  baseUrl: string,
+  path: string,
+  schema: z.ZodType<T>,
+  options: BackendFetchOptions,
+  includeLocalToken: boolean
+): Promise<T> {
+  const config = getBackendConfig(event)
   const headers: Record<string, string> = {
     accept: 'application/json'
   }
 
-  if (config.backendLocalTokenHeader && config.backendLocalToken) {
+  if (includeLocalToken && config.backendLocalTokenHeader && config.backendLocalToken) {
     headers[config.backendLocalTokenHeader] = config.backendLocalToken
   }
 
@@ -28,7 +50,7 @@ export async function fetchBackend<T>(
     headers.authorization = `Bearer ${options.bearerToken}`
   }
 
-  const url = new URL(path, config.backendBaseUrl)
+  const url = new URL(path, baseUrl)
 
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
