@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { BackendAuthTokenResponse, WebAuthSessionData } from '../../app/types/hdx-auth'
 import {
+  getPublicAuthSession,
   refreshAuthSession,
   refreshAuthSessionIfNeeded,
   saveAuthSession,
   shouldRefreshAccessToken,
+  toLocalAdminPublicAuthSession,
   toPublicAuthSession
 } from '../../server/utils/auth-session'
 
@@ -49,6 +51,8 @@ describe('auth session projection', () => {
       accessTokenExpiresAt: null,
       refreshTokenExpiresAt: null,
       sid: null,
+      actorType: null,
+      subject: null,
       user: null,
       roles: [],
       permissions: []
@@ -64,6 +68,8 @@ describe('auth session projection', () => {
       accessTokenExpiresAt: '2026-06-06T10:15:00Z',
       refreshTokenExpiresAt: '2026-06-13T10:00:00Z',
       sid: 'session-id',
+      actorType: 'USER',
+      subject: 'USER:1',
       user: {
         id: 1,
         displayName: '用户'
@@ -73,6 +79,24 @@ describe('auth session projection', () => {
     })
     expect(publicSession).not.toHaveProperty('accessToken')
     expect(publicSession).not.toHaveProperty('refreshToken')
+  })
+
+  it('projects all-in-one local admin public session', () => {
+    expect(toLocalAdminPublicAuthSession('c'.repeat(64))).toEqual({
+      authenticated: true,
+      csrfToken: 'c'.repeat(64),
+      accessTokenExpiresAt: null,
+      refreshTokenExpiresAt: null,
+      sid: 'local-admin',
+      actorType: 'LOCAL_ADMIN',
+      subject: 'local-admin',
+      user: {
+        id: 0,
+        displayName: '用户'
+      },
+      roles: ['ADMIN'],
+      permissions: ['*']
+    })
   })
 
   it('refreshes access token only when it is close to expiry', () => {
@@ -113,6 +137,20 @@ describe('auth session projection', () => {
       roles: ['ADMIN'],
       permissions: ['tool:read']
     })
+  })
+
+  it('returns local admin session when all-in-one token is configured', async () => {
+    stubRuntimeConfig({
+      backendLocalTokenHeader: 'X-HDX-Local-Token',
+      backendLocalToken: 'local-token'
+    })
+    vi.stubGlobal('getCookie', vi.fn(() => undefined))
+    vi.stubGlobal('setCookie', vi.fn())
+
+    const publicSession = await getPublicAuthSession({} as never)
+
+    expect(publicSession.actorType).toBe('LOCAL_ADMIN')
+    expect(publicSession.authenticated).toBe(true)
   })
 
   it('refreshes backend token and replaces session data', async () => {
@@ -193,7 +231,7 @@ describe('auth session projection', () => {
   })
 })
 
-function stubRuntimeConfig() {
+function stubRuntimeConfig(overrides: Record<string, unknown> = {}) {
   vi.stubGlobal('useRuntimeConfig', () => ({
     backendBaseUrl: 'http://localhost:18080',
     authBaseUrl: 'http://localhost:18082',
@@ -203,6 +241,7 @@ function stubRuntimeConfig() {
     authCsrfHeaderName: 'X-HDX-CSRF',
     authCookieSecure: false,
     authSessionMaxAgeSeconds: 604800,
-    authRefreshSkewSeconds: 60
+    authRefreshSkewSeconds: 60,
+    ...overrides
   }))
 }

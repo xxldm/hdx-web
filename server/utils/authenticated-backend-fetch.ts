@@ -18,6 +18,6 @@ export async function fetchAuthenticatedBackend<T>(
 
   return await fetchBackend(event, path, schema, {
     ...options,
-    bearerToken
+    bearerToken: bearerToken ?? undefined
   })
 }

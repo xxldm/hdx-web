@@ -1,4 +1,4 @@
-import { normalizeBoundaryError } from '~~/app/utils/api-error'
+import { createBoundaryH3Error } from '~~/app/utils/api-error'
 import { getPublicAuthSession, refreshAuthSessionIfNeeded } from '~~/server/utils/auth-session'
 
 export default defineEventHandler(async (event) => {
@@ -6,11 +6,6 @@ export default defineEventHandler(async (event) => {
     await refreshAuthSessionIfNeeded(event)
     return await getPublicAuthSession(event)
   } catch (error) {
-    const boundaryError = normalizeBoundaryError(error)
-
-    throw createError({
-      statusCode: boundaryError.statusCode,
-      statusMessage: boundaryError.message
-    })
+    throw createBoundaryH3Error(error)
   }
 })

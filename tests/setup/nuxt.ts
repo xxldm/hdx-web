@@ -6,6 +6,8 @@ config.global.stubs = {
   UAlert: true,
   USkeleton: true,
   UButton: true,
+  UFormField: true,
+  UInput: true,
   USelect: true,
   UColorModeSelect: true
 }

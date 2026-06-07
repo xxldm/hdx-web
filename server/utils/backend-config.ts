@@ -26,3 +26,7 @@ export function getBackendConfig(event: Parameters<typeof useRuntimeConfig>[0]):
 
   return parsed.data
 }
+
+export function isAllInOneBackendConfig(config: BackendConfig) {
+  return Boolean(config.backendLocalTokenHeader && config.backendLocalToken)
+}

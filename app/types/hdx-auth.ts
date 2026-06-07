@@ -14,6 +14,10 @@ export const backendAuthUserSchema = z.object({
 
 export type BackendAuthUser = z.infer<typeof backendAuthUserSchema>
 
+export const webAuthActorTypeSchema = z.enum(['USER', 'LOCAL_ADMIN'])
+
+export type WebAuthActorType = z.infer<typeof webAuthActorTypeSchema>
+
 export const backendAuthTokenResponseSchema = z.object({
   tokenType: z.literal('Bearer'),
   accessToken: z.string().min(1),
@@ -47,6 +51,8 @@ export const webAuthPublicSessionSchema = z.object({
   accessTokenExpiresAt: z.string().datetime().nullable(),
   refreshTokenExpiresAt: z.string().datetime().nullable(),
   sid: z.string().nullable(),
+  actorType: webAuthActorTypeSchema.nullable(),
+  subject: z.string().min(1).nullable(),
   user: backendAuthUserSchema.nullable(),
   roles: z.array(z.string()),
   permissions: z.array(z.string())

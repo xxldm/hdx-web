@@ -8,6 +8,23 @@
     "language": "语言",
     "theme": "主题"
   },
+  "auth": {
+    "loginTitle": "登录 HDX",
+    "loginDescription": "使用你的账号进入工具工作台。",
+    "identifier": "账号",
+    "identifierPlaceholder": "请输入账号",
+    "password": "密码",
+    "passwordPlaceholder": "请输入密码",
+    "loginAction": "登录",
+    "logoutAction": "退出",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "loginFailedTitle": "登录失败",
+    "loginFailed": "账号或密码不正确，或认证中心暂时不可用。",
+    "logoutFailed": "退出登录未完全完成，请刷新页面确认状态。",
+    "sessionFailed": "登录状态暂时无法确认，请稍后重试。",
+    "backgroundAlt": "HDX 登录页背景图"
+  },
   "workbench": {
     "title": "HDX 工具工作台",
     "description": "集中管理工具、运行状态和本机集成边界。",

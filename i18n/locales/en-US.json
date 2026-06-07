@@ -8,6 +8,23 @@
     "language": "Language",
     "theme": "Theme"
   },
+  "auth": {
+    "loginTitle": "Sign in to HDX",
+    "loginDescription": "Use your account to enter the tool workbench.",
+    "identifier": "Account",
+    "identifierPlaceholder": "Enter account",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "loginAction": "Sign in",
+    "logoutAction": "Sign out",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "loginFailedTitle": "Sign-in failed",
+    "loginFailed": "The account or password is incorrect, or the auth service is temporarily unavailable.",
+    "logoutFailed": "Sign-out was not fully completed. Refresh the page to confirm the state.",
+    "sessionFailed": "The sign-in state could not be confirmed. Try again later.",
+    "backgroundAlt": "HDX sign-in page background"
+  },
   "workbench": {
     "title": "HDX Tool Workbench",
     "description": "Manage tools, runtime status, and local integration boundaries in one place.",

@@ -34,6 +34,10 @@
 
 状态变更请求必须带 `X-HDX-CSRF` header，值来自 `session` 接口返回的 `csrfToken` 或同名非 `HttpOnly` CSRF cookie。
 
+Web 不提供访客模式。远程服务模式下，未登录访问页面会跳转 `/login`，登录成功后回到原地址；业务 BFF 请求会从 Web session 注入 Bearer access token。all-in-one 模式通过 `NUXT_BACKEND_LOCAL_TOKEN_HEADER` 与 `NUXT_BACKEND_LOCAL_TOKEN` 判断，永远视为已登录，public session 固定为 `LOCAL_ADMIN:local-admin`、显示名 `用户`、角色 `ADMIN`、权限 `*`，业务 BFF 请求只使用本机令牌。
+
+登录页位于 `app/pages/login.vue`，背景图资产位于 `app/assets/images/login-background.bmp`。背景图来自用户指定本机文件，已复制入项目，页面不依赖外部绝对路径。
+
 加密 cookie session 使用以下私有运行时配置：
 
 - `NUXT_AUTH_SESSION_COOKIE_NAME`：可选覆盖项，默认 `hdx_web_session`。

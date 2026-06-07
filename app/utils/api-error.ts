@@ -24,3 +24,12 @@ export function normalizeBoundaryError(error: unknown) {
 
   return new BoundaryError('upstream-failed', '请求暂时无法完成，请稍后重试。', 502)
 }
+
+export function createBoundaryH3Error(error: unknown) {
+  const boundaryError = normalizeBoundaryError(error)
+
+  return createError({
+    statusCode: boundaryError.statusCode,
+    message: boundaryError.message
+  })
+}

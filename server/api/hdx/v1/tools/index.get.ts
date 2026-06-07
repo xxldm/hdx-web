@@ -1,16 +1,11 @@
 import { toolRecordsSchema } from '~~/app/types/hdx-api'
-import { normalizeBoundaryError } from '~~/app/utils/api-error'
-import { fetchBackend } from '~~/server/utils/backend-fetch'
+import { createBoundaryH3Error } from '~~/app/utils/api-error'
+import { fetchAuthenticatedBackend } from '~~/server/utils/authenticated-backend-fetch'
 
 export default defineEventHandler(async (event) => {
   try {
-    return await fetchBackend(event, '/api/v1/tools', toolRecordsSchema)
+    return await fetchAuthenticatedBackend(event, '/api/v1/tools', toolRecordsSchema)
   } catch (error) {
-    const boundaryError = normalizeBoundaryError(error)
-
-    throw createError({
-      statusCode: boundaryError.statusCode,
-      statusMessage: boundaryError.message
-    })
+    throw createBoundaryH3Error(error)
   }
 })

@@ -4,7 +4,9 @@ import { storeToRefs } from 'pinia'
 const { t, locale } = useI18n()
 const route = useRoute()
 const workbench = useWorkbenchStore()
+const auth = useAuthStore()
 const { runtime, tools, enabledTools, loading, errorKey } = storeToRefs(workbench)
+const { displayName, isLocalAdmin } = storeToRefs(auth)
 const { setPreferredLocale } = useLocalePreference()
 
 const localeItems = [
@@ -61,6 +63,15 @@ await callOnce('workbench-overview', () => workbench.loadOverview())
 
 const currentPath = computed(() => route.fullPath)
 
+async function logout() {
+  if (isLocalAdmin.value) {
+    return
+  }
+
+  await auth.logout()
+  await navigateTo('/login')
+}
+
 useSeoMeta({
   title: () => t('workbench.title'),
   description: () => t('workbench.description'),
@@ -88,6 +99,23 @@ useSeoMeta({
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+          <UBadge color="neutral" variant="soft" class="min-h-9 px-3">
+            <span class="inline-flex min-w-0 items-center gap-2">
+              <UIcon :name="isLocalAdmin ? 'lucide:monitor' : 'lucide:user-round'" class="size-4 shrink-0" />
+              <span class="max-w-32 truncate">{{ displayName }}</span>
+            </span>
+          </UBadge>
+          <UButton
+            v-if="!isLocalAdmin"
+            color="neutral"
+            variant="ghost"
+            leading-icon="lucide:log-out"
+            :loading="auth.loading"
+            class="cursor-pointer"
+            @click="logout"
+          >
+            {{ t('auth.logoutAction') }}
+          </UButton>
           <USelect
             :model-value="locale"
             :items="localeItems"

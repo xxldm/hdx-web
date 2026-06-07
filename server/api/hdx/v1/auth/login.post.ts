@@ -2,7 +2,7 @@ import {
   backendAuthTokenResponseSchema,
   webAuthLoginRequestSchema
 } from '~~/app/types/hdx-auth'
-import { BoundaryError, normalizeBoundaryError } from '~~/app/utils/api-error'
+import { BoundaryError, createBoundaryH3Error } from '~~/app/utils/api-error'
 import { assertCsrfToken } from '~~/server/utils/auth-csrf'
 import { fetchAuthService } from '~~/server/utils/backend-fetch'
 import { getPublicAuthSession, saveAuthSession } from '~~/server/utils/auth-session'
@@ -29,11 +29,6 @@ export default defineEventHandler(async (event) => {
 
     return await getPublicAuthSession(event)
   } catch (error) {
-    const boundaryError = normalizeBoundaryError(error)
-
-    throw createError({
-      statusCode: boundaryError.statusCode,
-      statusMessage: boundaryError.message
-    })
+    throw createBoundaryH3Error(error)
   }
 })

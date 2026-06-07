@@ -1,4 +1,5 @@
 import type {
+  BackendAuthUser,
   BackendAuthTokenResponse,
   WebAuthPublicSession,
   WebAuthSessionData
@@ -9,10 +10,18 @@ import {
 } from '~~/app/types/hdx-auth'
 import { BoundaryError } from '~~/app/utils/api-error'
 import { fetchAuthService } from './backend-fetch'
-import { getBackendConfig } from './backend-config'
+import { getBackendConfig, isAllInOneBackendConfig } from './backend-config'
 import { getOrCreateCsrfToken } from './auth-csrf'
 
 type HdxEvent = Parameters<typeof getCookie>[0]
+const LOCAL_ADMIN_USER_ID = 0
+const LOCAL_ADMIN_SUBJECT = 'local-admin'
+const LOCAL_ADMIN_DISPLAY_NAME = '用户'
+const LOCAL_ADMIN_SESSION_ID = 'local-admin'
+
+export function isAllInOneRequest(event: HdxEvent) {
+  return isAllInOneBackendConfig(getBackendConfig(event))
+}
 
 export function toPublicAuthSession(
   data: WebAuthSessionData | null,
@@ -25,6 +34,8 @@ export function toPublicAuthSession(
       accessTokenExpiresAt: null,
       refreshTokenExpiresAt: null,
       sid: null,
+      actorType: null,
+      subject: null,
       user: null,
       roles: [],
       permissions: []
@@ -37,9 +48,31 @@ export function toPublicAuthSession(
     accessTokenExpiresAt: data.accessTokenExpiresAt,
     refreshTokenExpiresAt: data.refreshTokenExpiresAt,
     sid: data.sid,
+    actorType: 'USER',
+    subject: `USER:${data.user.id}`,
     user: data.user,
     roles: data.roles,
     permissions: data.permissions
+  }
+}
+
+export function toLocalAdminPublicAuthSession(csrfToken: string): WebAuthPublicSession {
+  const user: BackendAuthUser = {
+    id: LOCAL_ADMIN_USER_ID,
+    displayName: LOCAL_ADMIN_DISPLAY_NAME
+  }
+
+  return {
+    authenticated: true,
+    csrfToken,
+    accessTokenExpiresAt: null,
+    refreshTokenExpiresAt: null,
+    sid: LOCAL_ADMIN_SESSION_ID,
+    actorType: 'LOCAL_ADMIN',
+    subject: LOCAL_ADMIN_SUBJECT,
+    user,
+    roles: ['ADMIN'],
+    permissions: ['*']
   }
 }
 
@@ -59,6 +92,11 @@ export function shouldRefreshAccessToken(
 
 export async function getPublicAuthSession(event: HdxEvent) {
   const csrfToken = getOrCreateCsrfToken(event)
+
+  if (isAllInOneRequest(event)) {
+    return toLocalAdminPublicAuthSession(csrfToken)
+  }
+
   const data = await readAuthSessionData(event)
   return toPublicAuthSession(data, csrfToken)
 }
@@ -91,6 +129,10 @@ export async function clearAuthSession(event: HdxEvent) {
 }
 
 export async function refreshAuthSession(event: HdxEvent) {
+  if (isAllInOneRequest(event)) {
+    throw new BoundaryError('invalid-input', '本机模式不需要刷新登录态。', 400)
+  }
+
   const data = await readAuthSessionData(event)
 
   if (!data) {
@@ -116,6 +158,10 @@ export async function refreshAuthSession(event: HdxEvent) {
 }
 
 export async function refreshAuthSessionIfNeeded(event: HdxEvent) {
+  if (isAllInOneRequest(event)) {
+    return null
+  }
+
   const config = getBackendConfig(event)
   const data = await readAuthSessionData(event)
 
@@ -140,6 +186,10 @@ export async function refreshAuthSessionIfNeeded(event: HdxEvent) {
 }
 
 export async function requireBackendAccessToken(event: HdxEvent) {
+  if (isAllInOneRequest(event)) {
+    return null
+  }
+
   const config = getBackendConfig(event)
   const data = await readAuthSessionData(event)
 

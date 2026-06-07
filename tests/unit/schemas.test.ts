@@ -5,6 +5,7 @@ import {
   webAuthPublicSessionSchema
 } from '../../app/types/hdx-auth'
 import { createToolRequestSchema, runtimeInfoSchema, toolRecordsSchema } from '../../app/types/hdx-api'
+import { normalizeInternalRedirect } from '../../app/utils/internal-redirect'
 
 describe('hdx api schemas', () => {
   it('parses runtime info responses', () => {
@@ -65,6 +66,8 @@ describe('hdx api schemas', () => {
       accessTokenExpiresAt: tokenResponse.accessTokenExpiresAt,
       refreshTokenExpiresAt: tokenResponse.refreshTokenExpiresAt,
       sid: tokenResponse.sid,
+      actorType: 'USER',
+      subject: 'USER:1',
       user: tokenResponse.user,
       roles: tokenResponse.roles,
       permissions: tokenResponse.permissions
@@ -84,5 +87,12 @@ describe('hdx api schemas', () => {
       identifier: '',
       password: ''
     }).success).toBe(false)
+  })
+
+  it('normalizes internal redirects', () => {
+    expect(normalizeInternalRedirect('/tools?filter=mine')).toBe('/tools?filter=mine')
+    expect(normalizeInternalRedirect('//evil.example/path')).toBe('/')
+    expect(normalizeInternalRedirect('https://evil.example/path')).toBe('/')
+    expect(normalizeInternalRedirect(undefined)).toBe('/')
   })
 })
