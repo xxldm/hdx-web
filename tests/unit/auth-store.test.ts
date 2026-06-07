@@ -47,7 +47,7 @@ describe('auth store', () => {
     expect(store.initialized).toBe(true)
   })
 
-  it('logs in with csrf header and stores session', async () => {
+  it('logs in with a freshly loaded csrf header and stores session', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith('/session')) {
         return anonymousSession
@@ -57,18 +57,47 @@ describe('auth store', () => {
     })
     vi.stubGlobal('$fetch', fetchMock)
     const store = useAuthStore()
+    store.session = {
+      ...anonymousSession,
+      csrfToken: 'c'.repeat(64)
+    }
 
     await store.login({
       identifier: 'admin',
       password: 'password'
     })
 
+    expect(fetchMock).toHaveBeenCalledWith('/api/hdx/v1/auth/session', expect.objectContaining({
+      credentials: 'same-origin'
+    }))
     expect(fetchMock).toHaveBeenCalledWith('/api/hdx/v1/auth/login', expect.objectContaining({
+      credentials: 'same-origin',
       headers: {
         'X-HDX-CSRF': anonymousSession.csrfToken
       }
     }))
     expect(store.authenticated).toBe(true)
+  })
+
+  it('reports csrf failure separately from credential failure', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/session')) {
+        return anonymousSession
+      }
+
+      throw {
+        statusCode: 403
+      }
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const store = useAuthStore()
+
+    await expect(store.login({
+      identifier: 'admin',
+      password: 'password'
+    })).rejects.toThrow('登录失败。')
+
+    expect(store.errorKey).toBe('auth.csrfFailed')
   })
 
   it('clears local state when logout fails', async () => {

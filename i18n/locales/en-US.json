@@ -21,6 +21,7 @@
     "hidePassword": "Hide password",
     "loginFailedTitle": "Sign-in failed",
     "loginFailed": "The account or password is incorrect, or the auth service is temporarily unavailable.",
+    "csrfFailed": "The sign-in check has expired. Refresh the page and try again.",
     "logoutFailed": "Sign-out was not fully completed. Refresh the page to confirm the state.",
     "sessionFailed": "The sign-in state could not be confirmed. Try again later.",
     "backgroundAlt": "HDX sign-in page background"

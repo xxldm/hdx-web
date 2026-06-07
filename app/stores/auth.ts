@@ -20,7 +20,9 @@ export const useAuthStore = defineStore('auth', () => {
     errorKey.value = null
 
     try {
-      const response = await $fetch<unknown>('/api/hdx/v1/auth/session')
+      const response = await $fetch<unknown>('/api/hdx/v1/auth/session', {
+        credentials: 'same-origin'
+      })
       session.value = webAuthPublicSessionSchema.parse(response)
       initialized.value = true
       return session.value
@@ -40,19 +42,26 @@ export const useAuthStore = defineStore('auth', () => {
     errorKey.value = null
 
     try {
-      const currentSession = session.value ?? await loadSession()
+      const currentSession = await loadSession()
+
+      if (!currentSession?.csrfToken) {
+        errorKey.value = 'auth.sessionFailed'
+        throw new Error('登录状态暂时无法确认。')
+      }
+
       const response = await $fetch<unknown>('/api/hdx/v1/auth/login', {
         method: 'POST',
         body: payload,
+        credentials: 'same-origin',
         headers: {
-          'X-HDX-CSRF': currentSession?.csrfToken ?? csrfToken.value
+          'X-HDX-CSRF': currentSession.csrfToken
         }
       })
       session.value = webAuthPublicSessionSchema.parse(response)
       initialized.value = true
       return session.value
-    } catch {
-      errorKey.value = 'auth.loginFailed'
+    } catch (error) {
+      errorKey.value = resolveAuthErrorKey(error, errorKey.value ?? 'auth.loginFailed')
       throw new Error('登录失败。')
     } finally {
       loginLoading.value = false
@@ -67,6 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await $fetch<unknown>('/api/hdx/v1/auth/logout', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'X-HDX-CSRF': currentCsrfToken
         }
@@ -99,3 +109,44 @@ export const useAuthStore = defineStore('auth', () => {
     logout
   }
 })
+
+function resolveAuthErrorKey(error: unknown, fallback: string) {
+  if (extractFetchStatus(error) === 403) {
+    return 'auth.csrfFailed'
+  }
+
+  return fallback
+}
+
+function extractFetchStatus(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const record = error as {
+    status?: unknown
+    statusCode?: unknown
+    data?: {
+      status?: unknown
+      statusCode?: unknown
+    }
+  }
+
+  if (typeof record.statusCode === 'number') {
+    return record.statusCode
+  }
+
+  if (typeof record.status === 'number') {
+    return record.status
+  }
+
+  if (typeof record.data?.statusCode === 'number') {
+    return record.data.statusCode
+  }
+
+  if (typeof record.data?.status === 'number') {
+    return record.data.status
+  }
+
+  return null
+}

@@ -21,6 +21,7 @@
     "hidePassword": "隐藏密码",
     "loginFailedTitle": "登录失败",
     "loginFailed": "账号或密码不正确，或认证中心暂时不可用。",
+    "csrfFailed": "登录校验已过期，请刷新页面后重试。",
     "logoutFailed": "退出登录未完全完成，请刷新页面确认状态。",
     "sessionFailed": "登录状态暂时无法确认，请稍后重试。",
     "backgroundAlt": "HDX 登录页背景图"
