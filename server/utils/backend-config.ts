@@ -1,11 +1,16 @@
 import { z } from 'zod'
 import { BoundaryError } from '~~/app/utils/api-error'
 
+const optionalNonBlankStringSchema = z.preprocess(
+  value => typeof value === 'string' && value.trim() === '' ? undefined : value,
+  z.string().min(1).optional()
+)
+
 export const backendConfigSchema = z.object({
   backendBaseUrl: z.string().url(),
   authBaseUrl: z.string().url(),
-  backendLocalTokenHeader: z.string().min(1).optional(),
-  backendLocalToken: z.string().min(1).optional(),
+  backendLocalTokenHeader: optionalNonBlankStringSchema,
+  backendLocalToken: optionalNonBlankStringSchema,
   authSessionCookieName: z.string().min(1),
   authSessionSecret: z.string().min(32),
   authCsrfCookieName: z.string().min(1),

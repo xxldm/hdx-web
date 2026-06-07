@@ -1,7 +1,13 @@
 import { z } from 'zod'
 import { createBoundaryH3Error } from '~~/app/utils/api-error'
-import { assertCsrfToken } from '~~/server/utils/auth-csrf'
-import { clearAuthSession, getPublicAuthSession, readAuthSessionData } from '~~/server/utils/auth-session'
+import { assertCsrfToken, getOrCreateCsrfToken } from '~~/server/utils/auth-csrf'
+import {
+  clearAuthSession,
+  getPublicAuthSession,
+  isAllInOneRequest,
+  readAuthSessionData,
+  toPublicAuthSession
+} from '~~/server/utils/auth-session'
 import { fetchAuthService } from '~~/server/utils/backend-fetch'
 
 const logoutResponseSchema = z.unknown().optional()
@@ -17,6 +23,10 @@ export default defineEventHandler(async (event) => {
     }
 
     await clearAuthSession(event)
+
+    if (!isAllInOneRequest(event)) {
+      return toPublicAuthSession(null, getOrCreateCsrfToken(event))
+    }
 
     return await getPublicAuthSession(event)
   } catch (error) {
