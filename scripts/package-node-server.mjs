@@ -114,6 +114,41 @@ function listReparsePoints(directory) {
   return result
 }
 
+function materializeReparsePoints(directory) {
+  for (let pass = 0; pass < 20; pass += 1) {
+    const reparsePoints = listReparsePoints(directory)
+
+    if (reparsePoints.length === 0) {
+      return
+    }
+
+    for (const reparsePoint of reparsePoints) {
+      const target = fs.realpathSync(reparsePoint)
+      const targetStat = fs.statSync(reparsePoint)
+
+      fs.rmSync(reparsePoint, { force: true, recursive: true })
+      fs.mkdirSync(path.dirname(reparsePoint), { recursive: true })
+
+      if (targetStat.isDirectory()) {
+        fs.cpSync(target, reparsePoint, {
+          dereference: true,
+          errorOnExist: false,
+          force: true,
+          preserveTimestamps: false,
+          recursive: true
+        })
+      } else if (targetStat.isFile()) {
+        fs.copyFileSync(target, reparsePoint)
+      } else {
+        throw new Error(`发布包不支持的符号链接目标：${formatRelative(reparsePoint)} -> ${target}`)
+      }
+    }
+  }
+
+  const remaining = listReparsePoints(directory)
+  throw new Error(`发布包符号链接物化超过上限，剩余：${remaining.map((file) => formatRelative(file)).join(', ')}`)
+}
+
 function formatRelative(filePath, baseDirectory = packageWorkDirectory) {
   return path.relative(baseDirectory, filePath).replaceAll(path.sep, '/')
 }
@@ -246,6 +281,7 @@ if (!fs.existsSync(path.join(outputDirectory, 'server', 'index.mjs'))) {
 }
 
 buildPackageTree()
+materializeReparsePoints(packageWorkDirectory)
 assertRequiredPackageLayout()
 await createArchive({ archivePath })
 

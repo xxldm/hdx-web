@@ -38,7 +38,7 @@ Web 运行配置以环境变量为事实源。仓库提供 `config.example.yml` 
 Web 第一版 Release asset 是 Nuxt SSR node-server tar 包，命名为 `hdx-web-node-server-<version>.tar.gz`。在 `apps/web/` 下执行：
 
 ```powershell
-pnpm package:node-server -- --version <version>
+node scripts/package-node-server.mjs --version <version>
 ```
 
 脚本默认先运行 Web build；本地调试可追加 `--skip-build` 复用现有 `.output`。发布包根目录直接包含 `public/`、`server/`、`nitro.json`、`start.sh`、`start-web.mjs`、`config.example.yml`、配置 loader 和 `yaml` runtime 依赖，不保留 `.output` 外层目录。
@@ -100,7 +100,7 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
-pnpm package:node-server -- --version dev
+node scripts/package-node-server.mjs --version dev
 ```
 
 如果本机后端未启动，首屏应显示 Web 工作台骨架和后端不可用提示；这不应阻塞 Web build。
