@@ -27,7 +27,7 @@
 
 Web 运行配置以环境变量为事实源。仓库提供 `config.example.yml` 作为可读模板；本地开发可复制为 `config.local.yml`，Release 包可复制为包根目录的 `config.yml`。`config.local.yml` 和 `config.yml` 不提交到仓库。
 
-配置优先级为环境变量 > YAML 配置文件 > 内置默认值。本地 `dev`、`build`、`generate`、`preview` 脚本会先读取 `config.local.yml`，不存在时再读取 `config.yml`，然后把配置映射为 Nuxt/Nitro 环境变量。Release 包使用 `start.sh` 调用 `start-web.mjs`，只读取包根目录的 `config.yml`；文件不存在时仍可完全依赖环境变量启动。
+配置优先级为环境变量 > YAML 配置文件 > 内置默认值。本地 `dev`、`build`、`preview` 脚本会先读取 `config.local.yml`，不存在时再读取 `config.yml`，然后把配置映射为 Nuxt/Nitro 环境变量。Release 包使用 `start.sh` 调用 `start-web.mjs`，只读取包根目录的 `config.yml`；文件不存在时仍可完全依赖环境变量启动。
 
 生产环境必须提供真实 `NUXT_AUTH_SESSION_SECRET` 或 `auth.sessionSecret`，长度至少 32，不能使用示例值。`localBackend.tokenHeader` 与 `localBackend.token` 必须同时填写或同时为空。
 

@@ -8,10 +8,10 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rootDirectory = path.resolve(scriptDirectory, '..')
 const command = process.argv[2]
 const args = process.argv.slice(3)
-const supportedCommands = new Set(['dev', 'build', 'generate', 'preview'])
+const supportedCommands = new Set(['dev', 'build', 'preview'])
 
 if (!supportedCommands.has(command)) {
-  console.error('Web 命令无效。支持：dev、build、generate、preview。')
+  console.error('Web 命令无效。支持：dev、build、preview。')
   process.exit(1)
 }
 

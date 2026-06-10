@@ -7,7 +7,6 @@
   "scripts": {
     "build": "node scripts/web-dev-runner.mjs build",
     "dev": "node scripts/web-dev-runner.mjs dev",
-    "generate": "node scripts/web-dev-runner.mjs generate",
     "lint": "eslint .",
     "postinstall": "nuxt prepare",
     "preview": "node scripts/web-dev-runner.mjs preview",
