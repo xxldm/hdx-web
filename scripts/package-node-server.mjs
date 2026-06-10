@@ -33,8 +33,8 @@ function parseArguments(argv) {
     }
   }
 
-  if (!options.version || !/^[0-9A-Za-z._-]+$/.test(options.version)) {
-    throw new Error('版本号只能包含字母、数字、点、下划线和短横线。')
+  if (!options.version || !/^[0-9A-Za-z._+-]+$/.test(options.version)) {
+    throw new Error('版本号只能包含字母、数字、点、下划线、加号和短横线。')
   }
 
   return options
