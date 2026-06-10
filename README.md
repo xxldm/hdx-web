@@ -33,6 +33,18 @@ Web 运行配置以环境变量为事实源。仓库提供 `config.example.yml` 
 
 生产构建关闭 client/public sourcemap；server sourcemap 可保留在 `server/` 运行产物内，用于 Node SSR/BFF 报错定位，但不得出现在 `public/` 静态资源目录。
 
+## 发布包
+
+Web 第一版 Release asset 是 Nuxt SSR node-server tar 包，命名为 `hdx-web-node-server-<version>.tar.gz`。在 `apps/web/` 下执行：
+
+```powershell
+pnpm package:node-server -- --version <version>
+```
+
+脚本默认先运行 Web build；本地调试可追加 `--skip-build` 复用现有 `.output`。发布包根目录直接包含 `public/`、`server/`、`nitro.json`、`start.sh`、`start-web.mjs`、`config.example.yml`、配置 loader 和 `yaml` runtime 依赖，不保留 `.output` 外层目录。
+
+打包脚本会检查 `public/` 下不存在 `*.map`，保留 `server/` 下的服务端 sourcemap，拒绝 `.env`、`.output`、`.nuxt`、缓存目录和符号链接/Junction，并确保 tar 内 `start.sh` 是 `0755`。
+
 ## Web BFF 登录态
 
 当前已提供最小 BFF 接口：
@@ -88,6 +100,7 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+pnpm package:node-server -- --version dev
 ```
 
 如果本机后端未启动，首屏应显示 Web 工作台骨架和后端不可用提示；这不应阻塞 Web build。

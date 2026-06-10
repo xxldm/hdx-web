@@ -8,6 +8,7 @@
     "build": "node scripts/web-dev-runner.mjs build",
     "dev": "node scripts/web-dev-runner.mjs dev",
     "lint": "eslint .",
+    "package:node-server": "node scripts/package-node-server.mjs",
     "postinstall": "nuxt prepare",
     "preview": "node scripts/web-dev-runner.mjs preview",
     "test": "vitest run",
@@ -31,6 +32,7 @@
     "@vue/test-utils": "^2.4.0",
     "eslint": "^9.0.0",
     "happy-dom": "^15.0.0",
+    "tar": "^7.5.15",
     "typescript": "^5.8.0",
     "vitest": "^3.0.0",
     "vue-tsc": "^3.3.0"
