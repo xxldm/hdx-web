@@ -5,12 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "build": "node scripts/web-dev-runner.mjs build",
+    "dev": "node scripts/web-dev-runner.mjs dev",
+    "generate": "node scripts/web-dev-runner.mjs generate",
     "lint": "eslint .",
     "postinstall": "nuxt prepare",
-    "preview": "nuxt preview",
+    "preview": "node scripts/web-dev-runner.mjs preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "nuxt typecheck"
@@ -22,6 +22,7 @@
     "nuxt": "^4.0.0",
     "pinia": "^3.0.0",
     "vue": "^3.5.0",
+    "yaml": "^2.9.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
