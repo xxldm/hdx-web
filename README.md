@@ -31,6 +31,8 @@ Web 运行配置以环境变量为事实源。仓库提供 `config.example.yml` 
 
 生产环境必须提供真实 `NUXT_AUTH_SESSION_SECRET` 或 `auth.sessionSecret`，长度至少 32，不能使用示例值。`localBackend.tokenHeader` 与 `localBackend.token` 必须同时填写或同时为空。
 
+生产构建关闭 client/public sourcemap；server sourcemap 可保留在 `server/` 运行产物内，用于 Node SSR/BFF 报错定位，但不得出现在 `public/` 静态资源目录。
+
 ## Web BFF 登录态
 
 当前已提供最小 BFF 接口：
