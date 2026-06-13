@@ -66,6 +66,27 @@ function listFiles(directory) {
   return result
 }
 
+function copyDirectoryContents(sourceDirectory, targetDirectory) {
+  fs.mkdirSync(targetDirectory, { recursive: true })
+
+  for (const entry of fs.readdirSync(sourceDirectory, { withFileTypes: true })) {
+    const sourcePath = path.join(sourceDirectory, entry.name)
+    const targetPath = path.join(targetDirectory, entry.name)
+
+    if (entry.isSymbolicLink()) {
+      throw new Error(`Desktop 静态输出不允许包含链接项：${sourcePath}`)
+    }
+
+    if (entry.isDirectory()) {
+      copyDirectoryContents(sourcePath, targetPath)
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sourcePath, targetPath)
+    } else {
+      throw new Error(`Desktop 静态输出包含不支持的文件类型：${sourcePath}`)
+    }
+  }
+}
+
 function runNuxtGenerate() {
   removeDirectory(outputDirectory)
 
@@ -108,14 +129,7 @@ function copyStaticOutput(outDir) {
   }
 
   removeDirectory(outDir)
-  fs.mkdirSync(outDir, { recursive: true })
-  fs.cpSync(publicDirectory, outDir, {
-    dereference: true,
-    errorOnExist: false,
-    force: true,
-    preserveTimestamps: false,
-    recursive: true
-  })
+  copyDirectoryContents(publicDirectory, outDir)
 
   const publicMaps = listFiles(outDir).filter((file) => file.endsWith('.map'))
 
