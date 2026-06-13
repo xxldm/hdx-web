@@ -4,6 +4,10 @@ import {
   webAuthLoginRequestSchema,
   webAuthPublicSessionSchema
 } from '../../app/types/hdx-auth'
+import {
+  desktopOnlineConfigSchema,
+  desktopOnlineConnectionCheckResultSchema
+} from '../../app/types/desktop-online'
 import { createToolRequestSchema, runtimeInfoSchema, toolRecordsSchema } from '../../app/types/hdx-api'
 import { normalizeInternalRedirect } from '../../app/utils/internal-redirect'
 
@@ -94,5 +98,43 @@ describe('hdx api schemas', () => {
     expect(normalizeInternalRedirect('//evil.example/path')).toBe('/')
     expect(normalizeInternalRedirect('https://evil.example/path')).toBe('/')
     expect(normalizeInternalRedirect(undefined)).toBe('/')
+  })
+
+  it('validates Desktop Online config input', () => {
+    expect(desktopOnlineConfigSchema.parse({
+      authBaseUrl: ' https://auth.example.com ',
+      gatewayBaseUrl: 'https://api.example.com',
+      requestTimeoutSeconds: 10
+    })).toEqual({
+      authBaseUrl: 'https://auth.example.com',
+      gatewayBaseUrl: 'https://api.example.com',
+      requestTimeoutSeconds: 10
+    })
+
+    expect(desktopOnlineConfigSchema.safeParse({
+      authBaseUrl: 'not-a-url',
+      gatewayBaseUrl: 'https://api.example.com',
+      requestTimeoutSeconds: 0
+    }).success).toBe(false)
+  })
+
+  it('parses Desktop Online connection check results', () => {
+    expect(desktopOnlineConnectionCheckResultSchema.parse({
+      ok: true,
+      auth: {
+        ok: true,
+        url: 'https://auth.example.com/actuator/health',
+        statusCode: 200,
+        elapsedMs: 24,
+        message: '认证中心连接正常。'
+      },
+      gateway: {
+        ok: true,
+        url: 'https://api.example.com/actuator/health',
+        statusCode: 200,
+        elapsedMs: 31,
+        message: '业务网关连接正常。'
+      }
+    }).ok).toBe(true)
   })
 })

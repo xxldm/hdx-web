@@ -26,6 +26,21 @@
     "sessionFailed": "The sign-in state could not be confirmed. Try again later.",
     "backgroundAlt": "HDX sign-in page background"
   },
+  "desktopOnline": {
+    "title": "Remote services",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "configRequired": "Save the Desktop Online remote service configuration first.",
+    "configError": "Configuration failed",
+    "status": "Connection status",
+    "authBaseUrl": "Auth service URL",
+    "gatewayBaseUrl": "Gateway URL",
+    "timeoutSeconds": "Timeout seconds",
+    "checkAction": "Check connection",
+    "saveAction": "Save config",
+    "authCheck": "Auth service",
+    "gatewayCheck": "Gateway"
+  },
   "workbench": {
     "title": "HDX Tool Workbench",
     "description": "Manage tools, runtime status, and local integration boundaries in one place.",

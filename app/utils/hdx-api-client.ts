@@ -1,5 +1,10 @@
 import type { CreateToolRequest, RuntimeInfo, ToolRecord } from '~/types/hdx-api'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
+import type {
+  DesktopOnlineConfig,
+  DesktopOnlineConfigState,
+  DesktopOnlineConnectionCheckResult
+} from '~/types/desktop-online'
 
 type TauriInternals = {
   invoke?: <T>(command: string, args?: Record<string, unknown>) => Promise<T>
@@ -90,6 +95,28 @@ export async function createTool(input: CreateToolRequest): Promise<unknown> {
   })
 }
 
+export async function fetchDesktopOnlineConfig(): Promise<unknown> {
+  const invoke = getTauriInvoke()
+
+  if (!invoke) {
+    return null
+  }
+
+  return await invoke<DesktopOnlineConfigState>('hdx_online_config_get')
+}
+
+export async function saveDesktopOnlineConfig(input: DesktopOnlineConfig): Promise<unknown> {
+  const invoke = requireTauriInvoke()
+
+  return await invoke<DesktopOnlineConfigState>('hdx_online_config_save', { input })
+}
+
+export async function checkDesktopOnlineConnection(input: DesktopOnlineConfig): Promise<unknown> {
+  const invoke = requireTauriInvoke()
+
+  return await invoke<DesktopOnlineConnectionCheckResult>('hdx_online_connection_check', { input })
+}
+
 function getTauriInvoke() {
   if (!import.meta.client || typeof window === 'undefined') {
     return null
@@ -102,4 +129,14 @@ function getTauriInvoke() {
   }
 
   return tauri.invoke.bind(tauri)
+}
+
+function requireTauriInvoke() {
+  const invoke = getTauriInvoke()
+
+  if (!invoke) {
+    throw new Error('当前环境不是 HDX Desktop。')
+  }
+
+  return invoke
 }
