@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rootDirectory = path.resolve(scriptDirectory, '..')
-const outputDirectory = path.join(rootDirectory, '.output')
+const outputDirectory = path.join(rootDirectory, '.output-desktop-static')
 const defaultOutDirectory = path.join(rootDirectory, 'dist', 'desktop-static')
 
 function parseArguments(argv) {
@@ -67,6 +67,8 @@ function listFiles(directory) {
 }
 
 function runNuxtGenerate() {
+  removeDirectory(outputDirectory)
+
   const nuxtExecutable = path.join(rootDirectory, 'node_modules', 'nuxt', 'bin', 'nuxt.mjs')
   const nuxtPackageRoot = fs.realpathSync(path.join(rootDirectory, 'node_modules', 'nuxt'))
   const nodePathEntries = [

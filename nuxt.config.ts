@@ -45,6 +45,7 @@ const parsedServerConfig = serverConfigSchema.parse({
   authRefreshSkewSeconds: parseInteger(process.env.NUXT_AUTH_REFRESH_SKEW_SECONDS, 60)
 })
 const isDesktopStaticBuild = process.env.HDX_WEB_BUILD_TARGET === 'desktop-static'
+const desktopStaticOutputDirectory = '.output-desktop-static'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-05-26',
@@ -88,7 +89,10 @@ export default defineNuxtConfig({
   },
   nitro: isDesktopStaticBuild
     ? {
-        preset: 'static'
+        preset: 'static',
+        output: {
+          dir: desktopStaticOutputDirectory
+        }
       }
     : undefined,
   i18n: {
