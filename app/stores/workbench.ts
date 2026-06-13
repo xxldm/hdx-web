@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { z } from 'zod'
 import { createToolRequestSchema, runtimeInfoSchema, toolRecordSchema, toolRecordsSchema, type CreateToolRequest, type RuntimeInfo, type ToolRecord } from '~/types/hdx-api'
+import { createTool as createRemoteTool, fetchRuntimeInfo, fetchTools } from '~/utils/hdx-api-client'
 
 export const workbenchSnapshotSchema = z.object({
   runtime: runtimeInfoSchema.nullable(),
@@ -28,8 +29,8 @@ export const useWorkbenchStore = defineStore('workbench', () => {
 
     try {
       const [runtimeResponse, toolsResponse] = await Promise.all([
-        $fetch<unknown>('/api/hdx/v1/runtime'),
-        $fetch<unknown>('/api/hdx/v1/tools')
+        fetchRuntimeInfo(),
+        fetchTools()
       ])
 
       runtime.value = runtimeInfoSchema.parse(runtimeResponse)
@@ -43,10 +44,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
 
   async function createTool(input: CreateToolRequest) {
     const payload = createToolRequestSchema.parse(input)
-    const created = await $fetch<unknown>('/api/hdx/v1/tools', {
-      method: 'POST',
-      body: payload
-    })
+    const created = await createRemoteTool(payload)
     const tool = toolRecordSchema.parse(created)
 
     tools.value = [tool, ...tools.value]

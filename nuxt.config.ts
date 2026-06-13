@@ -44,9 +44,11 @@ const parsedServerConfig = serverConfigSchema.parse({
   authSessionMaxAgeSeconds: parseInteger(process.env.NUXT_AUTH_SESSION_MAX_AGE_SECONDS, 60 * 60 * 24 * 7),
   authRefreshSkewSeconds: parseInteger(process.env.NUXT_AUTH_REFRESH_SKEW_SECONDS, 60)
 })
+const isDesktopStaticBuild = process.env.HDX_WEB_BUILD_TARGET === 'desktop-static'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-05-26',
+  ssr: !isDesktopStaticBuild,
   devtools: { enabled: true },
   modules: [
     '@nuxt/eslint',
@@ -80,9 +82,15 @@ export default defineNuxtConfig({
     authSessionMaxAgeSeconds: parsedServerConfig.authSessionMaxAgeSeconds,
     authRefreshSkewSeconds: parsedServerConfig.authRefreshSkewSeconds,
     public: {
-      appName: 'HDX'
+      appName: 'HDX',
+      hdxClientTransport: isDesktopStaticBuild ? 'tauri' : 'auto'
     }
   },
+  nitro: isDesktopStaticBuild
+    ? {
+        preset: 'static'
+      }
+    : undefined,
   i18n: {
     strategy: 'no_prefix',
     defaultLocale: 'zh-CN',

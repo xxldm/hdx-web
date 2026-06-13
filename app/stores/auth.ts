@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthLoginRequestSchema, webAuthPublicSessionSchema } from '~/types/hdx-auth'
+import { fetchAuthSession, loginWithPassword, logoutSession } from '~/utils/hdx-api-client'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<WebAuthPublicSession | null>(null)
@@ -20,9 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
     errorKey.value = null
 
     try {
-      const response = await $fetch<unknown>('/api/hdx/v1/auth/session', {
-        credentials: 'same-origin'
-      })
+      const response = await fetchAuthSession()
       session.value = webAuthPublicSessionSchema.parse(response)
       initialized.value = true
       return session.value
@@ -49,14 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('登录状态暂时无法确认。')
       }
 
-      const response = await $fetch<unknown>('/api/hdx/v1/auth/login', {
-        method: 'POST',
-        body: payload,
-        credentials: 'same-origin',
-        headers: {
-          'X-HDX-CSRF': currentSession.csrfToken
-        }
-      })
+      const response = await loginWithPassword(payload, currentSession.csrfToken)
       session.value = webAuthPublicSessionSchema.parse(response)
       initialized.value = true
       return session.value
@@ -74,13 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     errorKey.value = null
 
     try {
-      const response = await $fetch<unknown>('/api/hdx/v1/auth/logout', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'X-HDX-CSRF': currentCsrfToken
-        }
-      })
+      const response = await logoutSession(currentCsrfToken)
       session.value = webAuthPublicSessionSchema.parse(response)
       initialized.value = true
       return session.value

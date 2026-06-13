@@ -20,6 +20,7 @@
 - 认证中心默认地址：优先读取 `NUXT_AUTH_BASE_URL`，其次读取 `HDX_AUTH_BASE_URL`，默认值为 `http://localhost:18082`。
 - 本机 all-in-one 令牌可通过 `NUXT_BACKEND_LOCAL_TOKEN_HEADER` 与 `NUXT_BACKEND_LOCAL_TOKEN` 注入，只能留在 Nuxt server 私有 `runtimeConfig` 中。
 - Web 登录态使用 Nuxt server 加密 `HttpOnly` cookie session。浏览器只持有同源 cookie 和 CSRF token，不能读取 access token 或 refresh token。
+- 浏览器侧 store 通过 `app/utils/hdx-api-client.ts` 调用 API：普通 Web Online 继续走 Nuxt server `/api/hdx/v1/**`，Desktop 静态 WebView 走 Tauri Rust BFF command。
 
 浏览器不得直接访问后端地址，也不得读取本机令牌。浏览器只调用 Web 自身的 `/api/hdx/v1/**`。
 
@@ -44,6 +45,14 @@ node scripts/package-node-server.mjs --version <version>
 脚本默认先运行 Web build；本地调试可追加 `--skip-build` 复用现有 `.output`。发布包根目录直接包含 `public/`、`server/`、`nitro.json`、`start.sh`、`start-web.mjs`、`config.example.yml`、配置 loader 和 `yaml` runtime 依赖，不保留 `.output` 外层目录。
 
 打包脚本会检查 `public/` 下不存在 `*.map`，保留 `server/` 下的服务端 sourcemap，拒绝 `.env`、`.output`、`.nuxt`、缓存目录和符号链接/Junction，并确保 tar 内 `start.sh` 是 `0755`。
+
+Desktop 发布包不内置 Node/Nitro。需要生成 Tauri WebView 使用的静态 UI 时，在 `apps/web/` 下执行：
+
+```powershell
+node scripts/build-desktop-static.mjs --out-dir dist/desktop-tauri
+```
+
+该脚本只在本次构建中设置 `HDX_WEB_BUILD_TARGET=desktop-static`，让 Nuxt 以 `ssr: false` 和 static preset 输出 `.output/public`，再复制到指定目录。默认 Web build、node-server 发布包和 Web Online SSR/Nitro 行为不受影响。
 
 ## Web BFF 登录态
 
@@ -101,6 +110,7 @@ pnpm lint
 pnpm test
 pnpm build
 node scripts/package-node-server.mjs --version dev
+node scripts/build-desktop-static.mjs --out-dir dist/desktop-tauri
 ```
 
 如果本机后端未启动，首屏应显示 Web 工作台骨架和后端不可用提示；这不应阻塞 Web build。

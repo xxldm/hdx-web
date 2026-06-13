@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "build": "node scripts/web-dev-runner.mjs build",
+    "build:desktop-static": "node scripts/build-desktop-static.mjs",
     "dev": "node scripts/web-dev-runner.mjs dev",
     "lint": "eslint .",
     "package:node-server": "node scripts/package-node-server.mjs",
