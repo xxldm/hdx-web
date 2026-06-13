@@ -49,7 +49,7 @@ node scripts/package-node-server.mjs --version <version>
 Desktop 发布包不内置 Node/Nitro。需要生成 Tauri WebView 使用的静态 UI 时，在 `apps/web/` 下执行：
 
 ```powershell
-node scripts/build-desktop-static.mjs --out-dir dist/desktop-tauri
+node scripts/build-desktop-static.mjs --out-dir target/desktop-tauri
 ```
 
 该脚本只在本次构建中设置 `HDX_WEB_BUILD_TARGET=desktop-static`，让 Nuxt 以 `ssr: false` 和 static preset 输出 `.output/public`，再复制到指定目录。默认 Web build、node-server 发布包和 Web Online SSR/Nitro 行为不受影响。
@@ -110,7 +110,7 @@ pnpm lint
 pnpm test
 pnpm build
 node scripts/package-node-server.mjs --version dev
-node scripts/build-desktop-static.mjs --out-dir dist/desktop-tauri
+node scripts/build-desktop-static.mjs --out-dir target/desktop-tauri
 ```
 
 如果本机后端未启动，首屏应显示 Web 工作台骨架和后端不可用提示；这不应阻塞 Web build。

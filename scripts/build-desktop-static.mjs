@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const rootDirectory = path.resolve(scriptDirectory, '..')
 const outputDirectory = path.join(rootDirectory, '.output-desktop-static')
-const defaultOutDirectory = path.join(rootDirectory, 'dist', 'desktop-static')
+const defaultOutDirectory = path.join(rootDirectory, 'target', 'desktop-static')
 
 function parseArguments(argv) {
   const options = {
