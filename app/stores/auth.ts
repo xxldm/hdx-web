@@ -97,11 +97,59 @@ export const useAuthStore = defineStore('auth', () => {
 })
 
 function resolveAuthErrorKey(error: unknown, fallback: string) {
+  const upstreamCode = extractUpstreamCode(error)
+
+  if (upstreamCode && upstreamCode in authErrorKeyByUpstreamCode) {
+    return authErrorKeyByUpstreamCode[upstreamCode as keyof typeof authErrorKeyByUpstreamCode]
+  }
+
   if (extractFetchStatus(error) === 403) {
     return 'auth.csrfFailed'
   }
 
   return fallback
+}
+
+const authErrorKeyByUpstreamCode = {
+  AUTH_INVALID_CREDENTIALS: 'auth.errors.AUTH_INVALID_CREDENTIALS',
+  AUTH_LOGIN_COOLDOWN: 'auth.errors.AUTH_LOGIN_COOLDOWN',
+  AUTH_REQUEST_INVALID: 'auth.errors.AUTH_REQUEST_INVALID',
+  AUTH_REVOCATION_UNAVAILABLE: 'auth.errors.AUTH_REVOCATION_UNAVAILABLE'
+} as const
+
+function extractUpstreamCode(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const record = error as {
+    data?: {
+      upstreamCode?: unknown
+      code?: unknown
+      data?: {
+        upstreamCode?: unknown
+        code?: unknown
+      }
+    }
+  }
+
+  if (typeof record.data?.upstreamCode === 'string') {
+    return record.data.upstreamCode
+  }
+
+  if (typeof record.data?.data?.upstreamCode === 'string') {
+    return record.data.data.upstreamCode
+  }
+
+  if (typeof record.data?.code === 'string' && record.data.code.startsWith('AUTH_')) {
+    return record.data.code
+  }
+
+  if (typeof record.data?.data?.code === 'string' && record.data.data.code.startsWith('AUTH_')) {
+    return record.data.data.code
+  }
+
+  return null
 }
 
 function extractFetchStatus(error: unknown) {

@@ -10,7 +10,8 @@ export class BoundaryError extends Error {
   constructor(
     public readonly code: BoundaryErrorCode,
     message: string,
-    public readonly statusCode = 500
+    public readonly statusCode = 500,
+    public readonly upstreamCode?: string
   ) {
     super(message)
     this.name = 'BoundaryError'
@@ -30,6 +31,10 @@ export function createBoundaryH3Error(error: unknown) {
 
   return createError({
     statusCode: boundaryError.statusCode,
-    message: boundaryError.message
+    message: boundaryError.message,
+    data: {
+      code: boundaryError.code,
+      upstreamCode: boundaryError.upstreamCode
+    }
   })
 }

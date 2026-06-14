@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { backendApiErrorResponseSchema } from '~~/app/types/hdx-api'
 import { BoundaryError } from '~~/app/utils/api-error'
 import { getBackendConfig } from './backend-config'
 
@@ -82,19 +83,48 @@ async function fetchHdxService<T>(
 
     if (fetchError) {
       if (fetchError.statusCode === 400) {
-        throw new BoundaryError('invalid-input', fetchError.message ?? '请求格式无效。', 400)
+        throw new BoundaryError(
+          'invalid-input',
+          fetchError.message ?? '请求格式无效。',
+          400,
+          fetchError.code
+        )
       }
 
       if (fetchError.statusCode === 401) {
-        throw new BoundaryError('auth-required', fetchError.message ?? '登录已过期，请重新登录。', 401)
+        throw new BoundaryError(
+          'auth-required',
+          fetchError.message ?? '登录已过期，请重新登录。',
+          401,
+          fetchError.code
+        )
       }
 
       if (fetchError.statusCode === 403) {
-        throw new BoundaryError('auth-required', fetchError.message ?? '当前账号无权执行该操作。', 403)
+        throw new BoundaryError(
+          'auth-required',
+          fetchError.message ?? '当前账号无权执行该操作。',
+          403,
+          fetchError.code
+        )
+      }
+
+      if (fetchError.statusCode === 429) {
+        throw new BoundaryError(
+          'upstream-failed',
+          fetchError.message ?? '请求过于频繁，请稍后重试。',
+          429,
+          fetchError.code
+        )
       }
 
       if (fetchError.statusCode === 503) {
-        throw new BoundaryError('upstream-failed', fetchError.message ?? '后端服务暂时不可用。', 503)
+        throw new BoundaryError(
+          'upstream-failed',
+          fetchError.message ?? '后端服务暂时不可用。',
+          503,
+          fetchError.code
+        )
       }
     }
 
@@ -102,7 +132,7 @@ async function fetchHdxService<T>(
   }
 }
 
-function normalizeFetchError(error: unknown): { statusCode: number, message?: string } | null {
+function normalizeFetchError(error: unknown): { statusCode: number, message?: string, code?: string } | null {
   if (!error || typeof error !== 'object') {
     return null
   }
@@ -124,11 +154,13 @@ function normalizeFetchError(error: unknown): { statusCode: number, message?: st
   }
 
   const data = record.data
-  const message = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-    ? data.message
+  const parsedError = backendApiErrorResponseSchema.safeParse(data)
+  const message = parsedError.success
+    ? parsedError.data.message
     : typeof record.statusMessage === 'string'
       ? record.statusMessage
       : undefined
+  const code = parsedError.success ? parsedError.data.code : undefined
 
-  return { statusCode, message }
+  return { statusCode, message, code }
 }

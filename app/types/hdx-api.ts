@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+export const backendApiErrorResponseSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1)
+})
+
+export type BackendApiErrorResponse = z.infer<typeof backendApiErrorResponseSchema>
+
 export const runtimeInfoSchema = z.object({
   application: z.string().min(1),
   topology: z.string().min(1),

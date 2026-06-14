@@ -8,7 +8,12 @@ import {
   desktopOnlineConfigSchema,
   desktopOnlineConnectionCheckResultSchema
 } from '../../app/types/desktop-online'
-import { createToolRequestSchema, runtimeInfoSchema, toolRecordsSchema } from '../../app/types/hdx-api'
+import {
+  backendApiErrorResponseSchema,
+  createToolRequestSchema,
+  runtimeInfoSchema,
+  toolRecordsSchema
+} from '../../app/types/hdx-api'
 import { normalizeInternalRedirect } from '../../app/utils/internal-redirect'
 
 describe('hdx api schemas', () => {
@@ -91,6 +96,16 @@ describe('hdx api schemas', () => {
       identifier: '',
       password: ''
     }).success).toBe(false)
+  })
+
+  it('parses backend api error responses', () => {
+    expect(backendApiErrorResponseSchema.parse({
+      code: 'AUTH_LOGIN_COOLDOWN',
+      message: '登录失败次数过多，请稍后再试。'
+    })).toEqual({
+      code: 'AUTH_LOGIN_COOLDOWN',
+      message: '登录失败次数过多，请稍后再试。'
+    })
   })
 
   it('normalizes internal redirects', () => {

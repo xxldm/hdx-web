@@ -100,6 +100,85 @@ describe('auth store', () => {
     expect(store.errorKey).toBe('auth.csrfFailed')
   })
 
+  it('maps backend credential error code to localized login error key', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/session')) {
+        return anonymousSession
+      }
+
+      throw {
+        statusCode: 401,
+        data: {
+          code: 'auth-required',
+          upstreamCode: 'AUTH_INVALID_CREDENTIALS'
+        }
+      }
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const store = useAuthStore()
+
+    await expect(store.login({
+      identifier: 'admin',
+      password: 'wrong-password'
+    })).rejects.toThrow('登录失败。')
+
+    expect(store.errorKey).toBe('auth.errors.AUTH_INVALID_CREDENTIALS')
+  })
+
+  it('maps backend login cooldown code to localized login error key', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/session')) {
+        return anonymousSession
+      }
+
+      throw {
+        statusCode: 429,
+        data: {
+          code: 'upstream-failed',
+          upstreamCode: 'AUTH_LOGIN_COOLDOWN'
+        }
+      }
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const store = useAuthStore()
+
+    await expect(store.login({
+      identifier: 'admin',
+      password: 'wrong-password'
+    })).rejects.toThrow('登录失败。')
+
+    expect(store.errorKey).toBe('auth.errors.AUTH_LOGIN_COOLDOWN')
+  })
+
+  it('maps nested h3 error data returned by nuxt server routes', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/session')) {
+        return anonymousSession
+      }
+
+      throw {
+        statusCode: 401,
+        data: {
+          statusCode: 401,
+          message: '账号或密码错误。',
+          data: {
+            code: 'auth-required',
+            upstreamCode: 'AUTH_INVALID_CREDENTIALS'
+          }
+        }
+      }
+    })
+    vi.stubGlobal('$fetch', fetchMock)
+    const store = useAuthStore()
+
+    await expect(store.login({
+      identifier: 'admin',
+      password: 'wrong-password'
+    })).rejects.toThrow('登录失败。')
+
+    expect(store.errorKey).toBe('auth.errors.AUTH_INVALID_CREDENTIALS')
+  })
+
   it('clears local state when logout fails', async () => {
     vi.stubGlobal('$fetch', vi.fn(async (url: string) => {
       if (url.endsWith('/session')) {

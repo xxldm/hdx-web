@@ -21,6 +21,12 @@
     "hidePassword": "Hide password",
     "loginFailedTitle": "Sign-in failed",
     "loginFailed": "The account or password is incorrect, or the auth service is temporarily unavailable.",
+    "errors": {
+      "AUTH_INVALID_CREDENTIALS": "The account or password is incorrect.",
+      "AUTH_LOGIN_COOLDOWN": "Too many failed sign-in attempts. Try again later.",
+      "AUTH_REQUEST_INVALID": "The sign-in information is invalid.",
+      "AUTH_REVOCATION_UNAVAILABLE": "The sign-in session state is temporarily unavailable. Try again later."
+    },
     "csrfFailed": "The sign-in check has expired. Refresh the page and try again.",
     "logoutFailed": "Sign-out was not fully completed. Refresh the page to confirm the state.",
     "sessionFailed": "The sign-in state could not be confirmed. Try again later.",
