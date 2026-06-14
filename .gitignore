@@ -9,6 +9,7 @@ target/
 .next/
 .nuxt/
 .output/
+.output-desktop-static/
 .nuxt-preview/
 .svelte-kit/
 .vite/
