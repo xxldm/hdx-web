@@ -2,8 +2,6 @@ import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import {
   desktopOnlineConfigSchema,
-  desktopOnlineConfigStateSchema,
-  desktopOnlineConnectionCheckResultSchema,
   type DesktopOnlineConfigState,
   type DesktopOnlineConnectionCheckResult
 } from '~/types/desktop-online'
@@ -41,9 +39,8 @@ export const useDesktopOnlineStore = defineStore('desktopOnline', () => {
         return null
       }
 
-      const state = desktopOnlineConfigStateSchema.parse(response)
-      applyState(state)
-      return state
+      applyState(response)
+      return response
     } catch (error) {
       available.value = false
       configured.value = false
@@ -60,8 +57,7 @@ export const useDesktopOnlineStore = defineStore('desktopOnline', () => {
 
     try {
       const payload = parseForm()
-      const response = await saveDesktopOnlineConfig(payload)
-      const state = desktopOnlineConfigStateSchema.parse(response)
+      const state = await saveDesktopOnlineConfig(payload)
       applyState(state)
       statusMessage.value = state.message
       return state
@@ -80,8 +76,7 @@ export const useDesktopOnlineStore = defineStore('desktopOnline', () => {
 
     try {
       const payload = parseForm()
-      const response = await checkDesktopOnlineConnection(payload)
-      const result = desktopOnlineConnectionCheckResultSchema.parse(response)
+      const result = await checkDesktopOnlineConnection(payload)
       checkResult.value = result
       statusMessage.value = result.ok ? 'Desktop Online 远端连接正常。' : 'Desktop Online 远端连接检查未通过。'
       return result
