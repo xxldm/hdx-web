@@ -15,12 +15,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  if (!auth.authenticated) {
-    return navigateTo({
-      path: '/login',
-      query: {
-        redirect: to.fullPath
-      }
-    })
-  }
+  // 临时放开首页与工具箱布局调试入口；恢复认证闭环时重新启用未登录跳转。
+  // if (!auth.authenticated) {
+  //   return navigateTo({
+  //     path: '/login',
+  //     query: {
+  //       redirect: to.fullPath
+  //     }
+  //   })
+  // }
 })

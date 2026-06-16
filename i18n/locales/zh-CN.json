@@ -54,14 +54,19 @@
   },
   "workbench": {
     "title": "HDX 工具箱",
+    "heroTitle": "把今天要用的东西摆顺手",
     "description": "把常用工具、内容入口和本机能力放在一起，需要时直接打开。",
     "runtime": "运行时",
     "tools": "工具目录",
     "enabledTools": "启用工具",
+    "enabledToolsCount": "{count} 个已启用",
     "emptyTools": "还没有工具记录。",
     "loading": "正在加载工具箱数据",
     "unavailable": "后端暂时不可用，已显示本地工具箱骨架。",
     "loadFailed": "工具箱数据暂时无法加载。",
+    "toolEnabled": "启用",
+    "toolDisabled": "停用",
+    "widgetLibrary": "可摆放组件",
     "topology": "拓扑",
     "application": "应用",
     "javaVersion": "Java 版本",
@@ -69,6 +74,59 @@
     "apiMode": "API 模式",
     "localeMode": "语言状态",
     "themeMode": "主题状态",
-    "themeManaged": "可切换"
+    "themeManaged": "可切换",
+    "quickLinks": {
+      "newTool": "新工具",
+      "collectIdea": "记灵感",
+      "openFolder": "打开目录"
+    },
+    "notes": {
+      "first": "今天先把最常用的东西放上来。",
+      "second": "后续模块会把自己的组件送到这里。",
+      "third": "不需要的组件可以随时收起。",
+      "action": "写一条"
+    },
+    "widgets": {
+      "quickLinks": {
+        "title": "快捷入口",
+        "description": "把顺手动作放在前面"
+      },
+      "toolCatalog": {
+        "title": "工具目录",
+        "description": "已经接入的工具"
+      },
+      "notes": {
+        "title": "随手记",
+        "description": "先放想法和待办"
+      },
+      "runtime": {
+        "title": "连接状态",
+        "description": "当前服务概况"
+      }
+    },
+    "layout": {
+      "edit": "整理布局",
+      "save": "保存",
+      "cancel": "取消",
+      "reset": "恢复默认",
+      "addWidget": "添加组件",
+      "removeWidget": "移除组件",
+      "overview": "布局概况",
+      "grid": "网格",
+      "occupied": "占用",
+      "columns": "列",
+      "rows": "行",
+      "gap": "间距",
+      "dragToSort": "排序",
+      "moveEarlier": "前移组件",
+      "moveLater": "后移组件",
+      "decrease": "减少{label}",
+      "increase": "增加{label}",
+      "decreaseColSpan": "减少跨列",
+      "increaseColSpan": "增加跨列",
+      "decreaseRowSpan": "减少跨行",
+      "increaseRowSpan": "增加跨行",
+      "resizeWidget": "拖动调整组件大小"
+    }
   }
 }

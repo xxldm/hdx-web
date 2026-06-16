@@ -54,14 +54,19 @@
   },
   "workbench": {
     "title": "HDX Toolbox",
+    "heroTitle": "Arrange what you need today",
     "description": "Keep handy tools, content entry points, and local helpers together so they are ready when you need them.",
     "runtime": "Runtime",
     "tools": "Tool catalog",
     "enabledTools": "Enabled tools",
+    "enabledToolsCount": "{count} enabled",
     "emptyTools": "No tool records yet.",
     "loading": "Loading toolbox data",
     "unavailable": "Backend is unavailable, showing the local toolbox shell.",
     "loadFailed": "Toolbox data could not be loaded.",
+    "toolEnabled": "Enabled",
+    "toolDisabled": "Disabled",
+    "widgetLibrary": "Widget shelf",
     "topology": "Topology",
     "application": "Application",
     "javaVersion": "Java version",
@@ -69,6 +74,59 @@
     "apiMode": "API mode",
     "localeMode": "Locale state",
     "themeMode": "Theme state",
-    "themeManaged": "Switchable"
+    "themeManaged": "Switchable",
+    "quickLinks": {
+      "newTool": "New tool",
+      "collectIdea": "Capture idea",
+      "openFolder": "Open folder"
+    },
+    "notes": {
+      "first": "Put the most-used things here first.",
+      "second": "Future modules can bring their own widgets here.",
+      "third": "Hide anything you do not need right now.",
+      "action": "Write one"
+    },
+    "widgets": {
+      "quickLinks": {
+        "title": "Quick actions",
+        "description": "Keep handy actions up front"
+      },
+      "toolCatalog": {
+        "title": "Tool catalog",
+        "description": "Tools already connected"
+      },
+      "notes": {
+        "title": "Scratch notes",
+        "description": "Ideas and loose tasks"
+      },
+      "runtime": {
+        "title": "Connection",
+        "description": "Current service snapshot"
+      }
+    },
+    "layout": {
+      "edit": "Arrange layout",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reset": "Reset",
+      "addWidget": "Add widget",
+      "removeWidget": "Remove widget",
+      "overview": "Layout overview",
+      "grid": "Grid",
+      "occupied": "Used",
+      "columns": "Cols",
+      "rows": "Rows",
+      "gap": "Gap",
+      "dragToSort": "Sort",
+      "moveEarlier": "Move earlier",
+      "moveLater": "Move later",
+      "decrease": "Decrease {label}",
+      "increase": "Increase {label}",
+      "decreaseColSpan": "Decrease columns",
+      "increaseColSpan": "Increase columns",
+      "decreaseRowSpan": "Decrease rows",
+      "increaseRowSpan": "Increase rows",
+      "resizeWidget": "Drag to resize widget"
+    }
   }
 }
