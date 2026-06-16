@@ -8,11 +8,20 @@
 
 **Project:** HDX Web
 **Generated:** 2026-05-26 15:13:09
-**Category:** Micro SaaS
+**Category:** Consumer Toolbox
 
 ---
 
 ## Global Rules
+
+### Product Positioning
+
+- HDX Web 默认是偏用户端的个人工具箱，不是企业后台、SaaS 控制台或正式工作台。
+- 主要使用者是普通用户；管理者或企业账号只是部分内容发布、账号归属和权限能力的来源。
+- 视觉应年轻、轻松、可信，像一组随手可用的工具集合；避免企业软件常见的严肃、规整、厚重和管理后台感。
+- 页面可以保持信息密度和工程可信度，但文案优先使用“工具箱、常用工具、内容、收藏、本机/远端、打开、继续使用”等用户端语汇。
+- 只有账号管理、权限配置、企业归属、发布审核等明确管理场景，才允许局部使用更稳重的后台式排版。
+- `Liquid Glass` 可作为全局关键风格方向之一，用于登录、首页氛围层、工具入口和轻量面板；使用时必须保证文字、表单和状态提示可读。
 
 ### Color Palette
 
@@ -30,7 +39,7 @@
 
 - **Heading Font:** Plus Jakarta Sans
 - **Body Font:** Plus Jakarta Sans
-- **Mood:** friendly, modern, saas, clean, approachable, professional
+- **Mood:** friendly, modern, personal, playful, clean, approachable
 - **Google Fonts:** [Plus Jakarta Sans + Plus Jakarta Sans](https://fonts.google.com/share?selection.family=Plus+Jakarta+Sans:wght@300;400;500;600;700)
 
 **CSS Import:**
@@ -157,7 +166,7 @@
 
 **Keywords:** 2D, minimalist, bold colors, no shadows, clean lines, simple shapes, typography-focused, modern, icon-heavy
 
-**Best For:** Web apps, mobile apps, cross-platform, startup MVPs, user-friendly, SaaS, dashboards, corporate
+**Best For:** Web apps, mobile apps, cross-platform, personal tools, user-friendly consumer apps, lightweight productivity
 
 **Key Effects:** No gradients/shadows, simple hover (color/opacity shift), fast loading, clean transitions (150-200ms ease), minimal icons
 
@@ -174,6 +183,8 @@
 
 - ❌ Complex onboarding flow
 - ❌ Cluttered layout
+- ❌ Corporate dashboard / enterprise workbench tone by default
+- ❌ User-facing copy that overuses “管理”, “工作台”, “控制台”, or enterprise SaaS language
 
 ### Additional Forbidden Patterns
 

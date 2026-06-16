@@ -1,16 +1,22 @@
 {
   "app": {
     "name": "HDX",
-    "subtitle": "工具工作台"
+    "subtitle": "个人工具箱",
+    "iconAlt": "HDX 图标"
   },
   "actions": {
     "refresh": "刷新",
     "language": "语言",
-    "theme": "主题"
+    "theme": "主题",
+    "themeSystem": "跟随系统",
+    "themeLight": "浅色",
+    "themeDark": "深色"
   },
   "auth": {
     "loginTitle": "登录 HDX",
-    "loginDescription": "使用你的账号进入工具工作台。",
+    "loginDescription": "登录后继续使用你的工具箱。",
+    "loginHeroTitle": "打开你的工具箱",
+    "loginPanelTitle": "回来继续折腾",
     "identifier": "账号",
     "identifierPlaceholder": "请输入账号",
     "password": "密码",
@@ -29,8 +35,7 @@
     },
     "csrfFailed": "登录校验已过期，请刷新页面后重试。",
     "logoutFailed": "退出登录未完全完成，请刷新页面确认状态。",
-    "sessionFailed": "登录状态暂时无法确认，请稍后重试。",
-    "backgroundAlt": "HDX 登录页背景图"
+    "sessionFailed": "登录状态暂时无法确认，请稍后重试。"
   },
   "desktopOnline": {
     "title": "远端服务",
@@ -48,15 +53,15 @@
     "gatewayCheck": "业务网关"
   },
   "workbench": {
-    "title": "HDX 工具工作台",
-    "description": "集中管理工具、运行状态和本机集成边界。",
+    "title": "HDX 工具箱",
+    "description": "把常用工具、内容入口和本机能力放在一起，需要时直接打开。",
     "runtime": "运行时",
     "tools": "工具目录",
     "enabledTools": "启用工具",
     "emptyTools": "还没有工具记录。",
-    "loading": "正在加载工作台数据",
-    "unavailable": "后端暂时不可用，已显示本地工作台骨架。",
-    "loadFailed": "工作台数据暂时无法加载。",
+    "loading": "正在加载工具箱数据",
+    "unavailable": "后端暂时不可用，已显示本地工具箱骨架。",
+    "loadFailed": "工具箱数据暂时无法加载。",
     "topology": "拓扑",
     "application": "应用",
     "javaVersion": "Java 版本",
