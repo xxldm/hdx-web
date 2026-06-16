@@ -50,6 +50,19 @@ describe('workbench layout store', () => {
     expect(reorderedWidgets.map(widget => widget.order)).toEqual([0, 1, 2])
   })
 
+  it('drops a widget after the target when dragging forward', () => {
+    const widgets = [
+      createWidget('first', 0, 1, 1),
+      createWidget('second', 1, 1, 1),
+      createWidget('third', 2, 1, 1)
+    ]
+
+    const reorderedWidgets = reorderLayoutWidgets(widgets, 'first', 'second')
+
+    expect(reorderedWidgets.map(widget => widget.id)).toEqual(['second', 'first', 'third'])
+    expect(reorderedWidgets.map(widget => widget.order)).toEqual([0, 1, 2])
+  })
+
   it('saves draft changes to local storage', async () => {
     const store = useWorkbenchLayoutStore()
 
@@ -84,6 +97,12 @@ describe('workbench layout store', () => {
     store.previewDragOverWidget('default-quick-links')
 
     expect(store.widgets.map(widget => widget.id)).toEqual([
+      'default-quick-links',
+      'default-tool-catalog',
+      'default-notes',
+      'default-runtime'
+    ])
+    expect(store.placedWidgets.map(widget => widget.id)).toEqual([
       'default-runtime',
       'default-quick-links',
       'default-tool-catalog',

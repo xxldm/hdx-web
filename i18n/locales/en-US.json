@@ -67,6 +67,12 @@
     "toolEnabled": "Enabled",
     "toolDisabled": "Disabled",
     "widgetLibrary": "Widget shelf",
+    "menu": "Menu",
+    "account": {
+      "menu": "Account menu",
+      "current": "Current user",
+      "settings": "Settings"
+    },
     "topology": "Topology",
     "application": "Application",
     "javaVersion": "Java version",

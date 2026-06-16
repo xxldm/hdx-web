@@ -15,20 +15,22 @@ const { t } = useI18n()
 const layout = useWorkbenchLayoutStore()
 const definition = computed(() => getWorkbenchWidgetDefinition(props.widget.key))
 const isDropTarget = computed(() => layout.dropTargetWidgetId === props.widget.id && layout.draggedWidgetId !== props.widget.id)
-const canIncreaseColSpan = computed(() => props.widget.colSpan < layout.columns)
-const canDecreaseColSpan = computed(() => props.widget.colSpan > 1)
-const canIncreaseRowSpan = computed(() => props.widget.rowSpan < layout.rows)
-const canDecreaseRowSpan = computed(() => props.widget.rowSpan > 1)
 const isDragging = computed(() => layout.draggedWidgetId === props.widget.id)
 const isResizing = computed(() => layout.resizingWidgetId === props.widget.id)
 const dragOffset = reactive({
   x: 0,
   y: 0
 })
+const dragFixedRect = reactive({
+  width: 0,
+  height: 0
+})
 const itemElement = ref<HTMLElement | null>(null)
 let dragPointerId: number | null = null
 let dragStartX = 0
 let dragStartY = 0
+let dragStartLeft = 0
+let dragStartTop = 0
 let dragHasStarted = false
 let resizePointerId: number | null = null
 let resizeStartX = 0
@@ -56,17 +58,15 @@ const componentProps = computed(() => {
   return {}
 })
 
-function updateColSpan(delta: number) {
-  layout.updateWidgetSpan(props.widget.id, {
-    colSpan: props.widget.colSpan + delta
-  })
+interface DragTargetRect {
+  id: string
+  left: number
+  right: number
+  top: number
+  bottom: number
 }
 
-function updateRowSpan(delta: number) {
-  layout.updateWidgetSpan(props.widget.id, {
-    rowSpan: props.widget.rowSpan + delta
-  })
-}
+let dragTargetRects: DragTargetRect[] = []
 
 function onItemPointerDown(event: PointerEvent) {
   if (!props.editing || event.button !== 0 || isWorkbenchControl(event.target)) {
@@ -88,9 +88,20 @@ function onDragHandlePointerDown(event: PointerEvent) {
 function startLocalDrag(event: PointerEvent) {
   event.preventDefault()
   removeWindowDragListeners()
+  const itemRect = itemElement.value?.getBoundingClientRect()
+
+  if (!itemRect) {
+    return
+  }
+
   dragPointerId = event.pointerId
   dragStartX = event.clientX
   dragStartY = event.clientY
+  dragStartLeft = itemRect.left
+  dragStartTop = itemRect.top
+  dragFixedRect.width = itemRect.width
+  dragFixedRect.height = itemRect.height
+  dragTargetRects = collectDragTargetRects()
   dragHasStarted = false
   itemElement.value?.setPointerCapture(event.pointerId)
   window.addEventListener('pointermove', onWindowDragPointerMove)
@@ -131,6 +142,8 @@ function onItemPointerUp(event: PointerEvent) {
 
     if (targetWidgetId && targetWidgetId !== props.widget.id) {
       layout.dropOnWidget(targetWidgetId)
+    } else if (layout.dropTargetWidgetId) {
+      layout.dropOnMarkedTarget()
     } else {
       layout.endDrag()
     }
@@ -168,10 +181,9 @@ function onResizePointerDown(event: PointerEvent) {
   event.stopPropagation()
 
   const grid = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')
-  const gridRect = grid?.getBoundingClientRect()
   const itemRect = itemElement.value?.getBoundingClientRect()
 
-  if (!grid || !gridRect || !itemRect) {
+  if (!grid || !itemRect) {
     return
   }
 
@@ -215,7 +227,7 @@ function onResizePointerUp(event: PointerEvent) {
     return
   }
 
-  endLocalResize(event.currentTarget as HTMLElement)
+  endLocalResize()
 }
 
 function onResizePointerCancel(event: PointerEvent) {
@@ -223,7 +235,7 @@ function onResizePointerCancel(event: PointerEvent) {
     return
   }
 
-  endLocalResize(event.currentTarget as HTMLElement)
+  endLocalResize()
 }
 
 function onWindowResizePointerMove(event: PointerEvent) {
@@ -244,6 +256,9 @@ function endLocalDrag(pointerId?: number) {
   dragHasStarted = false
   dragOffset.x = 0
   dragOffset.y = 0
+  dragFixedRect.width = 0
+  dragFixedRect.height = 0
+  dragTargetRects = []
   removeWindowDragListeners()
 
   if (capturedPointerId !== null && pointerId === capturedPointerId && itemElement.value?.hasPointerCapture(pointerId)) {
@@ -290,8 +305,40 @@ function previewWidgetUnderPointer(clientX: number, clientY: number) {
 }
 
 function getWidgetIdUnderPointer(clientX: number, clientY: number) {
-  const target = document.elementFromPoint(clientX, clientY)
-  return target?.closest<HTMLElement>('[data-workbench-widget-id]')?.dataset.workbenchWidgetId ?? null
+  const targetRect = dragTargetRects.find(rect =>
+    clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  )
+
+  if (targetRect) {
+    return targetRect.id
+  }
+
+  const elements = document.elementsFromPoint(clientX, clientY)
+  return elements
+    .map(element => element.closest<HTMLElement>('[data-workbench-widget-id]')?.dataset.workbenchWidgetId ?? null)
+    .find(widgetId => widgetId && widgetId !== layout.draggedWidgetId) ?? null
+}
+
+function collectDragTargetRects() {
+  const grid = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')
+
+  if (!grid) {
+    return []
+  }
+
+  return [...grid.querySelectorAll<HTMLElement>('[data-workbench-widget-id]')]
+    .filter(element => element.dataset.workbenchWidgetId && element.dataset.workbenchWidgetId !== props.widget.id)
+    .map((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        id: element.dataset.workbenchWidgetId ?? '',
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom
+      }
+    })
+    .filter(rect => rect.id)
 }
 
 function isWorkbenchControl(target: EventTarget | null) {
@@ -325,7 +372,11 @@ onUnmounted(() => {
       gridRowStart: widget.row + 1,
       gridRowEnd: `span ${widget.rowSpan}`,
       '--workbench-drag-x': `${dragOffset.x}px`,
-      '--workbench-drag-y': `${dragOffset.y}px`
+      '--workbench-drag-y': `${dragOffset.y}px`,
+      '--workbench-drag-left': `${dragStartLeft}px`,
+      '--workbench-drag-top': `${dragStartTop}px`,
+      '--workbench-drag-width': `${dragFixedRect.width}px`,
+      '--workbench-drag-height': `${dragFixedRect.height}px`
     }"
     @pointerdown="onItemPointerDown"
     @pointermove="onItemPointerMove"
@@ -333,8 +384,8 @@ onUnmounted(() => {
     @pointercancel="onItemPointerCancel"
     @lostpointercapture="onItemPointerCancel"
   >
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
-    <div class="relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 p-4">
+    <div class="toolbox-card-content relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-4">
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
       <header class="flex min-w-0 items-start justify-between gap-3">
         <div class="flex min-w-0 items-center gap-3">
           <div class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
@@ -350,16 +401,15 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="editing" class="flex shrink-0 items-center gap-1 rounded-full border border-white/55 bg-white/62 p-1 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
+        <div v-if="editing" data-workbench-control="true" class="flex shrink-0 items-center gap-1 rounded-full border border-white/55 bg-white/62 p-1 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
           <UTooltip :text="t('workbench.layout.removeWidget')">
             <UButton
               type="button"
               color="neutral"
               variant="ghost"
-              size="xs"
               icon="lucide:x"
               :aria-label="t('workbench.layout.removeWidget')"
-              class="cursor-pointer"
+              class="toolbox-icon-button cursor-pointer"
               @click.stop="layout.removeWidget(widget.id)"
             />
           </UTooltip>
@@ -373,101 +423,60 @@ onUnmounted(() => {
         />
       </div>
 
-      <div
-        v-if="editing"
-        data-workbench-control="true"
-        class="absolute inset-x-3 bottom-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-900/10 bg-white/82 px-2 py-1.5 text-xs shadow-lg shadow-slate-900/10 backdrop-blur-xl dark:border-white/14 dark:bg-slate-950/72 dark:shadow-black/35"
-      >
-        <span
-          class="inline-flex cursor-grab select-none items-center gap-1 rounded-full px-2 py-1 font-medium text-slate-600 active:cursor-grabbing dark:text-white/64"
-          @pointerdown="onDragHandlePointerDown"
-        >
-          <UIcon name="lucide:move" class="size-3.5" />
-          {{ t('workbench.layout.dragToSort') }}
-        </span>
-        <div class="flex items-center gap-1">
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:arrow-left"
-            :aria-label="t('workbench.layout.moveEarlier')"
-            class="cursor-pointer"
-            @click.stop="layout.moveWidget(widget.id, -1)"
-          />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:arrow-right"
-            :aria-label="t('workbench.layout.moveLater')"
-            class="cursor-pointer"
-            @click.stop="layout.moveWidget(widget.id, 1)"
-          />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:chevron-left"
-            :disabled="!canDecreaseColSpan"
-            :aria-label="t('workbench.layout.decreaseColSpan')"
-            class="cursor-pointer"
-            @click.stop="updateColSpan(-1)"
-          />
-          <span class="min-w-8 text-center font-semibold text-slate-800 dark:text-white">{{ widget.colSpan }}x{{ widget.rowSpan }}</span>
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:chevron-right"
-            :disabled="!canIncreaseColSpan"
-            :aria-label="t('workbench.layout.increaseColSpan')"
-            class="cursor-pointer"
-            @click.stop="updateColSpan(1)"
-          />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:chevron-up"
-            :disabled="!canDecreaseRowSpan"
-            :aria-label="t('workbench.layout.decreaseRowSpan')"
-            class="cursor-pointer"
-            @click.stop="updateRowSpan(-1)"
-          />
-          <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            icon="lucide:chevron-down"
-            :disabled="!canIncreaseRowSpan"
-            :aria-label="t('workbench.layout.increaseRowSpan')"
-            class="cursor-pointer"
-            @click.stop="updateRowSpan(1)"
-          />
+      <div v-if="editing" class="toolbox-edit-overlay pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-slate-950/10 opacity-0 backdrop-blur-[1px] transition-opacity duration-200 group-hover:opacity-100 dark:bg-black/20">
+        <div data-workbench-control="true" class="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/65 bg-white/78 p-1.5 shadow-xl shadow-slate-900/12 backdrop-blur-2xl dark:border-white/16 dark:bg-slate-950/72 dark:shadow-black/35">
+          <UTooltip :text="t('workbench.layout.dragToSort')">
+            <UButton
+              type="button"
+              color="neutral"
+              variant="ghost"
+              icon="lucide:move"
+              class="toolbox-icon-button cursor-grab active:cursor-grabbing"
+              :aria-label="t('workbench.layout.dragToSort')"
+              @pointerdown="onDragHandlePointerDown"
+            />
+          </UTooltip>
+          <UTooltip :text="t('workbench.layout.moveEarlier')">
+            <UButton
+              type="button"
+              color="neutral"
+              variant="ghost"
+              icon="lucide:arrow-left"
+              class="toolbox-icon-button cursor-pointer"
+              :aria-label="t('workbench.layout.moveEarlier')"
+              @click.stop="layout.moveWidget(widget.id, -1)"
+            />
+          </UTooltip>
+          <UTooltip :text="t('workbench.layout.moveLater')">
+            <UButton
+              type="button"
+              color="neutral"
+              variant="ghost"
+              icon="lucide:arrow-right"
+              class="toolbox-icon-button cursor-pointer"
+              :aria-label="t('workbench.layout.moveLater')"
+              @click.stop="layout.moveWidget(widget.id, 1)"
+            />
+          </UTooltip>
+          <span class="px-1.5 text-xs font-semibold tabular-nums text-slate-700 dark:text-white/74">{{ widget.colSpan }}x{{ widget.rowSpan }}</span>
         </div>
       </div>
 
-      <button
+      <UButton
         v-if="editing"
         type="button"
+        color="neutral"
+        variant="ghost"
+        icon="lucide:grip"
         data-workbench-control="true"
-        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-20 cursor-nwse-resize rounded-md border border-slate-900/16 bg-white/80 text-slate-700 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-colors duration-200 hover:bg-cyan-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-white/18 dark:bg-slate-950/68 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
+        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize rounded-md border border-white/65 bg-white/78 text-slate-700 opacity-0 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 group-hover:opacity-100 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
         :aria-label="t('workbench.layout.resizeWidget')"
         @pointerdown="onResizePointerDown"
         @pointermove="onResizePointerMove"
         @pointerup="onResizePointerUp"
         @pointercancel="onResizePointerCancel"
         @lostpointercapture="onResizePointerCancel"
-      >
-        <UIcon name="lucide:grip" class="size-3.5" />
-      </button>
+      />
     </div>
   </article>
 </template>
@@ -483,20 +492,70 @@ onUnmounted(() => {
   touch-action: none;
 }
 
+.toolbox-card-content {
+  min-height: inherit;
+}
+
 .toolbox-grid-item-dragging {
-  z-index: 30;
-  pointer-events: none;
-  opacity: 0.78;
-  translate: var(--workbench-drag-x) var(--workbench-drag-y);
-  scale: 1.015;
+  border-style: dashed;
+  background: rgba(125, 211, 252, 0.14);
+  box-shadow: none;
+}
+
+.toolbox-grid-item-dragging .toolbox-card-content {
+  position: fixed;
+  top: var(--workbench-drag-top);
+  left: var(--workbench-drag-left);
+  z-index: 40;
+  width: var(--workbench-drag-width);
+  height: var(--workbench-drag-height);
+  min-height: 0;
+  pointer-events: none !important;
+  opacity: 0.8;
+  transform: translate3d(var(--workbench-drag-x), var(--workbench-drag-y), 0) scale(1.015);
+  transition: none;
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
 }
 
 .toolbox-grid-item-resizing {
   z-index: 20;
   border-color: rgba(6, 182, 212, 0.72);
-  background: rgba(236, 254, 255, 0.72);
   box-shadow: 0 24px 60px rgba(8, 145, 178, 0.16);
+}
+
+.toolbox-grid-item-resizing .toolbox-card-content {
+  opacity: 0.72;
+}
+
+.toolbox-icon-button {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.78);
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.toolbox-icon-button:hover {
+  background: rgba(14, 165, 233, 0.14);
+  color: rgb(15, 23, 42);
+}
+
+.dark .toolbox-icon-button {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.dark .toolbox-icon-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
 }
 
 .toolbox-resize-handle {

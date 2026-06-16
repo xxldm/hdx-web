@@ -66,17 +66,25 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const draft = ref<WorkbenchLayout>(cloneLayout(storedLayout.value))
   const draggedWidgetId = ref<string | null>(null)
   const dropTargetWidgetId = ref<string | null>(null)
-  const lastPreviewTargetWidgetId = ref<string | null>(null)
-  const dragStartLayout = ref<WorkbenchLayout | null>(null)
-  const dragCommitted = ref(false)
   const resizingWidgetId = ref<string | null>(null)
 
   const layout = computed(() => editing.value ? draft.value : storedLayout.value)
+  const previewLayout = computed(() => {
+    if (!editing.value || !draggedWidgetId.value || !dropTargetWidgetId.value || draggedWidgetId.value === dropTargetWidgetId.value) {
+      return layout.value
+    }
+
+    return normalizeLayout({
+      ...layout.value,
+      widgets: reorderLayoutWidgets(layout.value.widgets, draggedWidgetId.value, dropTargetWidgetId.value)
+    })
+  })
   const rows = computed(() => layout.value.rows)
   const columns = computed(() => layout.value.columns)
   const gap = computed(() => layout.value.gap)
   const widgets = computed(() => sortedWidgets(layout.value.widgets))
-  const placedWidgets = computed(() => placeWorkbenchWidgets(layout.value))
+  const placedWidgets = computed(() => placeWorkbenchWidgets(previewLayout.value))
+  const draggedPlacedWidget = computed(() => placedWidgets.value.find(widget => widget.id === draggedWidgetId.value) ?? null)
   const occupiedCells = computed(() => placedWidgets.value.reduce((total, widget) => total + widget.colSpan * widget.rowSpan, 0))
   const totalCells = computed(() => rows.value * columns.value)
   const emptyCellCount = computed(() => Math.max(totalCells.value - occupiedCells.value, 0))
@@ -93,9 +101,6 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draft.value = cloneLayout(storedLayout.value)
     draggedWidgetId.value = null
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
-    dragStartLayout.value = null
-    dragCommitted.value = false
     resizingWidgetId.value = null
     editing.value = true
   }
@@ -104,9 +109,6 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draft.value = cloneLayout(storedLayout.value)
     draggedWidgetId.value = null
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
-    dragStartLayout.value = null
-    dragCommitted.value = false
     resizingWidgetId.value = null
     editing.value = false
   }
@@ -116,9 +118,6 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draft.value = cloneLayout(storedLayout.value)
     draggedWidgetId.value = null
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
-    dragStartLayout.value = null
-    dragCommitted.value = false
     resizingWidgetId.value = null
     editing.value = false
   }
@@ -127,9 +126,6 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draft.value = cloneLayout(defaultWorkbenchLayout)
     draggedWidgetId.value = null
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
-    dragStartLayout.value = null
-    dragCommitted.value = false
     resizingWidgetId.value = null
   }
 
@@ -202,11 +198,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    dragStartLayout.value = cloneLayout(draft.value)
-    dragCommitted.value = false
     draggedWidgetId.value = widgetId
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
   }
 
   function markDropTarget(widgetId: string | null) {
@@ -234,11 +227,6 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     }
 
     dropTargetWidgetId.value = targetWidgetId
-    lastPreviewTargetWidgetId.value = targetWidgetId
-    draft.value = normalizeLayout({
-      ...draft.value,
-      widgets: reorderLayoutWidgets(draft.value.widgets, sourceWidgetId, targetWidgetId)
-    })
   }
 
   function dropOnWidget(targetWidgetId: string) {
@@ -249,11 +237,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    if (lastPreviewTargetWidgetId.value !== targetWidgetId) {
-      reorderWidgets(sourceWidgetId, targetWidgetId)
-    }
+    reorderWidgets(sourceWidgetId, targetWidgetId)
 
-    dragCommitted.value = true
     endDrag()
   }
 
@@ -269,15 +254,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   }
 
   function endDrag() {
-    if (dragStartLayout.value && !dragCommitted.value) {
-      draft.value = cloneLayout(dragStartLayout.value)
-    }
-
     draggedWidgetId.value = null
     dropTargetWidgetId.value = null
-    lastPreviewTargetWidgetId.value = null
-    dragStartLayout.value = null
-    dragCommitted.value = false
   }
 
   function beginResize(widgetId: string) {
@@ -309,13 +287,20 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    const targetWidget = orderedWidgets[targetIndex]
+    const [movedWidget] = orderedWidgets.splice(currentIndex, 1)
 
-    if (!targetWidget) {
+    if (!movedWidget) {
       return
     }
 
-    reorderWidgets(widgetId, targetWidget.id)
+    orderedWidgets.splice(targetIndex, 0, movedWidget)
+    draft.value = normalizeLayout({
+      ...draft.value,
+      widgets: orderedWidgets.map((widget, index) => ({
+        ...widget,
+        order: index
+      }))
+    })
   }
 
   function updateDraftLayout(patch: Partial<Pick<WorkbenchLayout, 'rows' | 'columns' | 'gap'>>) {
@@ -331,11 +316,13 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     dropTargetWidgetId,
     resizingWidgetId,
     layout,
+    previewLayout,
     rows,
     columns,
     gap,
     widgets,
     placedWidgets,
+    draggedPlacedWidget,
     occupiedCells,
     totalCells,
     emptyCellCount,

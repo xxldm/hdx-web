@@ -67,6 +67,12 @@
     "toolEnabled": "启用",
     "toolDisabled": "停用",
     "widgetLibrary": "可摆放组件",
+    "menu": "菜单",
+    "account": {
+      "menu": "账户菜单",
+      "current": "当前用户",
+      "settings": "设置"
+    },
     "topology": "拓扑",
     "application": "应用",
     "javaVersion": "Java 版本",

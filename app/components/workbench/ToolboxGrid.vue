@@ -17,18 +17,20 @@ const widgetMenuItems = computed(() => workbenchWidgetDefinitions.map(definition
   icon: definition.icon,
   onSelect: () => layout.addWidget(definition.key as WorkbenchWidgetKey)
 })))
-const emptyCellPreviewCount = computed(() => Math.min(layout.emptyCellCount, 12))
+const canShowAddWidget = computed(() => layout.emptyCellCount > 0)
+const emptyCellPreviewCount = computed(() => Math.min(Math.max(layout.emptyCellCount - (canShowAddWidget.value ? 1 : 0), 0), 12))
 </script>
 
 <template>
-  <section class="grid gap-3">
+  <section class="grid h-full min-h-0 gap-3 overflow-hidden">
     <TransitionGroup
       name="toolbox-grid"
       tag="div"
-      class="toolbox-grid"
+      class="toolbox-grid h-full min-h-0"
       data-workbench-grid="true"
       :style="{
         '--toolbox-columns': layout.columns,
+        '--toolbox-rows': layout.rows,
         '--toolbox-gap': `${layout.gap}px`,
         '--toolbox-row-min': '8rem'
       }"
@@ -44,7 +46,7 @@ const emptyCellPreviewCount = computed(() => Math.min(layout.emptyCellCount, 12)
       />
 
       <div
-        v-if="layout.editing"
+        v-if="layout.editing && canShowAddWidget"
         key="add-widget"
         class="min-h-32"
       >
@@ -52,15 +54,18 @@ const emptyCellPreviewCount = computed(() => Math.min(layout.emptyCellCount, 12)
           :items="widgetMenuItems"
           :content="{ align: 'start' }"
         >
-          <button
+          <UButton
             type="button"
-            class="grid h-full min-h-32 w-full cursor-pointer place-items-center rounded-lg border border-dashed border-cyan-400/70 bg-cyan-50/44 text-cyan-800 transition-colors duration-200 hover:bg-cyan-100/58 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-cyan-200/34 dark:bg-cyan-300/8 dark:text-cyan-100 dark:hover:bg-cyan-300/14"
+            color="primary"
+            variant="soft"
+            block
+            class="toolbox-add-widget-button cursor-pointer"
           >
             <span class="grid justify-items-center gap-2">
               <UIcon name="lucide:plus" class="size-6" />
               <span class="text-sm font-semibold">{{ t('workbench.layout.addWidget') }}</span>
             </span>
-          </button>
+          </UButton>
         </UDropdownMenu>
       </div>
 
@@ -79,7 +84,8 @@ const emptyCellPreviewCount = computed(() => Math.min(layout.emptyCellCount, 12)
 .toolbox-grid {
   display: grid;
   grid-template-columns: repeat(var(--toolbox-columns), minmax(0, 1fr));
-  grid-auto-rows: minmax(var(--toolbox-row-min), auto);
+  grid-template-rows: repeat(var(--toolbox-rows), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
   gap: var(--toolbox-gap);
   grid-auto-flow: dense;
 }
@@ -96,6 +102,36 @@ const emptyCellPreviewCount = computed(() => Math.min(layout.emptyCellCount, 12)
 .toolbox-grid-leave-to {
   opacity: 0;
   transform: translateY(0.5rem);
+}
+
+.toolbox-add-widget-button {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 8rem;
+  place-items: center;
+  border: 1px dashed rgba(34, 211, 238, 0.7);
+  border-radius: 0.5rem;
+  background: rgba(236, 254, 255, 0.44);
+  color: rgb(21, 94, 117);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.toolbox-add-widget-button:hover {
+  background: rgba(207, 250, 254, 0.58);
+}
+
+.dark .toolbox-add-widget-button {
+  border-color: rgba(165, 243, 252, 0.34);
+  background: rgba(103, 232, 249, 0.08);
+  color: rgb(207, 250, 254);
+}
+
+.dark .toolbox-add-widget-button:hover {
+  background: rgba(103, 232, 249, 0.14);
 }
 
 @media (max-width: 767px) {
