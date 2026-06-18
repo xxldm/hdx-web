@@ -125,6 +125,37 @@ describe('workbench layout store', () => {
     })
   })
 
+  it('pushes affected widgets by the minimum required rows when a short widget moves back upward', () => {
+    const widgets = [
+      createWidget('quick-links', 0, 0, 2, 4, 1),
+      createWidget('notes', 1, 0, 0, 2, 2),
+      createWidget('runtime', 2, 2, 0, 2, 1)
+    ]
+
+    const movedWidgets = moveLayoutWidget(
+      widgets,
+      4,
+      4,
+      'quick-links',
+      { column: 0, row: 0 },
+      'notes',
+      'down'
+    )
+
+    expect(movedWidgets.find(widget => widget.id === 'quick-links')).toMatchObject({
+      column: 0,
+      row: 0
+    })
+    expect(movedWidgets.find(widget => widget.id === 'notes')).toMatchObject({
+      column: 0,
+      row: 1
+    })
+    expect(movedWidgets.find(widget => widget.id === 'runtime')).toMatchObject({
+      column: 2,
+      row: 1
+    })
+  })
+
   it('saves draft changes to local storage', async () => {
     const store = useWorkbenchLayoutStore()
 

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { RuntimeInfo, ToolRecord } from '~/types/hdx-api'
-import type { PlacedWorkbenchWidget, WorkbenchDropPlacement, WorkbenchGridPosition } from '~/stores/workbench-layout'
+import type {
+  PlacedWorkbenchWidget,
+  WorkbenchDropPlacement,
+  WorkbenchGridPosition,
+  WorkbenchPushDirection
+} from '~/stores/workbench-layout'
 import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
 import { getWorkbenchWidgetDefinition, workbenchWidgetDefinitions } from '~/utils/workbench-widgets'
 
@@ -110,6 +115,7 @@ interface DragGridRect {
 interface WidgetDropTarget {
   id: string
   placement: WorkbenchDropPlacement
+  pushDirection: WorkbenchPushDirection
   position: WorkbenchGridPosition
 }
 
@@ -196,7 +202,7 @@ function onItemPointerUp(event: PointerEvent) {
     const target = getWidgetDropTargetUnderPointer(event.clientX, event.clientY)
 
     if (target && target.id !== props.widget.id) {
-      layout.dropOnPosition(target.position, target.id, target.placement)
+      layout.dropOnPosition(target.position, target.id, target.placement, target.pushDirection)
     } else if (target) {
       layout.dropOnPosition(target.position)
     } else if (isPointerInsideGrid(event.clientX, event.clientY)) {
@@ -369,7 +375,7 @@ function previewWidgetUnderPointer(clientX: number, clientY: number) {
   const target = getWidgetDropTargetUnderPointer(clientX, clientY)
 
   if (target) {
-    layout.previewDragOverPosition(target.id, target.position, target.placement)
+    layout.previewDragOverPosition(target.id, target.position, target.placement, target.pushDirection)
     return
   }
 
@@ -550,10 +556,12 @@ function createDropTargetFromRect(rect: DragTargetRect, dragRect: DragPreviewRec
   const rectCenterY = rect.top + rect.height / 2
   const horizontal = resolveDropAxis(rect, dragCenterX, dragCenterY, rectCenterX, rectCenterY)
   const placement = resolveDropPlacementByEdge(rect, dragRect, horizontal)
+  const pushDirection = resolvePushDirection(horizontal, dragCenterX, dragCenterY, rectCenterX, rectCenterY)
 
   return {
     id: rect.id,
     placement,
+    pushDirection,
     position: {
       column: projectedRect?.column ?? rect.column,
       row: projectedRect?.row ?? rect.row
@@ -596,6 +604,20 @@ function resolveDropPlacementByEdge(rect: DragTargetRect, dragRect: DragPreviewR
     : dragRect.top + dragRect.height / 2
 
   return dragCenter >= rectCenter ? 'after' : 'before'
+}
+
+function resolvePushDirection(
+  horizontal: boolean,
+  dragCenterX: number,
+  dragCenterY: number,
+  rectCenterX: number,
+  rectCenterY: number
+): WorkbenchPushDirection {
+  if (horizontal) {
+    return dragCenterX >= rectCenterX ? 'right' : 'left'
+  }
+
+  return dragCenterY >= rectCenterY ? 'down' : 'up'
 }
 
 function gridRangesOverlap(sourceStart: number, sourceSpan: number, targetStart: number, targetSpan: number) {

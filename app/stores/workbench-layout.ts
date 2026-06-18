@@ -11,6 +11,7 @@ const minGap = 2
 const maxGap = 24
 const maxWidgetCount = 24
 export type WorkbenchDropPlacement = 'before' | 'after'
+export type WorkbenchPushDirection = 'up' | 'down' | 'left' | 'right'
 
 export interface WorkbenchGridPosition {
   column: number
@@ -91,6 +92,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const draggedWidgetId = ref<string | null>(null)
   const dropTargetWidgetId = ref<string | null>(null)
   const dropTargetPlacement = ref<WorkbenchDropPlacement>('before')
+  const dropTargetPushDirection = ref<WorkbenchPushDirection | null>(null)
   const dropTargetColumn = ref<number | null>(null)
   const dropTargetRow = ref<number | null>(null)
   const resizingWidgetId = ref<string | null>(null)
@@ -109,7 +111,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
         layout.value.columns,
         draggedWidgetId.value,
         { column: dropTargetColumn.value, row: dropTargetRow.value },
-        dropTargetWidgetId.value
+        dropTargetWidgetId.value,
+        dropTargetPushDirection.value
       )
     })
   })
@@ -293,6 +296,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draggedWidgetId.value = widgetId
     dropTargetWidgetId.value = null
     dropTargetPlacement.value = 'before'
+    dropTargetPushDirection.value = null
     dropTargetColumn.value = null
     dropTargetRow.value = null
   }
@@ -305,7 +309,11 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     previewDragOverWidget(widgetId)
   }
 
-  function previewDragOverWidget(targetWidgetId: string | null, placement: WorkbenchDropPlacement = 'before') {
+  function previewDragOverWidget(
+    targetWidgetId: string | null,
+    placement: WorkbenchDropPlacement = 'before',
+    pushDirection: WorkbenchPushDirection | null = null
+  ) {
     if (!editing.value || !targetWidgetId) {
       clearDropTarget()
       return
@@ -318,10 +326,15 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    previewDragOverPosition(targetWidgetId, { column: targetWidget.column, row: targetWidget.row }, placement)
+    previewDragOverPosition(targetWidgetId, { column: targetWidget.column, row: targetWidget.row }, placement, pushDirection)
   }
 
-  function previewDragOverPosition(targetWidgetId: string | null, position: WorkbenchGridPosition, placement: WorkbenchDropPlacement = 'before') {
+  function previewDragOverPosition(
+    targetWidgetId: string | null,
+    position: WorkbenchGridPosition,
+    placement: WorkbenchDropPlacement = 'before',
+    pushDirection: WorkbenchPushDirection | null = null
+  ) {
     if (!editing.value || !draggedWidgetId.value) {
       return
     }
@@ -338,6 +351,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     if (
       dropTargetWidgetId.value === targetWidgetId
       && dropTargetPlacement.value === placement
+      && dropTargetPushDirection.value === pushDirection
       && dropTargetColumn.value === nextPosition.column
       && dropTargetRow.value === nextPosition.row
     ) {
@@ -346,6 +360,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
     dropTargetWidgetId.value = targetWidgetId
     dropTargetPlacement.value = placement
+    dropTargetPushDirection.value = pushDirection
     dropTargetColumn.value = nextPosition.column
     dropTargetRow.value = nextPosition.row
   }
@@ -361,7 +376,12 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     dropOnPosition({ column: targetWidget.column, row: targetWidget.row }, targetWidgetId, placement)
   }
 
-  function dropOnPosition(position: WorkbenchGridPosition, targetWidgetId: string | null = dropTargetWidgetId.value, placement: WorkbenchDropPlacement = dropTargetPlacement.value) {
+  function dropOnPosition(
+    position: WorkbenchGridPosition,
+    targetWidgetId: string | null = dropTargetWidgetId.value,
+    placement: WorkbenchDropPlacement = dropTargetPlacement.value,
+    pushDirection: WorkbenchPushDirection | null = dropTargetPushDirection.value
+  ) {
     const sourceWidgetId = draggedWidgetId.value
 
     if (!sourceWidgetId) {
@@ -371,7 +391,15 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
     draft.value = normalizeLayout({
       ...draft.value,
-      widgets: moveLayoutWidget(draft.value.widgets, draft.value.rows, draft.value.columns, sourceWidgetId, position, targetWidgetId)
+      widgets: moveLayoutWidget(
+        draft.value.widgets,
+        draft.value.rows,
+        draft.value.columns,
+        sourceWidgetId,
+        position,
+        targetWidgetId,
+        pushDirection
+      )
     })
 
     dropTargetPlacement.value = placement
@@ -450,6 +478,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   function clearDropTarget() {
     dropTargetWidgetId.value = null
     dropTargetPlacement.value = 'before'
+    dropTargetPushDirection.value = null
     dropTargetColumn.value = null
     dropTargetRow.value = null
   }
@@ -562,7 +591,8 @@ export function moveLayoutWidget(
   columns: number,
   sourceWidgetId: string,
   targetPosition: WorkbenchGridPosition,
-  targetWidgetId: string | null = null
+  targetWidgetId: string | null = null,
+  pushDirection: WorkbenchPushDirection | null = null
 ) {
   const orderedWidgets = sortedWidgets(widgets)
   const sourceWidget = orderedWidgets.find(widget => widget.id === sourceWidgetId)
@@ -577,6 +607,22 @@ export function moveLayoutWidget(
     const targetWidget = orderedWidgets.find(widget => widget.id === targetWidgetId)
 
     if (targetWidget) {
+      if (pushDirection) {
+        const pushedWidgets = pushWidgetsFromDrop(
+          orderedWidgets,
+          rows,
+          columns,
+          sourceWidget,
+          targetWidget,
+          nextPosition,
+          pushDirection
+        )
+
+        if (pushedWidgets) {
+          return normalizeWidgetOrders(pushedWidgets)
+        }
+      }
+
       const swappedWidgets = orderedWidgets.map((widget) => {
         if (widget.id === sourceWidgetId) {
           return {
@@ -760,6 +806,180 @@ function findNearestAvailableWidgetPosition(
 
     return left.column - right.column
   })[0] ?? null
+}
+
+function pushWidgetsFromDrop(
+  widgets: WorkbenchLayoutWidget[],
+  rows: number,
+  columns: number,
+  sourceWidget: WorkbenchLayoutWidget,
+  targetWidget: WorkbenchLayoutWidget,
+  nextPosition: WorkbenchGridPosition,
+  pushDirection: WorkbenchPushDirection
+) {
+  const widgetsById = new Map(widgets.map(widget => [widget.id, { ...widget }]))
+  const movedSource = {
+    ...sourceWidget,
+    column: nextPosition.column,
+    row: nextPosition.row
+  }
+  widgetsById.set(sourceWidget.id, movedSource)
+  const collidingWidgets = sortWidgetsForPush(
+    getCollidingWidgets(movedSource, widgetsById, sourceWidget.id),
+    pushDirection
+  )
+
+  if (!collidingWidgets.some(widget => widget.id === targetWidget.id)) {
+    return null
+  }
+
+  for (const collidingWidget of collidingWidgets) {
+    const requiredSteps = getRequiredPushSteps(movedSource, collidingWidget, pushDirection)
+
+    for (let step = 0; step < requiredSteps; step += 1) {
+      if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns)) {
+        return null
+      }
+    }
+  }
+
+  if (getCollidingWidgets(movedSource, widgetsById, sourceWidget.id).length > 0) {
+    return null
+  }
+
+  return [...widgetsById.values()]
+}
+
+function shiftWidgetChainOneCell(
+  widgetsById: Map<string, WorkbenchLayoutWidget>,
+  widgetId: string,
+  pushDirection: WorkbenchPushDirection,
+  rows: number,
+  columns: number
+) {
+  const snapshot = cloneWidgetMap(widgetsById)
+  const widget = widgetsById.get(widgetId)
+
+  if (!widget) {
+    return false
+  }
+
+  const { columnDelta, rowDelta } = getPushDirectionDelta(pushDirection)
+  const candidateWidget = {
+    ...widget,
+    column: widget.column + columnDelta,
+    row: widget.row + rowDelta
+  }
+
+  if (!isWidgetInsideGrid(candidateWidget, rows, columns)) {
+    restoreWidgetMap(widgetsById, snapshot)
+    return false
+  }
+
+  const collidingWidgets = sortWidgetsForPush(
+    getCollidingWidgets(candidateWidget, widgetsById, widgetId),
+    pushDirection
+  )
+
+  for (const collidingWidget of collidingWidgets) {
+    if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns)) {
+      restoreWidgetMap(widgetsById, snapshot)
+      return false
+    }
+  }
+
+  if (getCollidingWidgets(candidateWidget, widgetsById, widgetId).length > 0) {
+    restoreWidgetMap(widgetsById, snapshot)
+    return false
+  }
+
+  widgetsById.set(widgetId, candidateWidget)
+  return true
+}
+
+function getRequiredPushSteps(
+  sourceWidget: WorkbenchLayoutWidget,
+  targetWidget: WorkbenchLayoutWidget,
+  pushDirection: WorkbenchPushDirection
+) {
+  switch (pushDirection) {
+    case 'down':
+      return Math.max(sourceWidget.row + sourceWidget.rowSpan - targetWidget.row, 1)
+    case 'up':
+      return Math.max(targetWidget.row + targetWidget.rowSpan - sourceWidget.row, 1)
+    case 'right':
+      return Math.max(sourceWidget.column + sourceWidget.colSpan - targetWidget.column, 1)
+    case 'left':
+      return Math.max(targetWidget.column + targetWidget.colSpan - sourceWidget.column, 1)
+  }
+}
+
+function getPushDirectionDelta(pushDirection: WorkbenchPushDirection) {
+  switch (pushDirection) {
+    case 'up':
+      return { columnDelta: 0, rowDelta: -1 }
+    case 'down':
+      return { columnDelta: 0, rowDelta: 1 }
+    case 'left':
+      return { columnDelta: -1, rowDelta: 0 }
+    case 'right':
+      return { columnDelta: 1, rowDelta: 0 }
+  }
+}
+
+function sortWidgetsForPush(widgets: WorkbenchLayoutWidget[], pushDirection: WorkbenchPushDirection) {
+  return [...widgets].sort((left, right) => {
+    if (pushDirection === 'down') {
+      if (left.row !== right.row) {
+        return right.row - left.row
+      }
+    } else if (pushDirection === 'up') {
+      if (left.row !== right.row) {
+        return left.row - right.row
+      }
+    } else if (pushDirection === 'right') {
+      if (left.column !== right.column) {
+        return right.column - left.column
+      }
+    } else if (left.column !== right.column) {
+      return left.column - right.column
+    }
+
+    if (left.row !== right.row) {
+      return left.row - right.row
+    }
+
+    if (left.column !== right.column) {
+      return left.column - right.column
+    }
+
+    return left.id.localeCompare(right.id)
+  })
+}
+
+function getCollidingWidgets(
+  widget: WorkbenchLayoutWidget,
+  widgetsById: Map<string, WorkbenchLayoutWidget>,
+  ignoredWidgetId: string
+) {
+  return [...widgetsById.values()].filter(existingWidget =>
+    existingWidget.id !== ignoredWidgetId && gridWidgetsCollide(widget, existingWidget)
+  )
+}
+
+function cloneWidgetMap(widgetsById: Map<string, WorkbenchLayoutWidget>) {
+  return new Map([...widgetsById.entries()].map(([widgetId, widget]) => [widgetId, { ...widget }]))
+}
+
+function restoreWidgetMap(
+  widgetsById: Map<string, WorkbenchLayoutWidget>,
+  snapshot: Map<string, WorkbenchLayoutWidget>
+) {
+  widgetsById.clear()
+
+  for (const [widgetId, widget] of snapshot.entries()) {
+    widgetsById.set(widgetId, { ...widget })
+  }
 }
 
 function findWidgetPosition(occupied: boolean[][], colSpan: number, rowSpan: number) {
