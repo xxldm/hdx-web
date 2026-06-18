@@ -18,8 +18,6 @@ const hoverPosition = ref<WorkbenchGridPosition | null>(null)
 const addMenuOpen = ref(false)
 const manualFlipTransition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
 const manualFlipCleanupDelayMs = 260
-let debugLayoutSequence = 0
-let debugLayoutFrame: number | null = null
 const manualFlipCleanupTimers = new Map<string, number>()
 const renderedWidgets = computed(() => {
   const stableOrder = new Map(layout.widgets.map((widget, index) => [widget.id, index]))
@@ -38,11 +36,6 @@ const renderedWidgets = computed(() => {
 const flipLayoutSignature = computed(() => renderedWidgets.value
   .map(widget => `${widget.id}:${widget.column},${widget.row},${widget.colSpan}x${widget.rowSpan}`)
   .join('|'))
-const debugLayoutSignature = computed(() => [
-  `drag=${layout.draggedWidgetId ?? '-'}`,
-  `target=${layout.dropTargetWidgetId ?? '-'}`,
-  flipLayoutSignature.value
-].join('|'))
 const widgetMenuItems = computed(() => workbenchWidgetDefinitions.map(definition => ({
   label: t(definition.titleKey),
   icon: definition.icon,
@@ -245,74 +238,10 @@ function scheduleManualFlip() {
   })
 }
 
-function logWorkbenchLayoutDebug(signature: string) {
-  if (!import.meta.dev || !import.meta.client || !layout.editing) {
-    return
-  }
-
-  debugLayoutSequence += 1
-  const sequence = debugLayoutSequence
-
-  console.groupCollapsed(`[workbench-layout-debug #${sequence}] store ${signature}`)
-  console.table(renderedWidgets.value.map(widget => ({
-    id: widget.id,
-    key: widget.key,
-    column: widget.column,
-    row: widget.row,
-    colSpan: widget.colSpan,
-    rowSpan: widget.rowSpan,
-    dragged: layout.draggedWidgetId === widget.id,
-    dropTarget: layout.dropTargetWidgetId === widget.id
-  })))
-  console.groupEnd()
-
-  if (debugLayoutFrame !== null) {
-    cancelAnimationFrame(debugLayoutFrame)
-  }
-
-  debugLayoutFrame = requestAnimationFrame(() => {
-    debugLayoutFrame = null
-    const gridRect = gridElement.value?.getBoundingClientRect()
-    const domRows = [...(gridElement.value?.querySelectorAll<HTMLElement>('[data-workbench-widget-id]') ?? [])].map((element) => {
-      const rect = element.getBoundingClientRect()
-      const style = getComputedStyle(element)
-
-      return {
-        id: element.dataset.workbenchWidgetId,
-        left: Math.round(rect.left),
-        top: Math.round(rect.top),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        relLeft: gridRect ? Math.round(rect.left - gridRect.left) : null,
-        relTop: gridRect ? Math.round(rect.top - gridRect.top) : null,
-        gridColumnStart: style.gridColumnStart,
-        gridColumnEnd: style.gridColumnEnd,
-        gridRowStart: style.gridRowStart,
-        gridRowEnd: style.gridRowEnd,
-        hasMoveClass: element.classList.contains('toolbox-grid-move'),
-        transform: style.transform,
-        transition: style.transition
-      }
-    })
-
-    console.groupCollapsed(`[workbench-layout-debug #${sequence}] dom`)
-    console.table(domRows)
-    console.groupEnd()
-  })
-}
-
-if (import.meta.client && import.meta.dev) {
-  watch(debugLayoutSignature, logWorkbenchLayoutDebug, { flush: 'post' })
-}
-
 if (import.meta.client) {
   watch(flipLayoutSignature, scheduleManualFlip, { flush: 'pre' })
 
   onUnmounted(() => {
-    if (debugLayoutFrame !== null) {
-      cancelAnimationFrame(debugLayoutFrame)
-    }
-
     for (const cleanupTimer of manualFlipCleanupTimers.values()) {
       window.clearTimeout(cleanupTimer)
     }
