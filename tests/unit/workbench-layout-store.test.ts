@@ -243,6 +243,32 @@ describe('workbench layout store', () => {
     expect(store.addWidgetAt('runtime', { column: 0, row: 0 })).toBe(false)
   })
 
+  it('does not change widget key when the target widget size no longer fits at the current position', () => {
+    const store = useWorkbenchLayoutStore()
+
+    store.startEditing()
+    expect(store.canUpdateWidgetKey('default-runtime', 'tool-catalog')).toBe(false)
+    expect(store.updateWidgetKey('default-runtime', 'tool-catalog')).toBe(false)
+    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+      key: 'runtime',
+      colSpan: 1,
+      rowSpan: 1
+    })
+  })
+
+  it('changes widget key when the target widget size still fits at the current position', () => {
+    const store = useWorkbenchLayoutStore()
+
+    store.startEditing()
+    expect(store.canUpdateWidgetKey('default-quick-links', 'runtime')).toBe(true)
+    expect(store.updateWidgetKey('default-quick-links', 'runtime')).toBe(true)
+    expect(store.widgets.find(widget => widget.id === 'default-quick-links')).toMatchObject({
+      key: 'runtime',
+      colSpan: 1,
+      rowSpan: 1
+    })
+  })
+
   it('tracks resize state while widget spans update', () => {
     const store = useWorkbenchLayoutStore()
 

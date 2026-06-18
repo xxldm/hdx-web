@@ -12,9 +12,14 @@ import { getWorkbenchWidgetDefinition, workbenchWidgetDefinitions } from '~/util
 const props = defineProps<{
   widget: PlacedWorkbenchWidget
   editing: boolean
+  selected?: boolean
   tools: ToolRecord[]
   runtime: RuntimeInfo | null
   loading: boolean
+}>()
+const emit = defineEmits<{
+  select: [widgetId: string]
+  leave: [widgetId: string]
 }>()
 
 const { t } = useI18n()
@@ -23,15 +28,14 @@ const definition = computed(() => getWorkbenchWidgetDefinition(props.widget.key)
 const isDropTarget = computed(() => layout.dropTargetWidgetId === props.widget.id && layout.draggedWidgetId !== props.widget.id)
 const isDragging = computed(() => layout.draggedWidgetId === props.widget.id)
 const isResizing = computed(() => layout.resizingWidgetId === props.widget.id)
-const canIncreaseColSpan = computed(() => props.widget.colSpan < layout.columns)
-const canDecreaseColSpan = computed(() => props.widget.colSpan > 1)
-const canIncreaseRowSpan = computed(() => props.widget.rowSpan < layout.rows)
-const canDecreaseRowSpan = computed(() => props.widget.rowSpan > 1)
 const widgetMenuItems = computed(() => workbenchWidgetDefinitions.map((item) => ({
   label: t(item.titleKey),
   icon: item.icon,
   selected: item.key === props.widget.key,
-  onSelect: () => layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+  disabled: item.key === props.widget.key ? false : !layout.canUpdateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey),
+  onSelect: () => {
+    layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+  }
 })))
 const dragOffset = reactive({
   x: 0,
@@ -42,6 +46,9 @@ const dragFixedRect = reactive({
   height: 0
 })
 const itemElement = ref<HTMLElement | null>(null)
+const removeConfirmOpen = ref(false)
+const isRemoving = ref(false)
+const suppressNextEditActionClick = ref(false)
 let dragPointerId: number | null = null
 let dragStartX = 0
 let dragStartY = 0
@@ -64,6 +71,8 @@ let resizeCellWidth = 1
 let resizeCellHeight = 1
 let resizeGap = 0
 let resizeHandleElement: HTMLElement | null = null
+let removeWidgetTimer: number | null = null
+let suppressEditActionClickTimer: number | null = null
 const componentProps = computed(() => {
   if (props.widget.key === 'tool-catalog') {
     return {
@@ -126,16 +135,30 @@ function onItemPointerDown(event: PointerEvent) {
     return
   }
 
-  startLocalDrag(event)
-}
+  removeConfirmOpen.value = false
 
-function onDragHandlePointerDown(event: PointerEvent) {
-  if (!props.editing || event.button !== 0) {
+  if (event.pointerType && event.pointerType !== 'mouse' && !props.selected) {
+    event.preventDefault()
+    event.stopPropagation()
+    armEditActionClickGuard()
+    emit('select', props.widget.id)
     return
   }
 
-  event.stopPropagation()
+  emit('select', props.widget.id)
   startLocalDrag(event)
+}
+
+function onItemPointerLeave(event: PointerEvent) {
+  if (event.pointerType && event.pointerType !== 'mouse') {
+    return
+  }
+
+  if (removeConfirmOpen.value) {
+    return
+  }
+
+  emit('leave', props.widget.id)
 }
 
 function startLocalDrag(event: PointerEvent) {
@@ -244,6 +267,8 @@ function onResizePointerDown(event: PointerEvent) {
 
   event.preventDefault()
   event.stopPropagation()
+  removeConfirmOpen.value = false
+  emit('select', props.widget.id)
 
   const grid = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')
   const itemRect = itemElement.value?.getBoundingClientRect()
@@ -638,17 +663,71 @@ function isWorkbenchControl(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest('[data-workbench-control="true"]'))
 }
 
-function updateColSpan(delta: number) {
-  layout.updateWidgetSpan(props.widget.id, {
-    colSpan: props.widget.colSpan + delta
-  })
+function onConfirmRemoveWidget() {
+  if (isRemoving.value) {
+    return
+  }
+
+  removeConfirmOpen.value = false
+  isRemoving.value = true
+  removeWidgetTimer = window.setTimeout(() => {
+    removeWidgetTimer = null
+    layout.removeWidget(props.widget.id)
+  }, 220)
 }
 
-function updateRowSpan(delta: number) {
-  layout.updateWidgetSpan(props.widget.id, {
-    rowSpan: props.widget.rowSpan + delta
-  })
+function onCancelRemoveWidget() {
+  removeConfirmOpen.value = false
 }
+
+function armEditActionClickGuard() {
+  suppressNextEditActionClick.value = true
+
+  if (suppressEditActionClickTimer !== null) {
+    window.clearTimeout(suppressEditActionClickTimer)
+  }
+
+  suppressEditActionClickTimer = window.setTimeout(() => {
+    suppressEditActionClickTimer = null
+    suppressNextEditActionClick.value = false
+  }, 350)
+}
+
+function clearEditActionClickGuard() {
+  suppressNextEditActionClick.value = false
+
+  if (suppressEditActionClickTimer !== null) {
+    window.clearTimeout(suppressEditActionClickTimer)
+    suppressEditActionClickTimer = null
+  }
+}
+
+function onEditActionClickCapture(event: MouseEvent) {
+  if (!suppressNextEditActionClick.value) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation()
+  clearEditActionClickGuard()
+}
+
+watch(() => props.selected, (selected) => {
+  if (!selected) {
+    removeConfirmOpen.value = false
+    clearEditActionClickGuard()
+  }
+})
+
+watch(() => props.editing, (editing) => {
+  if (editing) {
+    return
+  }
+
+  removeConfirmOpen.value = false
+  clearEditActionClickGuard()
+})
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -660,6 +739,12 @@ onUnmounted(() => {
   if (resizePointerId !== null) {
     endLocalResize()
   }
+
+  if (removeWidgetTimer !== null) {
+    window.clearTimeout(removeWidgetTimer)
+  }
+
+  clearEditActionClickGuard()
 })
 </script>
 
@@ -668,9 +753,12 @@ onUnmounted(() => {
     v-if="definition"
     ref="itemElement"
     :data-workbench-widget-id="widget.id"
-    class="toolbox-grid-item group relative min-h-0 overflow-hidden rounded-lg border border-white/65 bg-white/64 text-slate-950 shadow-lg shadow-slate-900/7 backdrop-blur-2xl transition-[border-color,background,box-shadow,transform] duration-200 dark:border-white/14 dark:bg-white/9 dark:text-white dark:shadow-black/28"
+    class="toolbox-grid-item relative min-h-0 overflow-hidden rounded-lg border border-white/65 bg-white/64 text-slate-950 shadow-lg shadow-slate-900/7 backdrop-blur-2xl transition-[border-color,background,box-shadow,transform,opacity] duration-200 dark:border-white/14 dark:bg-white/9 dark:text-white dark:shadow-black/28"
     :class="[
       editing ? 'toolbox-grid-item-editing cursor-grab active:cursor-grabbing' : '',
+      props.selected ? 'toolbox-grid-item-selected ring-1 ring-cyan-400/45 shadow-[0_20px_40px_rgba(15,23,42,0.12)] dark:ring-cyan-200/30 dark:shadow-[0_20px_40px_rgba(0,0,0,0.32)]' : '',
+      removeConfirmOpen ? 'toolbox-grid-item-remove-open' : '',
+      isRemoving ? 'toolbox-grid-item-removing' : '',
       isDropTarget ? 'border-cyan-400 bg-cyan-50/70 shadow-cyan-900/16 dark:border-cyan-200/55 dark:bg-cyan-300/12' : '',
       isDragging ? 'toolbox-grid-item-dragging' : '',
       isResizing ? 'toolbox-grid-item-resizing' : ''
@@ -688,6 +776,7 @@ onUnmounted(() => {
       '--workbench-drag-height': `${dragFixedRect.height}px`
     }"
     @pointerdown="onItemPointerDown"
+    @pointerleave="onItemPointerLeave"
     @pointermove="onItemPointerMove"
     @pointerup="onItemPointerUp"
     @pointercancel="onItemPointerCancel"
@@ -713,17 +802,56 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-if="editing" data-workbench-control="true" class="relative z-30 flex shrink-0 items-center gap-1">
-          <UTooltip :text="t('workbench.layout.removeWidget')">
+        <div
+          v-if="editing"
+          data-workbench-control="true"
+          class="toolbox-remove-action absolute right-3 top-3 z-30 opacity-0 transition-[opacity,transform] duration-200"
+        >
+          <UPopover
+            v-model:open="removeConfirmOpen"
+            mode="click"
+            :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
+            :ui="{ content: 'workbench-floating-menu rounded-[1rem]' }"
+          >
             <button
               type="button"
-              :aria-label="t('workbench.layout.removeWidget')"
               class="toolbox-remove-button cursor-pointer"
-              @click.stop="layout.removeWidget(widget.id)"
+              :aria-label="t('workbench.layout.removeWidget')"
+              @click.stop="emit('select', props.widget.id)"
             >
               <UIcon name="lucide:x" class="size-4" />
             </button>
-          </UTooltip>
+
+            <template #content="{ close }">
+              <div class="grid gap-1.5 p-2">
+                <p class="px-1.5 py-0.5 text-sm font-medium text-slate-950 dark:text-white">
+                  {{ t('workbench.layout.confirmRemoveWidget') }}
+                </p>
+                <div class="flex items-center gap-1.5">
+                  <UButton
+                    type="button"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    class="cursor-pointer rounded-lg"
+                    @click="() => { onCancelRemoveWidget(); close() }"
+                  >
+                    {{ t('workbench.layout.cancel') }}
+                  </UButton>
+                  <UButton
+                    type="button"
+                    color="error"
+                    variant="solid"
+                    size="sm"
+                    class="cursor-pointer rounded-lg"
+                    @click="() => { onConfirmRemoveWidget(); close() }"
+                  >
+                    {{ t('workbench.layout.removeWidget') }}
+                  </UButton>
+                </div>
+              </div>
+            </template>
+          </UPopover>
         </div>
       </header>
 
@@ -734,96 +862,19 @@ onUnmounted(() => {
         />
       </div>
 
-      <div v-if="editing" class="toolbox-edit-overlay pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg bg-slate-950/10 opacity-0 backdrop-blur-[1px] transition-opacity duration-200 group-hover:opacity-100 dark:bg-black/20">
-        <div data-workbench-control="true" class="toolbox-edit-toolbar pointer-events-auto flex max-w-[calc(100%-1rem)] flex-wrap items-center justify-center gap-1.5 rounded-full border border-white/65 bg-white/78 p-1.5 shadow-xl shadow-slate-900/12 backdrop-blur-2xl dark:border-white/16 dark:bg-slate-950/72 dark:shadow-black/35">
-          <UTooltip :text="t('workbench.layout.dragToSort')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:move"
-              class="toolbox-icon-button cursor-grab active:cursor-grabbing"
-              :aria-label="t('workbench.layout.dragToSort')"
-              @pointerdown="onDragHandlePointerDown"
-            />
-          </UTooltip>
-          <UTooltip :text="t('workbench.layout.moveEarlier')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:arrow-left"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.moveEarlier')"
-              @click.stop="layout.moveWidget(widget.id, -1)"
-            />
-          </UTooltip>
-          <UTooltip :text="t('workbench.layout.moveLater')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:arrow-right"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.moveLater')"
-              @click.stop="layout.moveWidget(widget.id, 1)"
-            />
-          </UTooltip>
-          <span class="mx-0.5 h-5 w-px bg-slate-900/12 dark:bg-white/14" />
-          <UTooltip :text="t('workbench.layout.decreaseColSpan')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:chevron-left"
-              :disabled="!canDecreaseColSpan"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.decreaseColSpan')"
-              @click.stop="updateColSpan(-1)"
-            />
-          </UTooltip>
-          <UTooltip :text="t('workbench.layout.increaseColSpan')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:chevron-right"
-              :disabled="!canIncreaseColSpan"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.increaseColSpan')"
-              @click.stop="updateColSpan(1)"
-            />
-          </UTooltip>
-          <UTooltip :text="t('workbench.layout.decreaseRowSpan')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:chevron-up"
-              :disabled="!canDecreaseRowSpan"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.decreaseRowSpan')"
-              @click.stop="updateRowSpan(-1)"
-            />
-          </UTooltip>
-          <UTooltip :text="t('workbench.layout.increaseRowSpan')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="lucide:chevron-down"
-              :disabled="!canIncreaseRowSpan"
-              class="toolbox-icon-button cursor-pointer"
-              :aria-label="t('workbench.layout.increaseRowSpan')"
-              @click.stop="updateRowSpan(1)"
-            />
-          </UTooltip>
-          <span class="px-1.5 text-xs font-semibold tabular-nums text-slate-700 dark:text-white/74">{{ widget.colSpan }}x{{ widget.rowSpan }}</span>
-          <span class="mx-0.5 h-5 w-px bg-slate-900/12 dark:bg-white/14" />
+      <div v-if="editing" class="toolbox-edit-affordance pointer-events-none absolute inset-0 z-20 rounded-lg bg-slate-950/7 opacity-0 transition-opacity duration-200 dark:bg-black/14" />
+
+      <div
+        v-if="editing"
+        data-workbench-control="true"
+        class="toolbox-edit-actions absolute bottom-3 left-3 z-30 max-w-[calc(100%-4.25rem)] opacity-0 transition-[opacity,transform] duration-200"
+        @click.capture="onEditActionClickCapture"
+      >
+        <div class="rounded-full border border-white/65 bg-white/78 p-1 shadow-xl shadow-slate-900/12 backdrop-blur-2xl dark:border-white/16 dark:bg-slate-950/72 dark:shadow-black/35">
           <UTooltip :text="t('workbench.layout.changeWidget')">
             <UDropdownMenu
               :items="widgetMenuItems"
-              :content="{ align: 'center' }"
+              :content="{ align: 'start' }"
               :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
             >
               <UButton
@@ -831,9 +882,12 @@ onUnmounted(() => {
                 color="neutral"
                 variant="ghost"
                 icon="lucide:replace"
-                class="toolbox-icon-button cursor-pointer"
+                size="sm"
+                class="toolbox-change-button cursor-pointer"
                 :aria-label="t('workbench.layout.changeWidget')"
-              />
+              >
+                {{ t('workbench.layout.changeWidget') }}
+              </UButton>
               <template #item-trailing="{ item }">
                 <UIcon v-if="item.selected" name="lucide:check" class="size-4 text-cyan-700 dark:text-cyan-100" />
               </template>
@@ -846,7 +900,7 @@ onUnmounted(() => {
         v-if="editing"
         type="button"
         data-workbench-control="true"
-        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize rounded-md border border-white/65 bg-white/78 text-slate-700 opacity-0 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 group-hover:opacity-100 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
+        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize rounded-md border border-white/65 bg-white/78 text-slate-700 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
         :aria-label="t('workbench.layout.resizeWidget')"
         @pointerdown="onResizePointerDown"
         @pointermove="onResizePointerMove"
@@ -905,6 +959,11 @@ onUnmounted(() => {
   translate: 0 0;
 }
 
+.toolbox-grid-item-removing {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .toolbox-grid-item-editing {
   user-select: none;
   touch-action: none;
@@ -957,39 +1016,64 @@ onUnmounted(() => {
   opacity: 0.72;
 }
 
-.toolbox-edit-toolbar {
-  line-height: 1;
+.toolbox-grid-item-selected .toolbox-edit-affordance,
+.toolbox-grid-item-selected .toolbox-edit-actions,
+.toolbox-grid-item-selected .toolbox-remove-action,
+.toolbox-grid-item-remove-open .toolbox-remove-action {
+  opacity: 1;
 }
 
-.toolbox-icon-button {
-  display: inline-grid;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  place-items: center;
-  border: 0;
+.toolbox-grid-item-selected .toolbox-edit-actions,
+.toolbox-grid-item-selected .toolbox-remove-action,
+.toolbox-grid-item-remove-open .toolbox-remove-action {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toolbox-edit-affordance {
+  opacity: 0;
+}
+
+.toolbox-edit-actions {
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(0.35rem);
+}
+
+.toolbox-remove-action {
+  pointer-events: none;
+  transform: translateY(-0.35rem);
+}
+
+.toolbox-change-button {
+  min-width: 0;
+  max-width: 100%;
   border-radius: 9999px;
-  background: transparent;
-  color: rgba(15, 23, 42, 0.78);
-  line-height: 1;
-  transition:
-    background-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+  padding-inline: 0.75rem;
+  white-space: nowrap;
 }
 
-.toolbox-icon-button:hover {
-  background: rgba(14, 165, 233, 0.14);
-  color: rgb(15, 23, 42);
+.toolbox-change-button :deep(.truncate) {
+  max-width: 7rem;
 }
 
-.dark .toolbox-icon-button {
-  color: rgba(255, 255, 255, 0.76);
-}
+@media (hover: hover) and (pointer: fine) {
+  .toolbox-grid-item-editing:hover .toolbox-edit-affordance,
+  .toolbox-grid-item-editing:hover .toolbox-edit-actions,
+  .toolbox-grid-item-editing:hover .toolbox-remove-action {
+    opacity: 1;
+  }
 
-.dark .toolbox-icon-button:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: white;
+  .toolbox-grid-item-editing:hover .toolbox-edit-actions,
+  .toolbox-grid-item-editing:hover .toolbox-remove-action {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .toolbox-grid-item-editing:hover .toolbox-resize-handle {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .toolbox-remove-button {
@@ -1041,6 +1125,13 @@ onUnmounted(() => {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toolbox-grid-item-selected .toolbox-resize-handle {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .toolbox-resize-handle:hover {
@@ -1074,4 +1165,5 @@ onUnmounted(() => {
   width: 0.55rem;
   height: 0.55rem;
 }
+
 </style>

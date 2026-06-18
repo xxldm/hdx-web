@@ -15,10 +15,13 @@ const { t } = useI18n()
 const layout = useWorkbenchLayoutStore()
 const gridElement = ref<HTMLElement | null>(null)
 const hoverPosition = ref<WorkbenchGridPosition | null>(null)
+const pinnedPosition = ref<WorkbenchGridPosition | null>(null)
+const selectedWidgetId = ref<string | null>(null)
 const addMenuOpen = ref(false)
 const manualFlipTransition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
 const manualFlipCleanupDelayMs = 260
 const manualFlipCleanupTimers = new Map<string, number>()
+const activeEmptyPosition = computed(() => hoverPosition.value ?? pinnedPosition.value)
 const renderedWidgets = computed(() => {
   const stableOrder = new Map(layout.widgets.map((widget, index) => [widget.id, index]))
 
@@ -39,23 +42,27 @@ const flipLayoutSignature = computed(() => renderedWidgets.value
 const widgetMenuItems = computed(() => workbenchWidgetDefinitions.map(definition => ({
   label: t(definition.titleKey),
   icon: definition.icon,
-  disabled: hoverPosition.value ? !layout.canAddWidgetAt(definition.key as WorkbenchWidgetKey, hoverPosition.value) : true,
+  disabled: activeEmptyPosition.value ? !layout.canAddWidgetAt(definition.key as WorkbenchWidgetKey, activeEmptyPosition.value) : true,
   onSelect: () => addWidgetAtHoverPosition(definition.key as WorkbenchWidgetKey)
 })))
 const hoveredEmptyCellStyle = computed(() => {
-  if (!hoverPosition.value) {
+  if (!activeEmptyPosition.value) {
     return {}
   }
 
   return {
-    gridColumnStart: hoverPosition.value.column + 1,
-    gridRowStart: hoverPosition.value.row + 1
+    gridColumnStart: activeEmptyPosition.value.column + 1,
+    gridRowStart: activeEmptyPosition.value.row + 1
   }
 })
 
 function onGridPointerMove(event: PointerEvent) {
   if (!layout.editing || layout.draggedWidgetId || layout.resizingWidgetId) {
     hoverPosition.value = null
+    return
+  }
+
+  if (event.pointerType && event.pointerType !== 'mouse') {
     return
   }
 
@@ -68,6 +75,31 @@ function onGridPointerLeave() {
   }
 
   hoverPosition.value = null
+}
+
+function onGridPointerDown(event: PointerEvent) {
+  if (!layout.editing || layout.draggedWidgetId || layout.resizingWidgetId) {
+    return
+  }
+
+  const target = event.target
+
+  if (target instanceof Element && target.closest('[data-workbench-control="true"]')) {
+    return
+  }
+
+  if (target instanceof Element && target.closest('[data-workbench-widget-id]')) {
+    pinnedPosition.value = null
+    addMenuOpen.value = false
+    return
+  }
+
+  selectedWidgetId.value = null
+  pinnedPosition.value = getEmptyPositionFromPointer(event.clientX, event.clientY)
+
+  if (!pinnedPosition.value) {
+    addMenuOpen.value = false
+  }
 }
 
 function getEmptyPositionFromPointer(clientX: number, clientY: number) {
@@ -121,18 +153,40 @@ function isPositionOccupied(position: WorkbenchGridPosition) {
 }
 
 function addWidgetAtHoverPosition(key: WorkbenchWidgetKey) {
-  if (!hoverPosition.value) {
+  if (!activeEmptyPosition.value) {
     return
   }
 
-  if (layout.addWidgetAt(key, hoverPosition.value)) {
+  if (layout.addWidgetAt(key, activeEmptyPosition.value)) {
     addMenuOpen.value = false
     hoverPosition.value = null
+    pinnedPosition.value = null
   }
 }
 
 function onAddMenuOpenUpdate(open: boolean) {
   addMenuOpen.value = open
+
+  if (open) {
+    selectedWidgetId.value = null
+    return
+  }
+
+  hoverPosition.value = null
+  pinnedPosition.value = null
+}
+
+function onSelectWidget(widgetId: string) {
+  selectedWidgetId.value = widgetId
+  pinnedPosition.value = null
+  hoverPosition.value = null
+  addMenuOpen.value = false
+}
+
+function onLeaveWidget(widgetId: string) {
+  if (selectedWidgetId.value === widgetId) {
+    selectedWidgetId.value = null
+  }
 }
 
 function collectGridItemElements() {
@@ -240,6 +294,16 @@ function scheduleManualFlip() {
 
 if (import.meta.client) {
   watch(flipLayoutSignature, scheduleManualFlip, { flush: 'pre' })
+  watch(() => layout.editing, (editing) => {
+    if (editing) {
+      return
+    }
+
+    hoverPosition.value = null
+    pinnedPosition.value = null
+    selectedWidgetId.value = null
+    addMenuOpen.value = false
+  })
 
   onUnmounted(() => {
     for (const cleanupTimer of manualFlipCleanupTimers.values()) {
@@ -264,6 +328,7 @@ if (import.meta.client) {
         '--toolbox-row-min': '0px'
       }"
       @pointermove="onGridPointerMove"
+      @pointerdown="onGridPointerDown"
       @pointerleave="onGridPointerLeave"
     >
       <TransitionGroup name="toolbox-grid">
@@ -272,15 +337,18 @@ if (import.meta.client) {
           :key="widget.id"
           :widget="widget"
           :editing="layout.editing"
+          :selected="selectedWidgetId === widget.id"
           :tools="tools"
           :runtime="runtime"
           :loading="loading"
+          @select="onSelectWidget"
+          @leave="onLeaveWidget"
         />
       </TransitionGroup>
 
       <Transition name="toolbox-empty-cell">
         <div
-          v-if="layout.editing && hoverPosition"
+          v-if="layout.editing && activeEmptyPosition"
           class="toolbox-empty-cell-hover pointer-events-none relative z-0 min-h-0 rounded-lg border border-dashed border-cyan-300/80 bg-cyan-50/32 shadow-inner shadow-cyan-900/6 dark:border-cyan-200/30 dark:bg-cyan-300/8"
           :style="hoveredEmptyCellStyle"
         >
@@ -326,20 +394,22 @@ if (import.meta.client) {
 
 .toolbox-grid-enter-active,
 .toolbox-grid-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
+  transition: opacity 160ms ease;
 }
 
-.toolbox-grid-enter-from,
+.toolbox-grid-enter-from {
+  opacity: 0;
+}
+
 .toolbox-grid-leave-to {
   opacity: 0;
-  transform: translateY(0.35rem);
+  transform: none;
 }
 
 .toolbox-grid-leave-active {
   position: absolute;
   pointer-events: none;
+  transform: none !important;
 }
 
 .toolbox-empty-cell-enter-active,

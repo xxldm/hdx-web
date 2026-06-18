@@ -231,6 +231,31 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     return Boolean(widget && canPlaceWidgetAt(draft.value.widgets, widget, position, draft.value.rows, draft.value.columns))
   }
 
+  function canUpdateWidgetKey(widgetId: string, key: WorkbenchWidgetKey) {
+    const widget = draft.value.widgets.find(widget => widget.id === widgetId)
+    const definition = getWorkbenchWidgetMetadata(key)
+
+    if (!widget || !definition) {
+      return false
+    }
+
+    const candidateWidget = {
+      ...widget,
+      key,
+      colSpan: clampInteger(definition.defaultLayout.colSpan, 1, draft.value.columns),
+      rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, draft.value.rows)
+    }
+
+    return canPlaceWidgetAt(
+      draft.value.widgets,
+      candidateWidget,
+      { column: widget.column, row: widget.row },
+      draft.value.rows,
+      draft.value.columns,
+      [widget.id]
+    )
+  }
+
   function removeWidget(widgetId: string) {
     draft.value = normalizeLayout({
       ...draft.value,
@@ -241,8 +266,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   function updateWidgetKey(widgetId: string, key: WorkbenchWidgetKey) {
     const definition = getWorkbenchWidgetMetadata(key)
 
-    if (!definition) {
-      return
+    if (!definition || !canUpdateWidgetKey(widgetId, key)) {
+      return false
     }
 
     draft.value = normalizeLayout({
@@ -254,10 +279,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
         return {
           ...widget,
-          key
+          key,
+          colSpan: clampInteger(definition.defaultLayout.colSpan, 1, draft.value.columns),
+          rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, draft.value.rows)
         }
       })
     })
+
+    return true
   }
 
   function updateWidgetSpan(widgetId: string, patch: Partial<Pick<WorkbenchLayoutWidget, 'colSpan' | 'rowSpan'>>) {
@@ -516,6 +545,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     addWidget,
     addWidgetAt,
     canAddWidgetAt,
+    canUpdateWidgetKey,
     removeWidget,
     updateWidgetKey,
     updateWidgetSpan,
