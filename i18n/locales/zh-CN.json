@@ -132,7 +132,8 @@
       "increaseColSpan": "增加跨列",
       "decreaseRowSpan": "减少跨行",
       "increaseRowSpan": "增加跨行",
-      "resizeWidget": "拖动调整组件大小"
+      "resizeWidget": "拖动调整组件大小",
+      "changeWidget": "修改组件"
     }
   }
 }

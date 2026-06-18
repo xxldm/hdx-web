@@ -9,13 +9,22 @@ const minGridSize = 1
 const maxGridSize = 8
 const minGap = 2
 const maxGap = 24
+const maxWidgetCount = 24
+export type WorkbenchDropPlacement = 'before' | 'after'
+
+export interface WorkbenchGridPosition {
+  column: number
+  row: number
+}
 
 const workbenchWidgetKeySchema = z.enum(workbenchWidgetKeys as [WorkbenchWidgetKey, ...WorkbenchWidgetKey[]])
 
 export const workbenchLayoutWidgetSchema = z.object({
   id: z.string().min(1),
   key: workbenchWidgetKeySchema,
-  order: z.number().int().nonnegative(),
+  order: z.number().int().nonnegative().optional(),
+  column: z.number().int().nonnegative().optional(),
+  row: z.number().int().nonnegative().optional(),
   colSpan: z.number().int().min(1).max(maxGridSize),
   rowSpan: z.number().int().min(1).max(maxGridSize)
 })
@@ -25,16 +34,31 @@ export const workbenchLayoutSchema = z.object({
   rows: z.number().int().min(minGridSize).max(maxGridSize),
   columns: z.number().int().min(minGridSize).max(maxGridSize),
   gap: z.number().int().min(minGap).max(maxGap),
-  widgets: z.array(workbenchLayoutWidgetSchema).min(1).max(24)
+  widgets: z.array(workbenchLayoutWidgetSchema).min(1).max(maxWidgetCount)
 })
 
-export type WorkbenchLayoutWidget = z.infer<typeof workbenchLayoutWidgetSchema>
-export type WorkbenchLayout = z.infer<typeof workbenchLayoutSchema>
+type WorkbenchLayoutWidgetInput = z.infer<typeof workbenchLayoutWidgetSchema>
+export type WorkbenchLayoutInput = z.infer<typeof workbenchLayoutSchema>
 
-export interface PlacedWorkbenchWidget extends WorkbenchLayoutWidget {
-  row: number
+export interface WorkbenchLayoutWidget {
+  id: string
+  key: WorkbenchWidgetKey
+  order: number
   column: number
+  row: number
+  colSpan: number
+  rowSpan: number
 }
+
+export interface WorkbenchLayout {
+  version: 1
+  rows: number
+  columns: number
+  gap: number
+  widgets: WorkbenchLayoutWidget[]
+}
+
+export type PlacedWorkbenchWidget = WorkbenchLayoutWidget
 
 export interface WorkbenchLayoutSummary {
   rows: number
@@ -66,17 +90,27 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const draft = ref<WorkbenchLayout>(cloneLayout(storedLayout.value))
   const draggedWidgetId = ref<string | null>(null)
   const dropTargetWidgetId = ref<string | null>(null)
+  const dropTargetPlacement = ref<WorkbenchDropPlacement>('before')
+  const dropTargetColumn = ref<number | null>(null)
+  const dropTargetRow = ref<number | null>(null)
   const resizingWidgetId = ref<string | null>(null)
 
   const layout = computed(() => editing.value ? draft.value : storedLayout.value)
   const previewLayout = computed(() => {
-    if (!editing.value || !draggedWidgetId.value || !dropTargetWidgetId.value || draggedWidgetId.value === dropTargetWidgetId.value) {
+    if (!editing.value || !draggedWidgetId.value || dropTargetColumn.value === null || dropTargetRow.value === null) {
       return layout.value
     }
 
     return normalizeLayout({
       ...layout.value,
-      widgets: reorderLayoutWidgets(layout.value.widgets, draggedWidgetId.value, dropTargetWidgetId.value)
+      widgets: moveLayoutWidget(
+        layout.value.widgets,
+        layout.value.rows,
+        layout.value.columns,
+        draggedWidgetId.value,
+        { column: dropTargetColumn.value, row: dropTargetRow.value },
+        dropTargetWidgetId.value
+      )
     })
   })
   const rows = computed(() => layout.value.rows)
@@ -99,16 +133,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
   function startEditing() {
     draft.value = cloneLayout(storedLayout.value)
-    draggedWidgetId.value = null
-    dropTargetWidgetId.value = null
+    clearDragTarget()
     resizingWidgetId.value = null
     editing.value = true
   }
 
   function cancelEditing() {
     draft.value = cloneLayout(storedLayout.value)
-    draggedWidgetId.value = null
-    dropTargetWidgetId.value = null
+    clearDragTarget()
     resizingWidgetId.value = null
     editing.value = false
   }
@@ -116,16 +148,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   function saveEditing() {
     storedLayout.value = normalizeLayout(draft.value)
     draft.value = cloneLayout(storedLayout.value)
-    draggedWidgetId.value = null
-    dropTargetWidgetId.value = null
+    clearDragTarget()
     resizingWidgetId.value = null
     editing.value = false
   }
 
   function resetLayout() {
     draft.value = cloneLayout(defaultWorkbenchLayout)
-    draggedWidgetId.value = null
-    dropTargetWidgetId.value = null
+    clearDragTarget()
     resizingWidgetId.value = null
   }
 
@@ -143,10 +173,16 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
   function addWidget(key?: WorkbenchWidgetKey) {
     const widgetKey = key ?? findFirstAvailableWidgetKey(draft.value.widgets) ?? 'quick-links'
-    const definition = getWorkbenchWidgetMetadata(widgetKey)
+    const widget = createNewLayoutWidget(widgetKey, draft.value.widgets.length, draft.value.rows, draft.value.columns)
 
-    if (!definition) {
-      return
+    if (!widget) {
+      return false
+    }
+
+    const position = findFirstAvailableWidgetPosition(draft.value.widgets, draft.value.rows, draft.value.columns, widget.colSpan, widget.rowSpan)
+
+    if (!position) {
+      return false
     }
 
     draft.value = normalizeLayout({
@@ -154,14 +190,42 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       widgets: [
         ...draft.value.widgets,
         {
-          id: createWidgetId(widgetKey),
-          key: widgetKey,
-          order: draft.value.widgets.length,
-          colSpan: definition.defaultLayout.colSpan,
-          rowSpan: definition.defaultLayout.rowSpan
+          ...widget,
+          column: position.column,
+          row: position.row
         }
       ]
     })
+
+    return true
+  }
+
+  function addWidgetAt(key: WorkbenchWidgetKey, position: WorkbenchGridPosition) {
+    const widget = createNewLayoutWidget(key, draft.value.widgets.length, draft.value.rows, draft.value.columns)
+
+    if (!widget || !canPlaceWidgetAt(draft.value.widgets, widget, position, draft.value.rows, draft.value.columns)) {
+      return false
+    }
+
+    draft.value = normalizeLayout({
+      ...draft.value,
+      widgets: [
+        ...draft.value.widgets,
+        {
+          ...widget,
+          column: position.column,
+          row: position.row
+        }
+      ]
+    })
+
+    return true
+  }
+
+  function canAddWidgetAt(key: WorkbenchWidgetKey, position: WorkbenchGridPosition) {
+    const widget = createNewLayoutWidget(key, draft.value.widgets.length, draft.value.rows, draft.value.columns)
+
+    return Boolean(widget && canPlaceWidgetAt(draft.value.widgets, widget, position, draft.value.rows, draft.value.columns))
   }
 
   function removeWidget(widgetId: string) {
@@ -171,8 +235,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     })
   }
 
-  function updateWidgetSpan(widgetId: string, patch: Partial<Pick<WorkbenchLayoutWidget, 'colSpan' | 'rowSpan'>>) {
-    const nextLayout = normalizeLayout({
+  function updateWidgetKey(widgetId: string, key: WorkbenchWidgetKey) {
+    const definition = getWorkbenchWidgetMetadata(key)
+
+    if (!definition) {
+      return
+    }
+
+    draft.value = normalizeLayout({
       ...draft.value,
       widgets: draft.value.widgets.map((widget) => {
         if (widget.id !== widgetId) {
@@ -181,16 +251,38 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
         return {
           ...widget,
-          ...patch
+          key
         }
       })
     })
+  }
 
-    if (!canPlaceAllWidgets(nextLayout)) {
+  function updateWidgetSpan(widgetId: string, patch: Partial<Pick<WorkbenchLayoutWidget, 'colSpan' | 'rowSpan'>>) {
+    const nextWidgets = draft.value.widgets.map((widget) => {
+      if (widget.id !== widgetId) {
+        return widget
+      }
+
+      const colSpan = clampInteger(patch.colSpan ?? widget.colSpan, 1, draft.value.columns)
+      const rowSpan = clampInteger(patch.rowSpan ?? widget.rowSpan, 1, draft.value.rows)
+
+      return {
+        ...widget,
+        colSpan,
+        rowSpan,
+        column: clampInteger(widget.column, 0, Math.max(draft.value.columns - colSpan, 0)),
+        row: clampInteger(widget.row, 0, Math.max(draft.value.rows - rowSpan, 0))
+      }
+    })
+
+    if (!canPlaceAllWidgetsInGrid(nextWidgets, draft.value.rows, draft.value.columns)) {
       return
     }
 
-    draft.value = nextLayout
+    draft.value = normalizeLayout({
+      ...draft.value,
+      widgets: nextWidgets
+    })
   }
 
   function beginDrag(widgetId: string) {
@@ -200,6 +292,9 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
 
     draggedWidgetId.value = widgetId
     dropTargetWidgetId.value = null
+    dropTargetPlacement.value = 'before'
+    dropTargetColumn.value = null
+    dropTargetRow.value = null
   }
 
   function markDropTarget(widgetId: string | null) {
@@ -207,55 +302,93 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    dropTargetWidgetId.value = widgetId
+    previewDragOverWidget(widgetId)
   }
 
-  function previewDragOverWidget(targetWidgetId: string | null) {
-    if (!editing.value) {
+  function previewDragOverWidget(targetWidgetId: string | null, placement: WorkbenchDropPlacement = 'before') {
+    if (!editing.value || !targetWidgetId) {
+      clearDropTarget()
       return
     }
 
-    const sourceWidgetId = draggedWidgetId.value
+    const targetWidget = layout.value.widgets.find(widget => widget.id === targetWidgetId)
 
-    if (!sourceWidgetId || !targetWidgetId || sourceWidgetId === targetWidgetId) {
-      dropTargetWidgetId.value = null
+    if (!targetWidget) {
+      clearDropTarget()
       return
     }
 
-    if (dropTargetWidgetId.value === targetWidgetId) {
+    previewDragOverPosition(targetWidgetId, { column: targetWidget.column, row: targetWidget.row }, placement)
+  }
+
+  function previewDragOverPosition(targetWidgetId: string | null, position: WorkbenchGridPosition, placement: WorkbenchDropPlacement = 'before') {
+    if (!editing.value || !draggedWidgetId.value) {
+      return
+    }
+
+    const sourceWidget = layout.value.widgets.find(widget => widget.id === draggedWidgetId.value)
+
+    if (!sourceWidget) {
+      clearDropTarget()
+      return
+    }
+
+    const nextPosition = clampWidgetPosition(position, sourceWidget, layout.value.rows, layout.value.columns)
+
+    if (
+      dropTargetWidgetId.value === targetWidgetId
+      && dropTargetPlacement.value === placement
+      && dropTargetColumn.value === nextPosition.column
+      && dropTargetRow.value === nextPosition.row
+    ) {
       return
     }
 
     dropTargetWidgetId.value = targetWidgetId
+    dropTargetPlacement.value = placement
+    dropTargetColumn.value = nextPosition.column
+    dropTargetRow.value = nextPosition.row
   }
 
-  function dropOnWidget(targetWidgetId: string) {
-    const sourceWidgetId = draggedWidgetId.value
+  function dropOnWidget(targetWidgetId: string, placement: WorkbenchDropPlacement = dropTargetPlacement.value) {
+    const targetWidget = layout.value.widgets.find(widget => widget.id === targetWidgetId)
 
-    if (!sourceWidgetId || sourceWidgetId === targetWidgetId) {
+    if (!targetWidget) {
       endDrag()
       return
     }
 
-    reorderWidgets(sourceWidgetId, targetWidgetId)
+    dropOnPosition({ column: targetWidget.column, row: targetWidget.row }, targetWidgetId, placement)
+  }
 
+  function dropOnPosition(position: WorkbenchGridPosition, targetWidgetId: string | null = dropTargetWidgetId.value, placement: WorkbenchDropPlacement = dropTargetPlacement.value) {
+    const sourceWidgetId = draggedWidgetId.value
+
+    if (!sourceWidgetId) {
+      endDrag()
+      return
+    }
+
+    draft.value = normalizeLayout({
+      ...draft.value,
+      widgets: moveLayoutWidget(draft.value.widgets, draft.value.rows, draft.value.columns, sourceWidgetId, position, targetWidgetId)
+    })
+
+    dropTargetPlacement.value = placement
     endDrag()
   }
 
   function dropOnMarkedTarget() {
-    const targetWidgetId = dropTargetWidgetId.value
-
-    if (!targetWidgetId) {
+    if (dropTargetColumn.value === null || dropTargetRow.value === null) {
       endDrag()
       return
     }
 
-    dropOnWidget(targetWidgetId)
+    dropOnPosition({ column: dropTargetColumn.value, row: dropTargetRow.value }, dropTargetWidgetId.value, dropTargetPlacement.value)
   }
 
   function endDrag() {
-    draggedWidgetId.value = null
-    dropTargetWidgetId.value = null
+    clearDragTarget()
   }
 
   function beginResize(widgetId: string) {
@@ -271,11 +404,19 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     resizingWidgetId.value = null
   }
 
-  function reorderWidgets(sourceWidgetId: string, targetWidgetId: string) {
+  function reorderWidgets(sourceWidgetId: string, targetWidgetId: string, placement: WorkbenchDropPlacement = 'before') {
+    const targetWidget = draft.value.widgets.find(widget => widget.id === targetWidgetId)
+
+    if (!targetWidget) {
+      return
+    }
+
     draft.value = normalizeLayout({
       ...draft.value,
-      widgets: reorderLayoutWidgets(draft.value.widgets, sourceWidgetId, targetWidgetId)
+      widgets: moveLayoutWidget(draft.value.widgets, draft.value.rows, draft.value.columns, sourceWidgetId, { column: targetWidget.column, row: targetWidget.row }, targetWidgetId)
     })
+
+    dropTargetPlacement.value = placement
   }
 
   function moveWidget(widgetId: string, direction: -1 | 1) {
@@ -287,19 +428,15 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return
     }
 
-    const [movedWidget] = orderedWidgets.splice(currentIndex, 1)
+    const targetWidget = orderedWidgets[targetIndex]
 
-    if (!movedWidget) {
+    if (!targetWidget) {
       return
     }
 
-    orderedWidgets.splice(targetIndex, 0, movedWidget)
     draft.value = normalizeLayout({
       ...draft.value,
-      widgets: orderedWidgets.map((widget, index) => ({
-        ...widget,
-        order: index
-      }))
+      widgets: moveLayoutWidget(draft.value.widgets, draft.value.rows, draft.value.columns, widgetId, { column: targetWidget.column, row: targetWidget.row }, targetWidget.id)
     })
   }
 
@@ -310,10 +447,23 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     })
   }
 
+  function clearDropTarget() {
+    dropTargetWidgetId.value = null
+    dropTargetPlacement.value = 'before'
+    dropTargetColumn.value = null
+    dropTargetRow.value = null
+  }
+
+  function clearDragTarget() {
+    draggedWidgetId.value = null
+    clearDropTarget()
+  }
+
   return {
     editing,
     draggedWidgetId,
     dropTargetWidgetId,
+    dropTargetPlacement,
     resizingWidgetId,
     layout,
     previewLayout,
@@ -335,12 +485,17 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     setColumns,
     setGap,
     addWidget,
+    addWidgetAt,
+    canAddWidgetAt,
     removeWidget,
+    updateWidgetKey,
     updateWidgetSpan,
     beginDrag,
     markDropTarget,
     previewDragOverWidget,
+    previewDragOverPosition,
     dropOnWidget,
+    dropOnPosition,
     dropOnMarkedTarget,
     endDrag,
     beginResize,
@@ -387,82 +542,224 @@ export function normalizeLayout(value: unknown): WorkbenchLayout {
 
   const rows = clampInteger(parsed.data.rows, minGridSize, maxGridSize)
   const columns = clampInteger(parsed.data.columns, minGridSize, maxGridSize)
-  const normalizedWidgets = sortedWidgets(parsed.data.widgets)
-    .map((widget, index) => ({
-      ...widget,
-      order: index,
-      colSpan: clampInteger(widget.colSpan, 1, columns),
-      rowSpan: clampInteger(widget.rowSpan, 1, rows)
-    }))
 
   return {
     version: 1,
     rows,
     columns,
     gap: clampInteger(parsed.data.gap, minGap, maxGap),
-    widgets: normalizedWidgets
+    widgets: normalizeWidgets(parsed.data.widgets, rows, columns)
   }
 }
 
 export function placeWorkbenchWidgets(layout: WorkbenchLayout): PlacedWorkbenchWidget[] {
-  const normalizedLayout = normalizeLayout(layout)
-  const occupied = Array.from({ length: normalizedLayout.rows }, () => Array.from({ length: normalizedLayout.columns }, () => false))
-  const placedWidgets: PlacedWorkbenchWidget[] = []
-
-  for (const widget of sortedWidgets(normalizedLayout.widgets)) {
-    const colSpan = clampInteger(widget.colSpan, 1, normalizedLayout.columns)
-    const rowSpan = clampInteger(widget.rowSpan, 1, normalizedLayout.rows)
-    const position = findWidgetPosition(occupied, colSpan, rowSpan)
-
-    if (!position) {
-      continue
-    }
-
-    for (let row = position.row; row < position.row + rowSpan; row += 1) {
-      const occupiedRow = occupied[row]
-
-      if (!occupiedRow) {
-        continue
-      }
-
-      for (let column = position.column; column < position.column + colSpan; column += 1) {
-        occupiedRow[column] = true
-      }
-    }
-
-    placedWidgets.push({
-      ...widget,
-      colSpan,
-      rowSpan,
-      row: position.row,
-      column: position.column
-    })
-  }
-
-  return placedWidgets
+  return sortedWidgets(normalizeLayout(layout).widgets)
 }
 
-export function reorderLayoutWidgets(widgets: WorkbenchLayoutWidget[], sourceWidgetId: string, targetWidgetId: string) {
+export function moveLayoutWidget(
+  widgets: WorkbenchLayoutWidget[],
+  rows: number,
+  columns: number,
+  sourceWidgetId: string,
+  targetPosition: WorkbenchGridPosition,
+  targetWidgetId: string | null = null
+) {
   const orderedWidgets = sortedWidgets(widgets)
-  const sourceIndex = orderedWidgets.findIndex(widget => widget.id === sourceWidgetId)
-  const targetIndex = orderedWidgets.findIndex(widget => widget.id === targetWidgetId)
-
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
-    return orderedWidgets
-  }
-
-  const [sourceWidget] = orderedWidgets.splice(sourceIndex, 1)
+  const sourceWidget = orderedWidgets.find(widget => widget.id === sourceWidgetId)
 
   if (!sourceWidget) {
     return orderedWidgets
   }
 
-  orderedWidgets.splice(targetIndex, 0, sourceWidget)
+  const nextPosition = clampWidgetPosition(targetPosition, sourceWidget, rows, columns)
 
-  return orderedWidgets.map((widget, index) => ({
+  if (targetWidgetId && targetWidgetId !== sourceWidgetId) {
+    const targetWidget = orderedWidgets.find(widget => widget.id === targetWidgetId)
+
+    if (targetWidget) {
+      const swappedWidgets = orderedWidgets.map((widget) => {
+        if (widget.id === sourceWidgetId) {
+          return {
+            ...widget,
+            column: nextPosition.column,
+            row: nextPosition.row
+          }
+        }
+
+        if (widget.id === targetWidgetId) {
+          return {
+            ...widget,
+            column: sourceWidget.column,
+            row: sourceWidget.row
+          }
+        }
+
+        return widget
+      })
+
+      if (canPlaceAllWidgetsInGrid(swappedWidgets, rows, columns)) {
+        return normalizeWidgetOrders(swappedWidgets)
+      }
+
+      const widgetsWithMovedSource = orderedWidgets
+        .filter(widget => widget.id !== targetWidgetId)
+        .map((widget) => {
+          if (widget.id !== sourceWidgetId) {
+            return widget
+          }
+
+          return {
+            ...widget,
+            column: nextPosition.column,
+            row: nextPosition.row
+          }
+        })
+      const displacedTargetPosition = findNearestAvailableWidgetPosition(
+        widgetsWithMovedSource,
+        rows,
+        columns,
+        targetWidget.colSpan,
+        targetWidget.rowSpan,
+        { column: sourceWidget.column, row: sourceWidget.row }
+      )
+
+      if (displacedTargetPosition) {
+        const displacedWidgets = orderedWidgets.map((widget) => {
+          if (widget.id === sourceWidgetId) {
+            return {
+              ...widget,
+              column: nextPosition.column,
+              row: nextPosition.row
+            }
+          }
+
+          if (widget.id === targetWidgetId) {
+            return {
+              ...widget,
+              column: displacedTargetPosition.column,
+              row: displacedTargetPosition.row
+            }
+          }
+
+          return widget
+        })
+
+        if (canPlaceAllWidgetsInGrid(displacedWidgets, rows, columns)) {
+          return normalizeWidgetOrders(displacedWidgets)
+        }
+      }
+    }
+  }
+
+  const movedWidgets = orderedWidgets.map((widget) => {
+    if (widget.id !== sourceWidgetId) {
+      return widget
+    }
+
+    return {
+      ...widget,
+      column: nextPosition.column,
+      row: nextPosition.row
+    }
+  })
+
+  if (!canPlaceAllWidgetsInGrid(movedWidgets, rows, columns)) {
+    return orderedWidgets
+  }
+
+  return normalizeWidgetOrders(movedWidgets)
+}
+
+function normalizeWidgets(widgets: WorkbenchLayoutWidgetInput[], rows: number, columns: number) {
+  const orderedWidgets = widgets
+    .map((widget, index) => ({
+      widget,
+      index,
+      order: widget.order ?? index
+    }))
+    .sort((left, right) => left.order - right.order || left.index - right.index)
+  const normalizedWidgets: WorkbenchLayoutWidget[] = []
+
+  for (const { widget } of orderedWidgets) {
+    const colSpan = clampInteger(widget.colSpan, 1, columns)
+    const rowSpan = clampInteger(widget.rowSpan, 1, rows)
+    const preferredPosition = typeof widget.column === 'number' && typeof widget.row === 'number'
+      ? {
+          column: clampInteger(widget.column, 0, Math.max(columns - colSpan, 0)),
+          row: clampInteger(widget.row, 0, Math.max(rows - rowSpan, 0))
+        }
+      : null
+    const candidateWidget = {
+      id: widget.id,
+      key: widget.key,
+      order: normalizedWidgets.length,
+      column: preferredPosition?.column ?? 0,
+      row: preferredPosition?.row ?? 0,
+      colSpan,
+      rowSpan
+    }
+    const position = preferredPosition && canPlaceWidgetAt(normalizedWidgets, candidateWidget, preferredPosition, rows, columns)
+      ? preferredPosition
+      : findFirstAvailableWidgetPosition(normalizedWidgets, rows, columns, colSpan, rowSpan)
+
+    if (!position) {
+      continue
+    }
+
+    normalizedWidgets.push({
+      ...candidateWidget,
+      column: position.column,
+      row: position.row
+    })
+  }
+
+  return normalizeWidgetOrders(normalizedWidgets)
+}
+
+function normalizeWidgetOrders(widgets: WorkbenchLayoutWidget[]) {
+  return sortedWidgets(widgets).map((widget, index) => ({
     ...widget,
     order: index
   }))
+}
+
+function findFirstAvailableWidgetPosition(widgets: WorkbenchLayoutWidget[], rows: number, columns: number, colSpan: number, rowSpan: number) {
+  return findWidgetPosition(createOccupiedGrid(widgets, rows, columns), colSpan, rowSpan)
+}
+
+function findNearestAvailableWidgetPosition(
+  widgets: WorkbenchLayoutWidget[],
+  rows: number,
+  columns: number,
+  colSpan: number,
+  rowSpan: number,
+  preferredPosition: WorkbenchGridPosition
+) {
+  const occupied = createOccupiedGrid(widgets, rows, columns)
+  const positions: WorkbenchGridPosition[] = []
+
+  for (let row = 0; row <= rows - rowSpan; row += 1) {
+    for (let column = 0; column <= columns - colSpan; column += 1) {
+      if (canPlaceWidgetInOccupiedGrid(occupied, row, column, colSpan, rowSpan)) {
+        positions.push({ row, column })
+      }
+    }
+  }
+
+  return positions.sort((left, right) => {
+    const leftDistance = Math.abs(left.column - preferredPosition.column) + Math.abs(left.row - preferredPosition.row)
+    const rightDistance = Math.abs(right.column - preferredPosition.column) + Math.abs(right.row - preferredPosition.row)
+
+    if (leftDistance !== rightDistance) {
+      return leftDistance - rightDistance
+    }
+
+    if (left.row !== right.row) {
+      return left.row - right.row
+    }
+
+    return left.column - right.column
+  })[0] ?? null
 }
 
 function findWidgetPosition(occupied: boolean[][], colSpan: number, rowSpan: number) {
@@ -474,7 +771,7 @@ function findWidgetPosition(occupied: boolean[][], colSpan: number, rowSpan: num
     }
 
     for (let column = 0; column <= occupiedRow.length - colSpan; column += 1) {
-      if (canPlaceWidget(occupied, row, column, colSpan, rowSpan)) {
+      if (canPlaceWidgetInOccupiedGrid(occupied, row, column, colSpan, rowSpan)) {
         return { row, column }
       }
     }
@@ -483,7 +780,34 @@ function findWidgetPosition(occupied: boolean[][], colSpan: number, rowSpan: num
   return null
 }
 
-function canPlaceWidget(occupied: boolean[][], startRow: number, startColumn: number, colSpan: number, rowSpan: number) {
+function createOccupiedGrid(widgets: WorkbenchLayoutWidget[], rows: number, columns: number, ignoredWidgetIds: string[] = []) {
+  const ignoredIds = new Set(ignoredWidgetIds)
+  const occupied = Array.from({ length: rows }, () => Array.from({ length: columns }, () => false))
+
+  for (const widget of widgets) {
+    if (ignoredIds.has(widget.id)) {
+      continue
+    }
+
+    for (let row = widget.row; row < widget.row + widget.rowSpan; row += 1) {
+      const occupiedRow = occupied[row]
+
+      if (!occupiedRow) {
+        continue
+      }
+
+      for (let column = widget.column; column < widget.column + widget.colSpan; column += 1) {
+        if (occupiedRow[column] === false) {
+          occupiedRow[column] = true
+        }
+      }
+    }
+  }
+
+  return occupied
+}
+
+function canPlaceWidgetInOccupiedGrid(occupied: boolean[][], startRow: number, startColumn: number, colSpan: number, rowSpan: number) {
   for (let row = startRow; row < startRow + rowSpan; row += 1) {
     for (let column = startColumn; column < startColumn + colSpan; column += 1) {
       if (occupied[row]?.[column] !== false) {
@@ -495,19 +819,105 @@ function canPlaceWidget(occupied: boolean[][], startRow: number, startColumn: nu
   return true
 }
 
-function canPlaceAllWidgets(layout: WorkbenchLayout) {
-  const normalizedLayout = normalizeLayout(layout)
-  return placeWorkbenchWidgets(normalizedLayout).length === normalizedLayout.widgets.length
+function canPlaceWidgetAt(widgets: WorkbenchLayoutWidget[], widget: WorkbenchLayoutWidget, position: WorkbenchGridPosition, rows: number, columns: number, ignoredWidgetIds: string[] = []) {
+  const candidateWidget = {
+    ...widget,
+    column: position.column,
+    row: position.row
+  }
+  const ignoredIds = new Set([...ignoredWidgetIds, widget.id])
+
+  if (!isWidgetInsideGrid(candidateWidget, rows, columns)) {
+    return false
+  }
+
+  return widgets.every(existingWidget => ignoredIds.has(existingWidget.id) || !gridWidgetsCollide(candidateWidget, existingWidget))
+}
+
+function canPlaceAllWidgetsInGrid(widgets: WorkbenchLayoutWidget[], rows: number, columns: number) {
+  return widgets.every((widget, index) => {
+    if (!isWidgetInsideGrid(widget, rows, columns)) {
+      return false
+    }
+
+    return widgets.every((otherWidget, otherIndex) => index === otherIndex || !gridWidgetsCollide(widget, otherWidget))
+  })
+}
+
+function isWidgetInsideGrid(widget: WorkbenchLayoutWidget, rows: number, columns: number) {
+  return widget.column >= 0
+    && widget.row >= 0
+    && widget.column + widget.colSpan <= columns
+    && widget.row + widget.rowSpan <= rows
+}
+
+function gridWidgetsCollide(left: WorkbenchLayoutWidget, right: WorkbenchLayoutWidget) {
+  if (left.column + left.colSpan <= right.column) {
+    return false
+  }
+
+  if (left.column >= right.column + right.colSpan) {
+    return false
+  }
+
+  if (left.row + left.rowSpan <= right.row) {
+    return false
+  }
+
+  if (left.row >= right.row + right.rowSpan) {
+    return false
+  }
+
+  return true
+}
+
+function clampWidgetPosition(position: WorkbenchGridPosition, widget: Pick<WorkbenchLayoutWidget, 'colSpan' | 'rowSpan'>, rows: number, columns: number) {
+  return {
+    column: clampInteger(position.column, 0, Math.max(columns - widget.colSpan, 0)),
+    row: clampInteger(position.row, 0, Math.max(rows - widget.rowSpan, 0))
+  }
 }
 
 function sortedWidgets(widgets: WorkbenchLayoutWidget[]) {
-  return [...widgets].sort((left, right) => left.order - right.order)
+  return [...widgets].sort((left, right) => {
+    if (left.row !== right.row) {
+      return left.row - right.row
+    }
+
+    if (left.column !== right.column) {
+      return left.column - right.column
+    }
+
+    if (left.order !== right.order) {
+      return left.order - right.order
+    }
+
+    return left.id.localeCompare(right.id)
+  })
 }
 
 function cloneLayout(layout: WorkbenchLayout): WorkbenchLayout {
   return {
     ...layout,
     widgets: layout.widgets.map(widget => ({ ...widget }))
+  }
+}
+
+function createNewLayoutWidget(key: WorkbenchWidgetKey, order: number, rows: number, columns: number): WorkbenchLayoutWidget | null {
+  const definition = getWorkbenchWidgetMetadata(key)
+
+  if (!definition || order >= maxWidgetCount) {
+    return null
+  }
+
+  return {
+    id: createWidgetId(key),
+    key,
+    order,
+    column: 0,
+    row: 0,
+    colSpan: clampInteger(definition.defaultLayout.colSpan, 1, columns),
+    rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, rows)
   }
 }
 

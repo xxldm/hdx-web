@@ -170,8 +170,8 @@ useSeoMeta({
     <div class="workbench-grid-lines absolute inset-0" />
 
     <section class="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-3 px-3 py-3 sm:px-4">
-      <header class="workbench-topbar rounded-lg border border-white/62 bg-white/58 px-3 py-2.5 shadow-xl shadow-cyan-950/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/28">
-        <div class="flex min-w-0 items-center gap-2">
+      <header class="workbench-topbar rounded-lg border border-white/62 bg-white/58 px-3 shadow-xl shadow-cyan-950/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/28">
+        <div class="flex h-16 min-w-0 items-center gap-2">
           <UTooltip :text="t('workbench.menu')">
             <UButton
               type="button"
@@ -198,7 +198,7 @@ useSeoMeta({
           </div>
 
           <div class="ml-auto flex min-w-0 items-center justify-end gap-2">
-            <div v-if="layout.editing" class="workbench-edit-commandbar hidden min-w-0 items-center gap-2 rounded-full border border-white/62 bg-white/54 p-1.5 shadow-sm shadow-slate-900/6 backdrop-blur-xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/24 lg:flex">
+            <div v-if="layout.editing" class="workbench-edit-commandbar hidden min-w-0 items-center gap-2 rounded-full border border-white/62 bg-white/54 p-1 shadow-sm shadow-slate-900/6 backdrop-blur-xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/24 lg:flex">
               <div class="flex min-w-0 items-center gap-1">
                 <div
                   v-for="stat in layoutStats"
@@ -346,46 +346,50 @@ useSeoMeta({
               </UDropdownMenu>
             </UTooltip>
 
-            <UTooltip :text="t('actions.refresh')">
-              <UButton
-                type="button"
-                color="neutral"
-                variant="ghost"
-                icon="lucide:refresh-cw"
-                :loading="loading"
-                :aria-label="t('actions.refresh')"
-                class="workbench-tool-button cursor-pointer"
-                @click="workbench.loadOverview"
-              />
-            </UTooltip>
-
-            <UDropdownMenu
-              :items="accountMenuItems"
+            <UPopover
+              mode="hover"
+              :open-delay="0"
+              :close-delay="180"
               :content="{ align: 'end' }"
-              :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
+              :ui="{ content: 'workbench-floating-menu workbench-account-menu rounded-[1.25rem]' }"
             >
               <UButton
                 type="button"
                 color="neutral"
                 variant="ghost"
-                class="workbench-avatar-button cursor-pointer"
+                class="workbench-avatar-button workbench-account-trigger cursor-pointer"
                 :aria-label="t('workbench.account.menu')"
               >
                 <UIcon v-if="isLocalAdmin" name="lucide:monitor" class="size-4" />
                 <span v-else>{{ avatarLabel }}</span>
               </UButton>
 
-              <template #content-top>
-                <div class="border-b border-slate-900/8 px-3 py-2.5 dark:border-white/12">
-                  <p class="text-xs text-slate-500 dark:text-white/55">
-                    {{ t('workbench.account.current') }}
-                  </p>
-                  <p class="mt-0.5 max-w-48 truncate text-sm font-semibold text-slate-950 dark:text-white">
-                    {{ displayName }}
-                  </p>
+              <template #content>
+                <div class="grid min-w-44 gap-1 p-1.5">
+                  <div class="border-b border-slate-900/8 px-2.5 py-2 dark:border-white/12">
+                    <p class="text-xs text-slate-500 dark:text-white/55">
+                      {{ t('workbench.account.current') }}
+                    </p>
+                    <p class="mt-0.5 max-w-48 truncate text-sm font-semibold text-slate-950 dark:text-white">
+                      {{ displayName }}
+                    </p>
+                  </div>
+                  <UButton
+                    v-for="item in accountMenuItems"
+                    :key="item.label"
+                    type="button"
+                    color="neutral"
+                    variant="ghost"
+                    :icon="item.icon"
+                    :disabled="item.disabled"
+                    class="workbench-account-menu-item cursor-pointer justify-start rounded-xl"
+                    @click="item.onSelect?.()"
+                  >
+                    {{ item.label }}
+                  </UButton>
                 </div>
               </template>
-            </UDropdownMenu>
+            </UPopover>
           </div>
         </div>
       </header>

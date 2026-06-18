@@ -132,7 +132,8 @@
       "increaseColSpan": "Increase columns",
       "decreaseRowSpan": "Decrease rows",
       "increaseRowSpan": "Increase rows",
-      "resizeWidget": "Drag to resize widget"
+      "resizeWidget": "Drag to resize widget",
+      "changeWidget": "Change widget"
     }
   }
 }
