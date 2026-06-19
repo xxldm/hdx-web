@@ -108,6 +108,12 @@
       "sourceType": "local",
       "skillPath": ".codex/skills/ui-ux-pro-max/SKILL.md",
       "computedHash": "b4f16d368d4c22972e2523c9f5bf7e24f1d6230224899b18ff7d6001b10c6bf4"
+    },
+    "nuxt-ui": {
+      "source": "nuxt/ui",
+      "sourceType": "github",
+      "skillPath": "skills/nuxt-ui/SKILL.md",
+      "computedHash": "714cc3cdf096a211b72637baf8e084303af91dcd98578616bc3e14fc28cff62b"
     }
   }
 }
