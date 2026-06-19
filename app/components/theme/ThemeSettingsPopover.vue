@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   buttonClass: '',
   buttonSize: 'sm',
-  contentClass: 'workbench-floating-menu rounded-[1.25rem]'
+  contentClass: 'workbench-floating-menu hdx-radius-popover'
 })
 
 const { t } = useI18n()
@@ -112,7 +112,7 @@ onMounted(() => {
             <UPopover
               mode="click"
               :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
-              :ui="{ content: 'rounded-[1rem]' }"
+              :ui="{ content: 'hdx-radius-popover' }"
             >
               <UButton
                 type="button"
@@ -161,7 +161,7 @@ onMounted(() => {
             <UPopover
               mode="click"
               :content="{ align: 'start', side: 'bottom', sideOffset: 8 }"
-              :ui="{ content: 'rounded-[1rem]' }"
+              :ui="{ content: 'hdx-radius-popover' }"
             >
               <UButton
                 type="button"
@@ -243,7 +243,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.65rem;
   border: 1px solid rgba(var(--hdx-theme-neutral-rgb), 0.18);
-  border-radius: 0.75rem;
+  border-radius: var(--hdx-radius-card);
   background: rgba(255, 255, 255, 0.44);
   padding: 0.55rem 0.7rem;
   color: var(--ui-text);

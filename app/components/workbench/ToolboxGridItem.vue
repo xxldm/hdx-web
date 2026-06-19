@@ -45,8 +45,8 @@ const componentChromeClass = computed(() => props.widget.chrome === 'bare'
   ? 'border-transparent bg-transparent shadow-none backdrop-blur-none dark:border-transparent dark:bg-transparent dark:shadow-none'
   : 'border-white/65 bg-white/64 shadow-lg shadow-slate-900/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/9 dark:shadow-black/28')
 const cardContentClass = computed(() => props.widget.chrome === 'bare'
-  ? 'grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-0'
-  : 'grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-4')
+  ? 'grid-rows-[auto_minmax(0,1fr)] gap-3 hdx-radius-card p-0'
+  : 'grid-rows-[auto_minmax(0,1fr)] gap-3 hdx-radius-card p-4')
 const shouldShowHeader = computed(() =>
   props.widget.header.visible
   && (props.widget.header.icon || props.widget.header.title || props.widget.header.description)
@@ -903,7 +903,7 @@ onUnmounted(() => {
     v-if="definition"
     ref="itemElement"
     :data-workbench-widget-id="widget.id"
-    class="toolbox-grid-item relative min-h-0 overflow-hidden rounded-lg border text-slate-950 transition-[border-color,background,box-shadow,transform,opacity] duration-200 dark:text-white"
+    class="toolbox-grid-item relative min-h-0 overflow-hidden border text-slate-950 transition-[border-color,background,box-shadow,transform,opacity] duration-200 hdx-radius-card dark:text-white"
     :class="[
       componentChromeClass,
       editing ? 'toolbox-grid-item-editing cursor-grab active:cursor-grabbing' : '',
@@ -933,7 +933,7 @@ onUnmounted(() => {
     @pointerup="onItemPointerUp"
     @pointercancel="onItemPointerCancel"
   >
-    <div v-if="isDragging" class="toolbox-drag-placeholder grid h-full min-h-0 place-items-center rounded-lg" aria-hidden="true">
+    <div v-if="isDragging" class="toolbox-drag-placeholder grid h-full min-h-0 place-items-center hdx-radius-card" aria-hidden="true">
       <UIcon name="lucide:move" class="size-6 text-cyan-100/70" />
     </div>
 
@@ -941,7 +941,7 @@ onUnmounted(() => {
       <div v-if="widget.chrome === 'card'" class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
       <header v-if="shouldShowHeader || editing" class="flex min-w-0 items-start justify-between gap-3">
         <div v-if="shouldShowHeader" class="flex min-w-0 items-center gap-3">
-          <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
+          <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 hdx-radius-card dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
             <UIcon :name="definition.icon" class="size-5 text-slate-800 dark:text-white" />
           </div>
           <div v-if="shouldShowHeaderText" class="min-w-0">
@@ -963,7 +963,7 @@ onUnmounted(() => {
             v-model:open="removeConfirmOpen"
             mode="click"
             :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
-            :ui="{ content: 'workbench-floating-menu rounded-[1rem]' }"
+            :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
           >
             <UButton
               type="button"
@@ -986,7 +986,7 @@ onUnmounted(() => {
                     color="neutral"
                     variant="ghost"
                     size="sm"
-                    class="cursor-pointer rounded-lg"
+                    class="cursor-pointer hdx-radius-card"
                     @click="() => { onCancelRemoveWidget(); close() }"
                   >
                     {{ t('workbench.layout.cancel') }}
@@ -996,7 +996,7 @@ onUnmounted(() => {
                     color="error"
                     variant="solid"
                     size="sm"
-                    class="cursor-pointer rounded-lg"
+                    class="cursor-pointer hdx-radius-card"
                     @click="() => { onConfirmRemoveWidget(); close() }"
                   >
                     {{ t('workbench.layout.removeWidget') }}
@@ -1015,7 +1015,7 @@ onUnmounted(() => {
         />
       </div>
 
-      <div v-if="editing" class="toolbox-edit-affordance pointer-events-none absolute inset-0 z-20 rounded-lg bg-slate-950/7 opacity-0 transition-opacity duration-200 dark:bg-black/14" />
+      <div v-if="editing" class="toolbox-edit-affordance pointer-events-none absolute inset-0 z-20 bg-slate-950/7 opacity-0 transition-opacity duration-200 hdx-radius-card dark:bg-black/14" />
 
       <div
         v-if="editing"
@@ -1023,12 +1023,12 @@ onUnmounted(() => {
         class="toolbox-edit-actions absolute bottom-3 left-3 z-30 max-w-[calc(100%-4.25rem)] opacity-0 transition-[opacity,transform] duration-200"
         @click.capture="onEditActionClickCapture"
       >
-        <div class="rounded-full border border-white/65 bg-white/78 p-1 shadow-xl shadow-slate-900/12 backdrop-blur-2xl dark:border-white/16 dark:bg-slate-950/72 dark:shadow-black/35">
+        <div class="border border-white/65 bg-white/78 p-1 shadow-xl shadow-slate-900/12 backdrop-blur-2xl hdx-radius-popover dark:border-white/16 dark:bg-slate-950/72 dark:shadow-black/35">
           <UTooltip :text="t('workbench.layout.changeWidget')">
             <UDropdownMenu
               :items="widgetMenuItems"
               :content="{ align: 'start' }"
-              :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
+              :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
             >
               <UButton
                 type="button"
@@ -1061,7 +1061,7 @@ onUnmounted(() => {
         v-if="editing"
         type="button"
         data-workbench-control="true"
-        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize rounded-md border border-white/65 bg-white/78 text-slate-700 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
+        class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize border border-white/65 bg-white/78 text-slate-700 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hdx-radius-control hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
         :aria-label="resizeWidgetAriaLabel"
         @pointerdown="onResizePointerDown"
         @pointermove="onResizePointerMove"
@@ -1076,7 +1076,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         v-if="isDragging"
-        class="toolbox-drag-preview fixed grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden rounded-lg border border-white/65 bg-white/70 p-4 text-slate-950 shadow-2xl shadow-slate-950/22 backdrop-blur-2xl dark:border-white/16 dark:bg-slate-950/80 dark:text-white dark:shadow-black/45"
+        class="toolbox-drag-preview fixed grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden border border-white/65 bg-white/70 p-4 text-slate-950 shadow-2xl shadow-slate-950/22 backdrop-blur-2xl hdx-radius-card dark:border-white/16 dark:bg-slate-950/80 dark:text-white dark:shadow-black/45"
         :style="{
           left: `${dragStartLeft}px`,
           top: `${dragStartTop}px`,
@@ -1089,7 +1089,7 @@ onUnmounted(() => {
         <div class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
         <header v-if="shouldShowHeader" class="relative flex min-w-0 items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
-            <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
+            <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 hdx-radius-card dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
               <UIcon :name="definition.icon" class="size-5 text-slate-800 dark:text-white" />
             </div>
             <div v-if="shouldShowHeaderText" class="min-w-0">
@@ -1236,7 +1236,7 @@ onUnmounted(() => {
 .toolbox-change-button {
   min-width: 0;
   max-width: 100%;
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-card);
   padding-inline: 0.75rem;
   white-space: nowrap;
 }

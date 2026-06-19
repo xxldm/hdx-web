@@ -24,14 +24,14 @@ const visibleTools = computed(() => (props.tools ?? []).slice(0, 5))
     </div>
 
     <div v-if="props.loading" class="grid content-start gap-2">
-      <USkeleton v-for="item in 3" :key="item" class="h-12 rounded-2xl" />
+      <USkeleton v-for="item in 3" :key="item" class="h-12 hdx-radius-card" />
     </div>
 
     <ul v-else-if="visibleTools.length" class="grid min-h-0 content-start gap-2 overflow-hidden">
       <li
         v-for="tool in visibleTools"
         :key="tool.id"
-        class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[1.1rem] border border-white/55 bg-white/54 px-3 py-2.5 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-white/12 dark:bg-white/9 dark:shadow-black/20"
+        class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border border-white/55 bg-white/54 px-3 py-2.5 shadow-sm shadow-slate-900/5 backdrop-blur-xl hdx-radius-card dark:border-white/12 dark:bg-white/9 dark:shadow-black/20"
       >
         <span class="min-w-0">
           <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white">{{ tool.displayName }}</span>
@@ -43,7 +43,7 @@ const visibleTools = computed(() => (props.tools ?? []).slice(0, 5))
       </li>
     </ul>
 
-    <div v-else class="grid place-items-center rounded-[1.25rem] border border-dashed border-slate-300/80 bg-white/38 p-5 text-center dark:border-white/20 dark:bg-white/6">
+    <div v-else class="grid place-items-center border border-dashed border-slate-300/80 bg-white/38 p-5 text-center hdx-radius-card dark:border-white/20 dark:bg-white/6">
       <div class="grid justify-items-center gap-2">
         <UIcon name="lucide:folder-plus" class="size-7 text-slate-400 dark:text-white/45" />
         <p class="max-w-56 text-sm text-slate-600 dark:text-white/64">

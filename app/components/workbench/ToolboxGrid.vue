@@ -349,14 +349,14 @@ if (import.meta.client) {
       <Transition name="toolbox-empty-cell">
         <div
           v-if="layout.editing && activeEmptyPosition"
-          class="toolbox-empty-cell-hover pointer-events-none relative z-0 min-h-0 rounded-lg border border-dashed border-cyan-300/80 bg-cyan-50/32 shadow-inner shadow-cyan-900/6 dark:border-cyan-200/30 dark:bg-cyan-300/8"
+          class="toolbox-empty-cell-hover pointer-events-none relative z-0 min-h-0 border border-dashed border-cyan-300/80 bg-cyan-50/32 shadow-inner shadow-cyan-900/6 hdx-radius-card dark:border-cyan-200/30 dark:bg-cyan-300/8"
           :style="hoveredEmptyCellStyle"
         >
           <UDropdownMenu
             v-model:open="addMenuOpen"
             :items="widgetMenuItems"
             :content="{ align: 'center' }"
-            :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
+            :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
             @update:open="onAddMenuOpenUpdate"
           >
             <UButton
@@ -434,7 +434,7 @@ if (import.meta.client) {
   min-height: 0;
   place-items: center;
   border: 1px dashed rgba(34, 211, 238, 0.7);
-  border-radius: 0.5rem;
+  border-radius: var(--hdx-radius-card);
   background: rgba(236, 254, 255, 0.44);
   color: rgb(21, 94, 117);
   transition:

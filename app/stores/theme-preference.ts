@@ -253,6 +253,7 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
     applyScaleToCssVariables(rootStyle, 'primary', activePrimaryScale.value)
     applyScaleToCssVariables(rootStyle, 'neutral', activeNeutralScale.value)
     rootStyle.setProperty('--ui-radius', `${preference.value.radius}rem`)
+    applyRadiusCssVariables(rootStyle, Number.parseFloat(preference.value.radius))
     rootStyle.setProperty('--hdx-theme-primary', activePrimaryHex.value)
     rootStyle.setProperty('--hdx-theme-primary-rgb', hexToRgbTriplet(activePrimaryHex.value))
     rootStyle.setProperty('--hdx-theme-neutral', activeNeutralHex.value)
@@ -312,6 +313,17 @@ function applyScaleToCssVariables(style: CSSStyleDeclaration, name: ThemeSemanti
   for (const [shade, value] of Object.entries(scale)) {
     style.setProperty(`--ui-color-${name}-${shade}`, value)
   }
+}
+
+function applyRadiusCssVariables(style: CSSStyleDeclaration, radius: number) {
+  const safeRadius = Number.isFinite(radius) ? radius : Number.parseFloat(defaultThemePreference.radius)
+
+  style.setProperty('--hdx-radius-control', `${safeRadius}rem`)
+  style.setProperty('--hdx-radius-card', `${safeRadius * 3}rem`)
+  style.setProperty('--hdx-radius-panel', `${safeRadius * 5}rem`)
+  style.setProperty('--hdx-radius-popover', `${safeRadius * 5}rem`)
+  style.setProperty('--hdx-radius-hero', `${safeRadius * 8}rem`)
+  style.setProperty('--hdx-radius-inner', `${safeRadius * 2.5}rem`)
 }
 
 function createScale(hex: string): ThemeColorScale {

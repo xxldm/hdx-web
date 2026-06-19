@@ -107,7 +107,7 @@ const accountMenuItems = computed<WorkbenchMenuItem[]>(() => [
       ]
     : [])
 ])
-const avatarLabel = computed(() => displayName.value.trim().slice(0, 1).toUpperCase() || 'H')
+const accountAvatarText = computed(() => Array.from(displayName.value.trim()).slice(0, 2).join('').toUpperCase() || 'HD')
 const contentRowsClass = computed(() => errorKey.value ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]')
 
 await callOnce('workbench-overview', () => workbench.loadOverview())
@@ -140,7 +140,7 @@ useSeoMeta({
     <div class="workbench-grid-lines absolute inset-0" />
 
     <section class="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-3 px-3 py-3 sm:px-4">
-      <header class="workbench-topbar rounded-lg border border-white/62 bg-white/58 px-3 shadow-xl shadow-cyan-950/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/28">
+      <header class="workbench-topbar hdx-radius-panel border border-white/62 bg-white/58 px-3 shadow-xl shadow-cyan-950/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/28">
         <div class="flex h-16 min-w-0 items-center gap-2">
           <UTooltip :text="t('workbench.menu')">
             <UButton
@@ -154,7 +154,7 @@ useSeoMeta({
           </UTooltip>
 
           <div class="flex min-w-0 items-center gap-3">
-            <div class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/70 bg-white/65 p-1.5 shadow-sm shadow-slate-900/6 dark:border-white/18 dark:bg-white/10">
+            <div class="grid size-11 shrink-0 place-items-center overflow-hidden border border-white/70 bg-white/65 p-1.5 shadow-sm shadow-slate-900/6 hdx-radius-card dark:border-white/18 dark:bg-white/10">
               <img :src="hdxIcon" :alt="t('app.iconAlt')" width="394" height="394" class="size-full rounded-full object-contain">
             </div>
             <div class="min-w-0">
@@ -168,12 +168,12 @@ useSeoMeta({
           </div>
 
           <div class="ml-auto flex min-w-0 items-center justify-end gap-2">
-            <div v-if="layout.editing" class="workbench-edit-commandbar hidden min-w-0 items-center gap-2 rounded-full border border-white/62 bg-white/54 p-1 shadow-sm shadow-slate-900/6 backdrop-blur-xl dark:border-white/14 dark:bg-white/8 dark:shadow-black/24 lg:flex">
+            <div v-if="layout.editing" class="workbench-edit-commandbar hidden min-w-0 items-center gap-2 border border-white/62 bg-white/54 p-1 shadow-sm shadow-slate-900/6 backdrop-blur-xl hdx-radius-popover dark:border-white/14 dark:bg-white/8 dark:shadow-black/24 lg:flex">
               <div class="flex min-w-0 items-center gap-1">
                 <div
                   v-for="stat in layoutStats"
                   :key="stat.label"
-                  class="flex items-center gap-1 rounded-full border border-slate-900/9 bg-white/64 px-1.5 py-1 text-xs text-slate-700 dark:border-white/14 dark:bg-white/8 dark:text-white/72"
+                  class="flex items-center gap-1 border border-slate-900/9 bg-white/64 px-1.5 py-1 text-xs text-slate-700 hdx-radius-card dark:border-white/14 dark:bg-white/8 dark:text-white/72"
                 >
                   <span class="px-1 font-medium">{{ stat.label }}</span>
                   <UButton
@@ -250,7 +250,7 @@ useSeoMeta({
               v-if="layout.editing"
               :items="layoutMenuItems"
               :content="{ align: 'end' }"
-              :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
+              :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
             >
               <UButton
                 type="button"
@@ -279,7 +279,7 @@ useSeoMeta({
                 v-model:open="localeMenuOpen"
                 :items="localeMenuItems"
                 :content="{ align: 'end' }"
-                :ui="{ content: 'workbench-floating-menu rounded-[1.25rem]' }"
+                :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
               >
                 <UButton
                   type="button"
@@ -302,7 +302,7 @@ useSeoMeta({
               :open-delay="0"
               :close-delay="180"
               :content="{ align: 'end' }"
-              :ui="{ content: 'workbench-floating-menu workbench-account-menu rounded-[1.25rem]' }"
+              :ui="{ content: 'workbench-floating-menu workbench-account-menu hdx-radius-popover' }"
             >
               <UButton
                 type="button"
@@ -311,8 +311,12 @@ useSeoMeta({
                 class="workbench-avatar-button workbench-account-trigger cursor-pointer"
                 :aria-label="t('workbench.account.menu')"
               >
-                <UIcon v-if="isLocalAdmin" name="lucide:monitor" class="size-4" />
-                <span v-else>{{ avatarLabel }}</span>
+                <UAvatar
+                  :alt="displayName"
+                  :text="accountAvatarText"
+                  size="sm"
+                  class="workbench-account-avatar"
+                />
               </UButton>
 
               <template #content>
@@ -333,7 +337,7 @@ useSeoMeta({
                     variant="ghost"
                     :icon="item.icon"
                     :disabled="item.disabled"
-                    class="workbench-account-menu-item cursor-pointer justify-start rounded-xl"
+                    class="workbench-account-menu-item cursor-pointer justify-start hdx-radius-card"
                     @click="item.onSelect?.()"
                   >
                     {{ item.label }}
@@ -346,7 +350,7 @@ useSeoMeta({
       </header>
 
       <section class="grid h-full min-h-0 gap-3 overflow-hidden" :class="contentRowsClass">
-        <div v-if="errorKey" class="rounded-lg border border-amber-300/45 bg-amber-50/72 p-3 text-sm text-amber-900 shadow-sm shadow-amber-950/8 backdrop-blur-xl dark:border-amber-200/20 dark:bg-amber-300/10 dark:text-amber-100">
+        <div v-if="errorKey" class="border border-amber-300/45 bg-amber-50/72 p-3 text-sm text-amber-900 shadow-sm shadow-amber-950/8 backdrop-blur-xl hdx-radius-card dark:border-amber-200/20 dark:bg-amber-300/10 dark:text-amber-100">
           <div class="flex items-start gap-2">
             <UIcon name="lucide:triangle-alert" class="mt-0.5 size-4 shrink-0" />
             <span>{{ t('workbench.unavailable') }} {{ t(errorKey) }}</span>
@@ -454,7 +458,7 @@ useSeoMeta({
   min-height: 2.25rem;
   align-items: center;
   gap: 0.45rem;
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-card);
   background: rgba(var(--hdx-theme-primary-rgb), 0.12);
   padding: 0 0.9rem;
   color: color-mix(in srgb, var(--hdx-theme-primary) 80%, #0f172a);
@@ -484,11 +488,13 @@ useSeoMeta({
 }
 
 .workbench-avatar-button {
-  display: inline-grid;
+  display: inline-flex;
   width: 2.25rem;
   min-width: 2.25rem;
   height: 2.25rem;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.66);
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.68);
@@ -502,6 +508,11 @@ useSeoMeta({
     background-color 160ms ease,
     color 160ms ease,
     box-shadow 160ms ease;
+}
+
+.workbench-account-avatar {
+  color: inherit;
+  background: transparent;
 }
 
 .workbench-avatar-button:hover {
@@ -536,7 +547,7 @@ useSeoMeta({
 .workbench-floating-menu {
   overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 1.25rem !important;
+  border-radius: var(--hdx-radius-popover) !important;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(18px);

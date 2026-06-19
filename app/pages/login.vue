@@ -91,7 +91,7 @@ useSeoMeta({
     <section class="relative z-10 mx-auto grid min-h-screen w-full max-w-6xl items-center gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(23rem,27rem)] lg:px-8">
       <aside class="hidden min-w-0 lg:grid lg:gap-5">
         <div class="grid gap-5">
-          <div class="login-brand-mark grid size-20 place-items-center overflow-hidden rounded-[2rem] border border-slate-900/10 bg-white/45 p-2.5 shadow-2xl shadow-cyan-900/10 backdrop-blur-2xl dark:border-white/20 dark:bg-white/12 dark:shadow-cyan-950/30">
+          <div class="login-brand-mark grid size-20 place-items-center overflow-hidden border border-slate-900/10 bg-white/45 p-2.5 shadow-2xl shadow-cyan-900/10 backdrop-blur-2xl hdx-radius-hero dark:border-white/20 dark:bg-white/12 dark:shadow-cyan-950/30">
             <img
               :src="hdxIcon"
               :alt="t('app.iconAlt')"
@@ -113,7 +113,7 @@ useSeoMeta({
 
       <div class="relative mx-auto w-full max-w-[27rem]">
         <div class="login-panel-glow" />
-        <div ref="loginPanelElement" class="login-panel relative box-border w-full min-w-0 overflow-hidden rounded-[2rem] border border-white/65 bg-white/70 p-4 shadow-2xl shadow-cyan-950/10 backdrop-blur-2xl dark:border-white/28 dark:bg-white/18 dark:shadow-slate-950/35 sm:p-6">
+        <div ref="loginPanelElement" class="login-panel relative box-border w-full min-w-0 overflow-hidden border border-white/65 bg-white/70 p-4 shadow-2xl shadow-cyan-950/10 backdrop-blur-2xl hdx-radius-hero dark:border-white/28 dark:bg-white/18 dark:shadow-slate-950/35 sm:p-6">
           <div class="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
           <header class="mb-6 grid gap-4">
@@ -123,13 +123,13 @@ useSeoMeta({
                   {{ t('auth.loginPanelTitle') }}
                 </h2>
               </div>
-              <div class="login-panel-tools flex shrink-0 items-center gap-1.5 rounded-[1.25rem] border border-slate-900/10 bg-white/65 p-1 text-slate-700 shadow-lg shadow-cyan-950/10 backdrop-blur-2xl dark:border-white/25 dark:bg-white/18 dark:text-white dark:shadow-cyan-950/25">
+              <div class="login-panel-tools flex shrink-0 items-center gap-1.5 border border-slate-900/10 bg-white/65 p-1 text-slate-700 shadow-lg shadow-cyan-950/10 backdrop-blur-2xl hdx-radius-popover dark:border-white/25 dark:bg-white/18 dark:text-white dark:shadow-cyan-950/25">
                 <UTooltip :text="t('actions.language')">
                   <UDropdownMenu
                     v-model:open="localeMenuOpen"
                     :items="localeMenuItems"
                     :content="{ align: 'end' }"
-                    :ui="{ content: 'login-floating-menu rounded-[1.25rem]' }"
+                    :ui="{ content: 'login-floating-menu hdx-radius-popover' }"
                   >
                     <UButton
                       type="button"
@@ -151,7 +151,7 @@ useSeoMeta({
                 </UTooltip>
                 <ThemeSettingsPopover
                   button-class="login-tool-button cursor-pointer"
-                  content-class="login-floating-menu rounded-[1.25rem]"
+                  content-class="login-floating-menu hdx-radius-popover"
                 />
               </div>
             </div>
@@ -416,7 +416,7 @@ useSeoMeta({
 .login-panel-glow {
   position: absolute;
   inset: -1.5rem;
-  border-radius: 2.75rem;
+  border-radius: var(--hdx-radius-hero);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(var(--hdx-theme-accent-rgb), 0.18) 52%, rgba(var(--hdx-theme-warm-rgb), 0.14)),
     linear-gradient(45deg, rgba(var(--hdx-theme-primary-rgb), 0.18), transparent 56%);
@@ -556,7 +556,7 @@ useSeoMeta({
 .login-floating-menu {
   overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 1.25rem !important;
+  border-radius: var(--hdx-radius-popover) !important;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(18px);
