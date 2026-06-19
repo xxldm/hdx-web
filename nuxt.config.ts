@@ -62,9 +62,6 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      htmlAttrs: {
-        lang: 'zh-CN'
-      },
       title: 'HDX',
       meta: [
         { name: 'description', content: 'HDX 工具箱 Web 工作台' },
