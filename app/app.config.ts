@@ -4,6 +4,7 @@ export default defineAppConfig({
       primary: 'green',
       secondary: 'slate',
       success: 'emerald',
+      info: 'sky',
       warning: 'amber',
       error: 'rose',
       neutral: 'slate'
