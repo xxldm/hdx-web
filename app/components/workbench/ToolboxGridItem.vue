@@ -8,6 +8,7 @@ import type {
   WorkbenchPushDirection
 } from '~/stores/workbench-layout'
 import type { ResolvedWorkbenchWidgetOrientation, WorkbenchWidgetKey, WorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
+import { constrainWorkbenchWidgetSpan } from '~/utils/workbench-widget-meta'
 import { getWorkbenchWidgetDefinition, workbenchWidgetDefinitions } from '~/utils/workbench-widgets'
 
 const props = defineProps<{
@@ -141,6 +142,22 @@ const itemElement = ref<HTMLElement | null>(null)
 const removeConfirmOpen = ref(false)
 const isRemoving = ref(false)
 const suppressNextEditActionClick = ref(false)
+const resizeLimitFeedback = shallowRef<ResizeLimitFeedback | null>(null)
+const resizeLimitFeedbackText = computed(() => {
+  if (resizeLimitFeedback.value === 'min') {
+    return t('workbench.layout.resizeMinLimitReached')
+  }
+
+  if (resizeLimitFeedback.value === 'max') {
+    return t('workbench.layout.resizeMaxLimitReached')
+  }
+
+  if (resizeLimitFeedback.value === 'boundary') {
+    return t('workbench.layout.resizeBoundaryLimitReached')
+  }
+
+  return ''
+})
 let dragPointerId: number | null = null
 let dragStartX = 0
 let dragStartY = 0
@@ -215,6 +232,13 @@ interface DragPreviewRect {
 interface DragGridRect {
   column: number
   row: number
+  colSpan: number
+  rowSpan: number
+}
+
+type ResizeLimitFeedback = 'min' | 'max' | 'boundary'
+
+interface ResizeSpan {
   colSpan: number
   rowSpan: number
 }
@@ -380,6 +404,7 @@ function onResizePointerDown(event: PointerEvent) {
   resizeStartY = event.clientY
   resizeStartColSpan = props.widget.colSpan
   resizeStartRowSpan = props.widget.rowSpan
+  resizeLimitFeedback.value = null
   resizeGap = layout.gap
   resizeCellWidth = Math.max((itemRect.width - resizeGap * (props.widget.colSpan - 1)) / props.widget.colSpan, 1)
   resizeCellHeight = Math.max((itemRect.height - resizeGap * (props.widget.rowSpan - 1)) / props.widget.rowSpan, 1)
@@ -403,11 +428,14 @@ function onResizePointerMove(event: PointerEvent) {
   const stepHeight = resizeCellHeight + resizeGap
   const colDelta = Math.round((event.clientX - resizeStartX) / stepWidth)
   const rowDelta = Math.round((event.clientY - resizeStartY) / stepHeight)
-
-  layout.updateWidgetSpan(props.widget.id, {
+  const requestedSpan = {
     colSpan: resizeStartColSpan + colDelta,
     rowSpan: resizeStartRowSpan + rowDelta
-  })
+  }
+
+  resizeLimitFeedback.value = getResizeLimitFeedback(requestedSpan, constrainResizeSpan(requestedSpan))
+
+  layout.updateWidgetSpan(props.widget.id, requestedSpan)
 }
 
 function onResizePointerUp(event: PointerEvent) {
@@ -474,6 +502,7 @@ function endLocalResize(target?: HTMLElement) {
   const capturedTarget = target ?? resizeHandleElement
   resizePointerId = null
   resizeHandleElement = null
+  resizeLimitFeedback.value = null
   layout.endResize()
   removeWindowResizeListeners()
 
@@ -831,6 +860,29 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function constrainResizeSpan(span: ResizeSpan) {
+  return constrainWorkbenchWidgetSpan(props.widget.key, span.colSpan, span.rowSpan, layout.rows, layout.columns)
+}
+
+function getResizeLimitFeedback(requestedSpan: ResizeSpan, constrainedSpan: ResizeSpan): ResizeLimitFeedback | null {
+  const reachedMin = requestedSpan.colSpan < constrainedSpan.colSpan || requestedSpan.rowSpan < constrainedSpan.rowSpan
+  const reachedMax = requestedSpan.colSpan > constrainedSpan.colSpan || requestedSpan.rowSpan > constrainedSpan.rowSpan
+
+  if (reachedMin && reachedMax) {
+    return 'boundary'
+  }
+
+  if (reachedMax) {
+    return 'max'
+  }
+
+  if (reachedMin) {
+    return 'min'
+  }
+
+  return null
+}
+
 onUnmounted(() => {
   cancelLocalDrag()
 
@@ -860,7 +912,8 @@ onUnmounted(() => {
       isRemoving ? 'toolbox-grid-item-removing' : '',
       isDropTarget ? 'border-cyan-400 bg-cyan-50/70 shadow-cyan-900/16 dark:border-cyan-200/55 dark:bg-cyan-300/12' : '',
       isDragging ? 'toolbox-grid-item-dragging' : '',
-      isResizing ? 'toolbox-grid-item-resizing' : ''
+      isResizing ? 'toolbox-grid-item-resizing' : '',
+      resizeLimitFeedback ? 'toolbox-grid-item-resize-limited' : ''
     ]"
     :style="{
       gridColumnStart: widget.column + 1,
@@ -996,6 +1049,14 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <div
+        v-if="editing && resizeLimitFeedbackText"
+        class="toolbox-resize-limit-hint pointer-events-none absolute bottom-11 right-3 z-30 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-50/86 px-2.5 py-1 text-xs font-medium text-amber-950 shadow-lg shadow-amber-900/12 backdrop-blur-xl dark:border-amber-200/18 dark:bg-amber-300/16 dark:text-amber-50 dark:shadow-black/28"
+      >
+        <UIcon name="lucide:circle-alert" class="size-3.5 shrink-0" />
+        <span class="truncate">{{ resizeLimitFeedbackText }}</span>
+      </div>
+
       <button
         v-if="editing"
         type="button"
@@ -1114,6 +1175,33 @@ onUnmounted(() => {
 
 .toolbox-grid-item-resizing .toolbox-card-content {
   opacity: 0.72;
+}
+
+.toolbox-grid-item-resize-limited {
+  border-color: rgba(245, 158, 11, 0.86);
+  box-shadow:
+    0 24px 60px rgba(245, 158, 11, 0.18),
+    inset 0 0 0 1px rgba(245, 158, 11, 0.22);
+}
+
+.dark .toolbox-grid-item-resize-limited {
+  border-color: rgba(251, 191, 36, 0.72);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(251, 191, 36, 0.22);
+}
+
+.toolbox-grid-item-resize-limited .toolbox-resize-handle {
+  color: rgb(146, 64, 14);
+  background: rgba(254, 243, 199, 0.92);
+  opacity: 1;
+  pointer-events: auto;
+  animation: toolbox-resize-limit-pulse 260ms ease;
+}
+
+.dark .toolbox-grid-item-resize-limited .toolbox-resize-handle {
+  color: rgb(254, 243, 199);
+  background: rgba(245, 158, 11, 0.22);
 }
 
 .toolbox-grid-item-selected .toolbox-edit-affordance,
@@ -1264,6 +1352,23 @@ onUnmounted(() => {
 .toolbox-resize-corner::after {
   width: 0.55rem;
   height: 0.55rem;
+}
+
+@keyframes toolbox-resize-limit-pulse {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  46% {
+    transform: translate3d(-2px, -2px, 0) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbox-grid-item-resize-limited .toolbox-resize-handle {
+    animation: none;
+  }
 }
 
 </style>

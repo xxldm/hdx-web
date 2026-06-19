@@ -90,3 +90,23 @@ export const workbenchWidgetKeys = workbenchWidgetMetadata.map(metadata => metad
 export function getWorkbenchWidgetMetadata(key: string) {
   return workbenchWidgetMetadataByKey[key as WorkbenchWidgetKey] ?? null
 }
+
+export function constrainWorkbenchWidgetSpan(key: WorkbenchWidgetKey, colSpan: number, rowSpan: number, rows: number, columns: number) {
+  const definition = getWorkbenchWidgetMetadata(key)
+  const constraints = definition?.constraints
+  const minColSpan = clampInteger(constraints?.minColSpan ?? 1, 1, columns)
+  const maxColSpan = clampInteger(constraints?.maxColSpan ?? columns, minColSpan, columns)
+  const minRowSpan = clampInteger(constraints?.minRowSpan ?? 1, 1, rows)
+  const maxRowSpan = clampInteger(constraints?.maxRowSpan ?? rows, minRowSpan, rows)
+
+  return {
+    colSpan: clampInteger(colSpan, minColSpan, maxColSpan),
+    rowSpan: clampInteger(rowSpan, minRowSpan, maxRowSpan)
+  }
+}
+
+function clampInteger(value: number, min: number, max: number) {
+  const integer = Number.isFinite(value) ? Math.trunc(value) : min
+
+  return Math.min(Math.max(integer, min), max)
+}

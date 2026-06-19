@@ -3,6 +3,7 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { z } from 'zod'
 import {
+  constrainWorkbenchWidgetSpan,
   getWorkbenchWidgetMetadata,
   workbenchWidgetKeys,
   workbenchWidgetMetadata,
@@ -1268,17 +1269,7 @@ function createDefaultWidgetHeaderPreference(): WorkbenchWidgetHeaderPreference 
 }
 
 function constrainWidgetSpan(key: WorkbenchWidgetKey, colSpan: number, rowSpan: number, rows: number, columns: number) {
-  const definition = getWorkbenchWidgetMetadata(key)
-  const constraints = definition?.constraints
-  const minColSpan = clampInteger(constraints?.minColSpan ?? 1, 1, columns)
-  const maxColSpan = clampInteger(constraints?.maxColSpan ?? columns, minColSpan, columns)
-  const minRowSpan = clampInteger(constraints?.minRowSpan ?? 1, 1, rows)
-  const maxRowSpan = clampInteger(constraints?.maxRowSpan ?? rows, minRowSpan, rows)
-
-  return {
-    colSpan: clampInteger(colSpan, minColSpan, maxColSpan),
-    rowSpan: clampInteger(rowSpan, minRowSpan, maxRowSpan)
-  }
+  return constrainWorkbenchWidgetSpan(key, colSpan, rowSpan, rows, columns)
 }
 
 function normalizeWidgetOrientation(key: WorkbenchWidgetKey, orientation: WorkbenchWidgetOrientation) {

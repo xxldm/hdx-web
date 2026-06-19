@@ -2,6 +2,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createDefaultWorkbenchLayout, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
+import { constrainWorkbenchWidgetSpan } from '../../app/utils/workbench-widget-meta'
 
 describe('workbench layout store', () => {
   beforeEach(() => {
@@ -346,6 +347,17 @@ describe('workbench layout store', () => {
       rowSpan: 2
     })
     expect(store.placedWidgets).toHaveLength(store.widgets.length)
+  })
+
+  it('shares widget span constraints with resize feedback helpers', () => {
+    expect(constrainWorkbenchWidgetSpan('runtime', 4, 4, 4, 4)).toEqual({
+      colSpan: 2,
+      rowSpan: 2
+    })
+    expect(constrainWorkbenchWidgetSpan('quick-links', 10, 10, 3, 4)).toEqual({
+      colSpan: 4,
+      rowSpan: 3
+    })
   })
 })
 
