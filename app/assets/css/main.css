@@ -20,11 +20,12 @@
   --hdx-theme-sun-rgb: 250, 204, 21;
   --ui-radius: 0.25rem;
   --hdx-radius-control: var(--ui-radius);
-  --hdx-radius-card: calc(var(--ui-radius) * 3);
-  --hdx-radius-panel: calc(var(--ui-radius) * 5);
-  --hdx-radius-popover: calc(var(--ui-radius) * 5);
-  --hdx-radius-hero: calc(var(--ui-radius) * 8);
-  --hdx-radius-inner: calc(var(--ui-radius) * 2.5);
+  --hdx-radius-card: min(calc(var(--ui-radius) * 3), 1.25rem);
+  --hdx-radius-panel: min(calc(var(--ui-radius) * 4), 1.5rem);
+  --hdx-radius-popover: min(calc(var(--ui-radius) * 3), 1.25rem);
+  --hdx-radius-hero: min(calc(var(--ui-radius) * 5), 2rem);
+  --hdx-radius-inner: min(calc(var(--ui-radius) * 2), 0.875rem);
+  --hdx-radius-toolbar-item: max(var(--hdx-radius-control), calc(var(--hdx-radius-popover) - 0.25rem));
 }
 
 html {
@@ -58,6 +59,10 @@ body {
 
 .hdx-radius-inner {
   border-radius: var(--hdx-radius-inner);
+}
+
+.hdx-radius-toolbar-item {
+  border-radius: var(--hdx-radius-toolbar-item);
 }
 
 @media (prefers-reduced-motion: reduce) {

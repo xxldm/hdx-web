@@ -446,7 +446,7 @@ useSeoMeta({
   min-width: 2.25rem;
   height: 2.25rem;
   padding: 0;
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-toolbar-item);
   border-color: transparent;
   background: transparent;
   color: rgba(15, 23, 42, 0.72);
@@ -496,7 +496,7 @@ useSeoMeta({
   justify-content: center;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-card);
   background: rgba(255, 255, 255, 0.68);
   color: rgba(15, 23, 42, 0.78);
   font-size: 0.78rem;
@@ -512,6 +512,7 @@ useSeoMeta({
 
 .workbench-account-avatar {
   color: inherit;
+  border-radius: var(--hdx-radius-control);
   background: transparent;
 }
 

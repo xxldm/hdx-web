@@ -56,44 +56,78 @@ const widgetMenuItems = computed(() => [
   workbenchWidgetDefinitions.map((item) => ({
     label: t(item.titleKey),
     icon: item.icon,
+    type: 'checkbox' as const,
     checked: item.key === props.widget.key,
+    active: item.key === props.widget.key,
     disabled: item.key === props.widget.key ? false : !layout.canUpdateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey),
-    onSelect: () => {
-      layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+    onUpdateChecked: (checked: boolean) => {
+      if (checked) {
+        layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+      }
     }
   })),
   [
     {
       label: t('workbench.layout.chromeCard'),
       icon: 'lucide:square',
+      type: 'checkbox' as const,
       checked: props.widget.chrome === 'card',
-      onSelect: () => layout.updateWidgetChrome(props.widget.id, 'card' satisfies WorkbenchWidgetChrome)
+      active: props.widget.chrome === 'card',
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) {
+          layout.updateWidgetChrome(props.widget.id, 'card' satisfies WorkbenchWidgetChrome)
+        }
+      }
     },
     {
       label: t('workbench.layout.chromeBare'),
       icon: 'lucide:square-dashed',
+      type: 'checkbox' as const,
       checked: props.widget.chrome === 'bare',
-      onSelect: () => layout.updateWidgetChrome(props.widget.id, 'bare' satisfies WorkbenchWidgetChrome)
+      active: props.widget.chrome === 'bare',
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) {
+          layout.updateWidgetChrome(props.widget.id, 'bare' satisfies WorkbenchWidgetChrome)
+        }
+      }
     }
   ],
   [
     {
       label: t('workbench.layout.orientationAuto'),
       icon: 'lucide:sparkles',
+      type: 'checkbox' as const,
       checked: props.widget.orientation === 'auto',
-      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'auto' satisfies WorkbenchWidgetOrientation)
+      active: props.widget.orientation === 'auto',
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) {
+          layout.updateWidgetOrientation(props.widget.id, 'auto' satisfies WorkbenchWidgetOrientation)
+        }
+      }
     },
     {
       label: t('workbench.layout.orientationHorizontal'),
       icon: 'lucide:panel-top',
+      type: 'checkbox' as const,
       checked: props.widget.orientation === 'horizontal',
-      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'horizontal' satisfies WorkbenchWidgetOrientation)
+      active: props.widget.orientation === 'horizontal',
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) {
+          layout.updateWidgetOrientation(props.widget.id, 'horizontal' satisfies WorkbenchWidgetOrientation)
+        }
+      }
     },
     {
       label: t('workbench.layout.orientationVertical'),
       icon: 'lucide:panel-left',
+      type: 'checkbox' as const,
       checked: props.widget.orientation === 'vertical',
-      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'vertical' satisfies WorkbenchWidgetOrientation)
+      active: props.widget.orientation === 'vertical',
+      onUpdateChecked: (checked: boolean) => {
+        if (checked) {
+          layout.updateWidgetOrientation(props.widget.id, 'vertical' satisfies WorkbenchWidgetOrientation)
+        }
+      }
     }
   ],
   [
@@ -1028,7 +1062,13 @@ onUnmounted(() => {
             <UDropdownMenu
               :items="widgetMenuItems"
               :content="{ align: 'start' }"
-              :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
+              :ui="{
+                content: 'workbench-floating-menu hdx-radius-popover',
+                item: 'workbench-widget-menu-item',
+                itemLeadingIcon: 'workbench-widget-menu-icon',
+                itemTrailing: 'workbench-widget-menu-trailing',
+                itemTrailingIcon: 'workbench-widget-menu-trailing-icon'
+              }"
             >
               <UButton
                 type="button"
@@ -1041,9 +1081,6 @@ onUnmounted(() => {
               >
                 {{ t('workbench.layout.changeWidget') }}
               </UButton>
-              <template #item-trailing="{ item }">
-                <UIcon v-if="item.checked" name="lucide:check" class="size-4 text-cyan-700 dark:text-cyan-100" />
-              </template>
             </UDropdownMenu>
           </UTooltip>
         </div>
@@ -1245,6 +1282,34 @@ onUnmounted(() => {
   max-width: 7rem;
 }
 
+:global(.workbench-widget-menu-item[data-disabled]) {
+  opacity: 0.34 !important;
+}
+
+:global(.workbench-widget-menu-item[data-disabled]::before) {
+  background: transparent !important;
+}
+
+:global(.workbench-widget-menu-item[data-disabled] .workbench-widget-menu-icon),
+:global(.workbench-widget-menu-item[data-disabled] .workbench-widget-menu-trailing-icon) {
+  color: var(--ui-text-dimmed) !important;
+}
+
+:global(.workbench-widget-menu-trailing) {
+  min-width: 1.25rem;
+  justify-content: flex-end;
+}
+
+:global(.workbench-widget-menu-trailing-icon) {
+  width: 1rem;
+  height: 1rem;
+  color: var(--ui-primary);
+}
+
+:global(.dark .workbench-widget-menu-trailing-icon) {
+  color: var(--ui-primary);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .toolbox-grid-item-editing:hover .toolbox-edit-affordance,
   .toolbox-grid-item-editing:hover .toolbox-edit-actions,
@@ -1272,7 +1337,7 @@ onUnmounted(() => {
   padding: 0;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.46);
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-card);
   background: rgba(15, 23, 42, 0.22);
   color: rgba(255, 255, 255, 0.86);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);

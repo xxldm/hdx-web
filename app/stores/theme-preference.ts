@@ -1,136 +1,23 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { z } from 'zod'
-
-export const themePrimaryColorKeys = [
-  'black',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'green',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'purple',
-  'fuchsia',
-  'pink',
-  'rose'
-] as const
-
-export const themeNeutralColorKeys = [
-  'slate',
-  'gray',
-  'zinc',
-  'neutral',
-  'stone',
-  'taupe',
-  'mauve',
-  'mist',
-  'olive'
-] as const
-
-export const themeRadiusValues = ['0', '0.125', '0.25', '0.375', '0.5'] as const
-export const themePreferenceStorageKey = 'hdx:web:theme:v1'
-
-export type ThemePrimaryColorKey = typeof themePrimaryColorKeys[number]
-export type ThemeNeutralColorKey = typeof themeNeutralColorKeys[number]
-export type ThemeRadiusValue = typeof themeRadiusValues[number]
-type ThemeColorMode = 'preset' | 'custom'
-type ThemeSemanticColorName = 'primary' | 'neutral'
-
-interface ThemeColorScale {
-  50: string
-  100: string
-  200: string
-  300: string
-  400: string
-  500: string
-  600: string
-  700: string
-  800: string
-  900: string
-  950: string
-}
-
-interface ThemeColorOption<T extends string> {
-  key: T
-  labelKey: string
-  swatch: string
-  scale: ThemeColorScale
-}
-
-interface ThemePreference {
-  version: 1
-  primaryMode: ThemeColorMode
-  primary: ThemePrimaryColorKey
-  customPrimary: string
-  neutralMode: ThemeColorMode
-  neutral: ThemeNeutralColorKey
-  customNeutral: string
-  radius: ThemeRadiusValue
-}
-
-export const defaultThemePreference: ThemePreference = {
-  version: 1,
-  primaryMode: 'preset',
-  primary: 'green',
-  customPrimary: '#22c55e',
-  neutralMode: 'preset',
-  neutral: 'slate',
-  customNeutral: '#64748b',
-  radius: '0.25'
-}
-
-const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i)
-const storedThemeSchema = z.object({
-  version: z.literal(1),
-  primaryMode: z.enum(['preset', 'custom']).default(defaultThemePreference.primaryMode),
-  primary: z.enum([...themePrimaryColorKeys] as [ThemePrimaryColorKey, ...ThemePrimaryColorKey[]]).default(defaultThemePreference.primary),
-  customPrimary: hexColorSchema.default(defaultThemePreference.customPrimary),
-  neutralMode: z.enum(['preset', 'custom']).default(defaultThemePreference.neutralMode),
-  neutral: z.enum([...themeNeutralColorKeys] as [ThemeNeutralColorKey, ...ThemeNeutralColorKey[]]).default(defaultThemePreference.neutral),
-  customNeutral: hexColorSchema.default(defaultThemePreference.customNeutral),
-  radius: z.enum([...themeRadiusValues] as [ThemeRadiusValue, ...ThemeRadiusValue[]]).default(defaultThemePreference.radius)
-})
-
-const primaryColorOptions: ThemeColorOption<ThemePrimaryColorKey>[] = [
-  { key: 'black', labelKey: 'theme.colors.black', swatch: '#0f172a', scale: createNeutralScale('#0f172a') },
-  { key: 'red', labelKey: 'theme.colors.red', swatch: '#ef4444', scale: createScale('#ef4444') },
-  { key: 'orange', labelKey: 'theme.colors.orange', swatch: '#f97316', scale: createScale('#f97316') },
-  { key: 'amber', labelKey: 'theme.colors.amber', swatch: '#f59e0b', scale: createScale('#f59e0b') },
-  { key: 'yellow', labelKey: 'theme.colors.yellow', swatch: '#eab308', scale: createScale('#eab308') },
-  { key: 'lime', labelKey: 'theme.colors.lime', swatch: '#84cc16', scale: createScale('#84cc16') },
-  { key: 'green', labelKey: 'theme.colors.green', swatch: '#22c55e', scale: createScale('#22c55e') },
-  { key: 'emerald', labelKey: 'theme.colors.emerald', swatch: '#10b981', scale: createScale('#10b981') },
-  { key: 'teal', labelKey: 'theme.colors.teal', swatch: '#14b8a6', scale: createScale('#14b8a6') },
-  { key: 'cyan', labelKey: 'theme.colors.cyan', swatch: '#06b6d4', scale: createScale('#06b6d4') },
-  { key: 'sky', labelKey: 'theme.colors.sky', swatch: '#0ea5e9', scale: createScale('#0ea5e9') },
-  { key: 'blue', labelKey: 'theme.colors.blue', swatch: '#3b82f6', scale: createScale('#3b82f6') },
-  { key: 'indigo', labelKey: 'theme.colors.indigo', swatch: '#6366f1', scale: createScale('#6366f1') },
-  { key: 'violet', labelKey: 'theme.colors.violet', swatch: '#8b5cf6', scale: createScale('#8b5cf6') },
-  { key: 'purple', labelKey: 'theme.colors.purple', swatch: '#a855f7', scale: createScale('#a855f7') },
-  { key: 'fuchsia', labelKey: 'theme.colors.fuchsia', swatch: '#d946ef', scale: createScale('#d946ef') },
-  { key: 'pink', labelKey: 'theme.colors.pink', swatch: '#ec4899', scale: createScale('#ec4899') },
-  { key: 'rose', labelKey: 'theme.colors.rose', swatch: '#f43f5e', scale: createScale('#f43f5e') }
-]
-
-const neutralColorOptions: ThemeColorOption<ThemeNeutralColorKey>[] = [
-  { key: 'slate', labelKey: 'theme.colors.slate', swatch: '#64748b', scale: createNeutralScale('#64748b') },
-  { key: 'gray', labelKey: 'theme.colors.gray', swatch: '#6b7280', scale: createNeutralScale('#6b7280') },
-  { key: 'zinc', labelKey: 'theme.colors.zinc', swatch: '#71717a', scale: createNeutralScale('#71717a') },
-  { key: 'neutral', labelKey: 'theme.colors.neutral', swatch: '#737373', scale: createNeutralScale('#737373') },
-  { key: 'stone', labelKey: 'theme.colors.stone', swatch: '#78716c', scale: createNeutralScale('#78716c') },
-  { key: 'taupe', labelKey: 'theme.colors.taupe', swatch: '#82736c', scale: createNeutralScale('#82736c') },
-  { key: 'mauve', labelKey: 'theme.colors.mauve', swatch: '#857386', scale: createNeutralScale('#857386') },
-  { key: 'mist', labelKey: 'theme.colors.mist', swatch: '#75858a', scale: createNeutralScale('#75858a') },
-  { key: 'olive', labelKey: 'theme.colors.olive', swatch: '#777f5c', scale: createNeutralScale('#777f5c') }
-]
+import { computed, ref, shallowRef } from 'vue'
+import {
+  applyThemeCssVariables,
+  createNeutralScale,
+  createScale,
+  createThemeCssVariables,
+  defaultThemePreference,
+  neutralColorOptions,
+  normalizeHex,
+  primaryColorOptions,
+  storedThemeSchema,
+  themeCssVariablesStorageKey,
+  themePreferenceStorageKey,
+  themeRadiusValues,
+  type ThemeNeutralColorKey,
+  type ThemePreference,
+  type ThemePrimaryColorKey,
+  type ThemeRadiusValue
+} from '~/utils/theme-runtime'
 
 const radiusOptions = themeRadiusValues.map(value => ({
   value,
@@ -140,7 +27,7 @@ const radiusOptions = themeRadiusValues.map(value => ({
 export const useThemePreferenceStore = defineStore('theme-preference', () => {
   const appConfig = useAppConfig()
   const colorMode = useColorMode()
-  const hydrated = ref(false)
+  const hydrated = shallowRef(false)
   const preference = ref<ThemePreference>({ ...defaultThemePreference })
 
   const activePrimaryOption = computed(() => primaryColorOptions.find(option => option.key === preference.value.primary) ?? primaryColorOptions[0]!)
@@ -151,14 +38,15 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
   const activeNeutralScale = computed(() => preference.value.neutralMode === 'custom' ? createNeutralScale(activeNeutralHex.value) : activeNeutralOption.value.scale)
   const activeColorMode = computed(() => colorMode.preference)
 
-  function hydrate() {
-    if (hydrated.value || !isBrowserRuntime()) {
+  function hydrate(options: HydrateThemeOptions = {}) {
+    if ((hydrated.value && !options.force) || !isBrowserRuntime()) {
       return
     }
 
     preference.value = readStoredTheme()
     hydrated.value = true
     applyTheme()
+    persistTheme()
   }
 
   function setPrimaryColor(key: ThemePrimaryColorKey) {
@@ -250,14 +138,16 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
     }
 
     const rootStyle = document.documentElement.style
-    applyScaleToCssVariables(rootStyle, 'primary', activePrimaryScale.value)
-    applyScaleToCssVariables(rootStyle, 'neutral', activeNeutralScale.value)
-    rootStyle.setProperty('--ui-radius', `${preference.value.radius}rem`)
-    applyRadiusCssVariables(rootStyle, Number.parseFloat(preference.value.radius))
-    rootStyle.setProperty('--hdx-theme-primary', activePrimaryHex.value)
-    rootStyle.setProperty('--hdx-theme-primary-rgb', hexToRgbTriplet(activePrimaryHex.value))
-    rootStyle.setProperty('--hdx-theme-neutral', activeNeutralHex.value)
-    rootStyle.setProperty('--hdx-theme-neutral-rgb', hexToRgbTriplet(activeNeutralHex.value))
+    const radius = Number.parseFloat(preference.value.radius)
+    const variables = createThemeCssVariables({
+      primaryScale: activePrimaryScale.value,
+      neutralScale: activeNeutralScale.value,
+      primaryHex: activePrimaryHex.value,
+      neutralHex: activeNeutralHex.value,
+      radius
+    })
+
+    applyThemeCssVariables(rootStyle, variables)
   }
 
   function persistTheme() {
@@ -266,6 +156,13 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
     }
 
     window.localStorage.setItem(themePreferenceStorageKey, JSON.stringify(preference.value))
+    window.localStorage.setItem(themeCssVariablesStorageKey, JSON.stringify(createThemeCssVariables({
+      primaryScale: activePrimaryScale.value,
+      neutralScale: activeNeutralScale.value,
+      primaryHex: activePrimaryHex.value,
+      neutralHex: activeNeutralHex.value,
+      radius: Number.parseFloat(preference.value.radius)
+    })))
   }
 
   if (isBrowserRuntime()) {
@@ -297,113 +194,192 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
 
 export function readStoredTheme(raw?: string | null): ThemePreference {
   const storedValue = raw ?? (isBrowserRuntime() ? window.localStorage.getItem(themePreferenceStorageKey) : null)
+  const shouldReadStoredVariables = raw === undefined && isBrowserRuntime()
+  const storedVariablesValue = shouldReadStoredVariables
+    ? window.localStorage.getItem(themeCssVariablesStorageKey)
+    : null
+  const variablePatch = readStoredThemePatchFromCssVariables(storedVariablesValue)
 
-  if (!storedValue) {
-    return { ...defaultThemePreference }
+  if (storedValue) {
+    const preference = parseStoredThemePreference(storedValue)
+
+    if (preference) {
+      return reconcileStoredTheme(preference, variablePatch)
+    }
+  }
+
+  return variablePatch ? storedThemeSchema.parse({ ...defaultThemePreference, ...variablePatch }) : { ...defaultThemePreference }
+}
+
+function parseStoredThemePreference(storedValue: string) {
+  try {
+    const storedTheme = JSON.parse(storedValue)
+
+    return storedThemeSchema.parse({
+      ...defaultThemePreference,
+      ...storedTheme
+    })
+  } catch {
+    return null
+  }
+}
+
+function readStoredThemePatchFromCssVariables(raw: string | null): Partial<ThemePreference> | null {
+  if (!raw) {
+    return null
   }
 
   try {
-    return storedThemeSchema.parse(JSON.parse(storedValue))
+    const variables = JSON.parse(raw) as Record<string, unknown>
+    const primaryHex = typeof variables['--hdx-theme-primary'] === 'string'
+      ? normalizeHex(variables['--hdx-theme-primary'])
+      : null
+    const neutralHex = typeof variables['--hdx-theme-neutral'] === 'string'
+      ? normalizeHex(variables['--hdx-theme-neutral'], defaultThemePreference.customNeutral)
+      : null
+    const radius = typeof variables['--ui-radius'] === 'string'
+      ? parseStoredRadius(variables['--ui-radius'])
+      : null
+
+    if (!primaryHex && !neutralHex && !radius) {
+      return null
+    }
+
+    return {
+      ...createColorPreference('primary', primaryHex),
+      ...createColorPreference('neutral', neutralHex),
+      ...(radius ? { radius } : {})
+    }
   } catch {
-    return { ...defaultThemePreference }
+    return null
   }
 }
 
-function applyScaleToCssVariables(style: CSSStyleDeclaration, name: ThemeSemanticColorName, scale: ThemeColorScale) {
-  for (const [shade, value] of Object.entries(scale)) {
-    style.setProperty(`--ui-color-${name}-${shade}`, value)
+function reconcileStoredTheme(preference: ThemePreference, variablePatch: Partial<ThemePreference> | null): ThemePreference {
+  if (!variablePatch) {
+    return preference
   }
+
+  return storedThemeSchema.parse({
+    ...preference,
+    ...readConflictingCssVariablePatch(preference, variablePatch)
+  })
 }
 
-function applyRadiusCssVariables(style: CSSStyleDeclaration, radius: number) {
-  const safeRadius = Number.isFinite(radius) ? radius : Number.parseFloat(defaultThemePreference.radius)
+function readConflictingCssVariablePatch(preference: ThemePreference, variablePatch: Partial<ThemePreference>) {
+  const patch: Partial<ThemePreference> = {}
+  const primaryPreference = pickPrimaryPreference(variablePatch)
+  const neutralPreference = pickNeutralPreference(variablePatch)
+  const radiusPreference = pickRadiusPreference(variablePatch)
 
-  style.setProperty('--hdx-radius-control', `${safeRadius}rem`)
-  style.setProperty('--hdx-radius-card', `${safeRadius * 3}rem`)
-  style.setProperty('--hdx-radius-panel', `${safeRadius * 5}rem`)
-  style.setProperty('--hdx-radius-popover', `${safeRadius * 5}rem`)
-  style.setProperty('--hdx-radius-hero', `${safeRadius * 8}rem`)
-  style.setProperty('--hdx-radius-inner', `${safeRadius * 2.5}rem`)
+  if (primaryPreference.primaryMode) {
+    const visiblePreference = storedThemeSchema.parse({
+      ...preference,
+      ...primaryPreference
+    })
+
+    if (resolvePrimaryHex(preference) !== resolvePrimaryHex(visiblePreference)) {
+      Object.assign(patch, primaryPreference)
+    }
+  }
+
+  if (neutralPreference.neutralMode) {
+    const visiblePreference = storedThemeSchema.parse({
+      ...preference,
+      ...neutralPreference
+    })
+
+    if (resolveNeutralHex(preference) !== resolveNeutralHex(visiblePreference)) {
+      Object.assign(patch, neutralPreference)
+    }
+  }
+
+  if (radiusPreference.radius && radiusPreference.radius !== preference.radius) {
+    patch.radius = radiusPreference.radius
+  }
+
+  return patch
 }
 
-function createScale(hex: string): ThemeColorScale {
+function createColorPreference(name: 'primary', hex: string | null): Pick<ThemePreference, 'primaryMode' | 'primary' | 'customPrimary'>
+function createColorPreference(name: 'neutral', hex: string | null): Pick<ThemePreference, 'neutralMode' | 'neutral' | 'customNeutral'>
+function createColorPreference(name: ThemePreferenceColorName, hex: string | null) {
+  if (!hex) {
+    return {}
+  }
+
+  if (name === 'primary') {
+    const preset = primaryColorOptions.find(option => option.swatch.toLowerCase() === hex)
+
+    return preset
+      ? { primaryMode: 'preset', primary: preset.key, customPrimary: hex }
+      : { primaryMode: 'custom', customPrimary: hex }
+  }
+
+  const preset = neutralColorOptions.find(option => option.swatch.toLowerCase() === hex)
+
+  return preset
+    ? { neutralMode: 'preset', neutral: preset.key, customNeutral: hex }
+    : { neutralMode: 'custom', customNeutral: hex }
+}
+
+function pickPrimaryPreference(preference: Partial<ThemePreference>): Partial<ThemePreference> {
+  if (!preference.primaryMode) {
+    return {}
+  }
+
   return {
-    50: mixHex('#ffffff', hex, 0.08),
-    100: mixHex('#ffffff', hex, 0.18),
-    200: mixHex('#ffffff', hex, 0.32),
-    300: mixHex('#ffffff', hex, 0.48),
-    400: mixHex('#ffffff', hex, 0.68),
-    500: hex,
-    600: mixHex('#000000', hex, 0.88),
-    700: mixHex('#000000', hex, 0.72),
-    800: mixHex('#000000', hex, 0.56),
-    900: mixHex('#000000', hex, 0.42),
-    950: mixHex('#000000', hex, 0.28)
+    primaryMode: preference.primaryMode,
+    ...(preference.primary ? { primary: preference.primary } : {}),
+    ...(preference.customPrimary ? { customPrimary: preference.customPrimary } : {})
   }
 }
 
-function createNeutralScale(hex: string): ThemeColorScale {
+function pickNeutralPreference(preference: Partial<ThemePreference>): Partial<ThemePreference> {
+  if (!preference.neutralMode) {
+    return {}
+  }
+
   return {
-    50: mixHex('#ffffff', hex, 0.06),
-    100: mixHex('#ffffff', hex, 0.14),
-    200: mixHex('#ffffff', hex, 0.26),
-    300: mixHex('#ffffff', hex, 0.42),
-    400: mixHex('#ffffff', hex, 0.62),
-    500: hex,
-    600: mixHex('#000000', hex, 0.86),
-    700: mixHex('#000000', hex, 0.68),
-    800: mixHex('#000000', hex, 0.5),
-    900: mixHex('#000000', hex, 0.34),
-    950: mixHex('#000000', hex, 0.22)
+    neutralMode: preference.neutralMode,
+    ...(preference.neutral ? { neutral: preference.neutral } : {}),
+    ...(preference.customNeutral ? { customNeutral: preference.customNeutral } : {})
   }
 }
 
-function mixHex(baseHex: string, colorHex: string, colorWeight: number) {
-  const base = hexToRgb(baseHex)
-  const color = hexToRgb(colorHex)
-  const weight = clampNumber(colorWeight, 0, 1)
-  const mixed = {
-    r: Math.round(base.r * (1 - weight) + color.r * weight),
-    g: Math.round(base.g * (1 - weight) + color.g * weight),
-    b: Math.round(base.b * (1 - weight) + color.b * weight)
+function pickRadiusPreference(preference: Partial<ThemePreference>): Partial<ThemePreference> {
+  return preference.radius ? { radius: preference.radius } : {}
+}
+
+function resolvePrimaryHex(preference: Pick<ThemePreference, 'primaryMode' | 'primary' | 'customPrimary'>) {
+  if (preference.primaryMode === 'custom') {
+    return normalizeHex(preference.customPrimary)
   }
 
-  return rgbToHex(mixed.r, mixed.g, mixed.b)
+  return primaryColorOptions.find(option => option.key === preference.primary)?.swatch.toLowerCase()
+    ?? defaultThemePreference.customPrimary
 }
 
-function normalizeHex(value: string | undefined, fallback = defaultThemePreference.customPrimary) {
-  if (!value) {
-    return fallback
+function resolveNeutralHex(preference: Pick<ThemePreference, 'neutralMode' | 'neutral' | 'customNeutral'>) {
+  if (preference.neutralMode === 'custom') {
+    return normalizeHex(preference.customNeutral, defaultThemePreference.customNeutral)
   }
 
-  const trimmed = value.trim()
-  const expanded = /^#[0-9a-f]{3}$/i.test(trimmed)
-    ? `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
-    : trimmed
-
-  return hexColorSchema.safeParse(expanded).success ? expanded.toLowerCase() : fallback
+  return neutralColorOptions.find(option => option.key === preference.neutral)?.swatch.toLowerCase()
+    ?? defaultThemePreference.customNeutral
 }
 
-function hexToRgbTriplet(hex: string) {
-  const color = hexToRgb(hex)
-  return `${color.r}, ${color.g}, ${color.b}`
+function parseStoredRadius(value: string): ThemeRadiusValue | null {
+  const match = /^([0-9]+(?:\.[0-9]+)?)rem$/.exec(value)
+  const radius = match?.[1] as ThemeRadiusValue | undefined
+
+  return radius && themeRadiusValues.includes(radius) ? radius : null
 }
 
-function hexToRgb(hex: string) {
-  const normalized = normalizeHex(hex)
-  return {
-    r: Number.parseInt(normalized.slice(1, 3), 16),
-    g: Number.parseInt(normalized.slice(3, 5), 16),
-    b: Number.parseInt(normalized.slice(5, 7), 16)
-  }
-}
+type ThemePreferenceColorName = 'primary' | 'neutral'
 
-function rgbToHex(r: number, g: number, b: number) {
-  return `#${[r, g, b].map(value => clampNumber(value, 0, 255).toString(16).padStart(2, '0')).join('')}`
-}
-
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
+interface HydrateThemeOptions {
+  force?: boolean
 }
 
 function isBrowserRuntime() {

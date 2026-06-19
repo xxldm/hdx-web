@@ -150,6 +150,7 @@ useSeoMeta({
                   </UDropdownMenu>
                 </UTooltip>
                 <ThemeSettingsPopover
+                  color-mode-only
                   button-class="login-tool-button cursor-pointer"
                   content-class="login-floating-menu hdx-radius-popover"
                 />
@@ -480,7 +481,7 @@ useSeoMeta({
   min-width: 2rem;
   height: 2rem;
   padding: 0;
-  border-radius: 9999px;
+  border-radius: var(--hdx-radius-toolbar-item);
   border-color: transparent;
   background: transparent;
   color: rgba(15, 23, 42, 0.72);

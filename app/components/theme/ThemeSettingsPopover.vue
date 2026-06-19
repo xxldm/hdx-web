@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import type { ThemeNeutralColorKey, ThemePrimaryColorKey, ThemeRadiusValue } from '~/stores/theme-preference'
+import type { ThemeNeutralColorKey, ThemePrimaryColorKey, ThemeRadiusValue } from '~/utils/theme-runtime'
 
 const props = withDefaults(defineProps<{
   buttonClass?: string
   buttonSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  colorModeOnly?: boolean
   contentClass?: string
 }>(), {
   buttonClass: '',
   buttonSize: 'sm',
+  colorModeOnly: false,
   contentClass: 'workbench-floating-menu hdx-radius-popover'
 })
 
@@ -39,6 +41,10 @@ const colorModeItems = computed(() => [
     icon: 'lucide:monitor'
   }
 ])
+const panelClass = computed(() => props.colorModeOnly
+  ? 'theme-settings-panel grid w-[min(20rem,calc(100vw-2rem))] gap-3 p-3'
+  : 'theme-settings-panel grid max-h-[min(42rem,calc(100vh-2rem))] w-[min(32rem,calc(100vw-2rem))] gap-5 overflow-y-auto p-4'
+)
 
 function isPrimarySelected(key: ThemePrimaryColorKey) {
   return theme.preference.primaryMode === 'preset' && theme.preference.primary === key
@@ -54,6 +60,12 @@ function isRadiusSelected(value: ThemeRadiusValue) {
 
 onMounted(() => {
   theme.hydrate()
+})
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    theme.hydrate({ force: true })
+  }
 })
 </script>
 
@@ -77,8 +89,8 @@ onMounted(() => {
     </UTooltip>
 
     <template #content>
-      <div class="theme-settings-panel grid max-h-[min(42rem,calc(100vh-2rem))] w-[min(32rem,calc(100vw-2rem))] gap-5 overflow-y-auto p-4">
-        <section class="grid gap-2.5">
+      <div :class="panelClass">
+        <section v-if="!props.colorModeOnly" class="grid gap-2.5">
           <div class="flex items-center justify-between gap-3">
             <h2 class="text-sm font-semibold text-[color:var(--ui-text-highlighted)]">
               {{ t('theme.primary') }}
@@ -89,7 +101,7 @@ onMounted(() => {
               variant="ghost"
               size="xs"
               icon="lucide:rotate-ccw"
-              class="cursor-pointer rounded-full"
+              class="cursor-pointer hdx-radius-card"
               :aria-label="t('theme.reset')"
               @click="theme.resetTheme()"
             />
@@ -139,7 +151,7 @@ onMounted(() => {
           </div>
         </section>
 
-        <section class="grid gap-2.5">
+        <section v-if="!props.colorModeOnly" class="grid gap-2.5">
           <h2 class="text-sm font-semibold text-[color:var(--ui-text-highlighted)]">
             {{ t('theme.neutral') }}
           </h2>
@@ -188,7 +200,7 @@ onMounted(() => {
           </div>
         </section>
 
-        <section class="grid gap-2.5">
+        <section v-if="!props.colorModeOnly" class="grid gap-2.5">
           <h2 class="text-sm font-semibold text-[color:var(--ui-text-highlighted)]">
             {{ t('theme.radius') }}
           </h2>

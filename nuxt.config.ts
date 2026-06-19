@@ -1,3 +1,4 @@
+import { createThemePreferenceHeadScript } from './app/utils/theme-runtime'
 import { z } from 'zod'
 
 const serverConfigSchema = z.object({
@@ -46,6 +47,7 @@ const parsedServerConfig = serverConfigSchema.parse({
 })
 const isDesktopStaticBuild = process.env.HDX_WEB_BUILD_TARGET === 'desktop-static'
 const desktopStaticOutputDirectory = '.output-desktop-static'
+const themePreferenceHeadScript = createThemePreferenceHeadScript()
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-05-26',
@@ -67,6 +69,12 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'HDX 工具箱 Web 工作台' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+      ],
+      script: [
+        {
+          innerHTML: themePreferenceHeadScript,
+          tagPosition: 'head'
+        }
       ]
     }
   },
