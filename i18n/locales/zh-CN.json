@@ -12,6 +12,44 @@
     "themeLight": "浅色",
     "themeDark": "深色"
   },
+  "theme": {
+    "primary": "主色",
+    "neutral": "中性色",
+    "radius": "圆角",
+    "colorMode": "外观",
+    "customPrimary": "自定义主色",
+    "customNeutral": "自定义中性色",
+    "reset": "恢复默认主题",
+    "colors": {
+      "black": "黑色",
+      "red": "红色",
+      "orange": "橙色",
+      "amber": "琥珀",
+      "yellow": "黄色",
+      "lime": "青柠",
+      "green": "绿色",
+      "emerald": "翠绿",
+      "teal": "蓝绿",
+      "cyan": "青色",
+      "sky": "天蓝",
+      "blue": "蓝色",
+      "indigo": "靛蓝",
+      "violet": "紫罗兰",
+      "purple": "紫色",
+      "fuchsia": "洋红",
+      "pink": "粉色",
+      "rose": "玫瑰",
+      "slate": "石板",
+      "gray": "灰色",
+      "zinc": "锌灰",
+      "neutral": "中性灰",
+      "stone": "石灰",
+      "taupe": "灰褐",
+      "mauve": "灰紫",
+      "mist": "雾灰",
+      "olive": "橄榄"
+    }
+  },
   "auth": {
     "loginTitle": "登录 HDX",
     "loginDescription": "登录后继续使用你的工具箱。",
@@ -117,6 +155,7 @@
       "reset": "恢复默认",
       "addWidget": "添加组件",
       "removeWidget": "移除组件",
+      "removeWidgetByTitle": "移除{title}组件",
       "confirmRemoveWidget": "确认移除这个组件？",
       "overview": "布局概况",
       "grid": "网格",
@@ -127,7 +166,18 @@
       "decrease": "减少{label}",
       "increase": "增加{label}",
       "resizeWidget": "拖动调整组件大小",
-      "changeWidget": "修改组件"
+      "resizeWidgetByTitle": "拖动调整{title}组件大小",
+      "changeWidget": "修改组件",
+      "changeWidgetByTitle": "修改{title}组件",
+      "chromeCard": "显示卡片外壳",
+      "chromeBare": "隐藏卡片外壳",
+      "orientationAuto": "方向自动",
+      "orientationHorizontal": "横向显示",
+      "orientationVertical": "纵向显示",
+      "showHeader": "显示标题区",
+      "showIcon": "显示图标",
+      "showTitle": "显示标题",
+      "showDescription": "显示描述"
     }
   }
 }

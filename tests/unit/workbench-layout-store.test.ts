@@ -35,6 +35,16 @@ describe('workbench layout store', () => {
       { id: 'tall', row: 0, column: 2 },
       { id: 'small', row: 1, column: 0 }
     ])
+    expect(placedWidgets[0]).toMatchObject({
+      chrome: 'card',
+      orientation: 'auto',
+      header: {
+        visible: true,
+        icon: true,
+        title: true,
+        description: true
+      }
+    })
   })
 
   it('preserves explicit empty cells instead of compacting widgets', () => {
@@ -287,6 +297,44 @@ describe('workbench layout store', () => {
     expect(store.resizingWidgetId).toBeNull()
   })
 
+  it('persists widget chrome, orientation, and header display preferences', () => {
+    const store = useWorkbenchLayoutStore()
+
+    store.startEditing()
+    store.updateWidgetChrome('default-runtime', 'bare')
+    store.updateWidgetOrientation('default-runtime', 'vertical')
+    store.updateWidgetHeader('default-runtime', {
+      visible: false,
+      icon: false
+    })
+
+    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+      chrome: 'bare',
+      orientation: 'vertical',
+      header: {
+        visible: false,
+        icon: false,
+        title: true,
+        description: true
+      }
+    })
+  })
+
+  it('clamps widgets to optional registry constraints when resizing', () => {
+    const store = useWorkbenchLayoutStore()
+
+    store.startEditing()
+    store.removeWidget('default-quick-links')
+    store.removeWidget('default-tool-catalog')
+    store.removeWidget('default-notes')
+    store.updateWidgetSpan('default-runtime', { colSpan: 4, rowSpan: 4 })
+
+    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+      colSpan: 2,
+      rowSpan: 2
+    })
+  })
+
   it('keeps the last valid layout when a span update would collide with another widget', () => {
     const store = useWorkbenchLayoutStore()
 
@@ -319,6 +367,14 @@ function createWidget(id: string, order: number, column: number, row: number, co
     column,
     row,
     colSpan,
-    rowSpan
+    rowSpan,
+    chrome: 'card',
+    orientation: 'auto',
+    header: {
+      visible: true,
+      icon: true,
+      title: true,
+      description: true
+    }
   }
 }

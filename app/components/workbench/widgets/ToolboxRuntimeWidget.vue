@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { RuntimeInfo } from '~/types/hdx-api'
+import type { ResolvedWorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
 
 const props = defineProps<{
   runtime?: RuntimeInfo | null
+  orientation?: ResolvedWorkbenchWidgetOrientation
 }>()
 
 const { t } = useI18n()

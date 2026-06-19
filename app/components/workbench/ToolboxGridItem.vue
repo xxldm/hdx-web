@@ -2,11 +2,12 @@
 import type { RuntimeInfo, ToolRecord } from '~/types/hdx-api'
 import type {
   PlacedWorkbenchWidget,
+  WorkbenchWidgetChrome,
   WorkbenchDropPlacement,
   WorkbenchGridPosition,
   WorkbenchPushDirection
 } from '~/stores/workbench-layout'
-import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
+import type { ResolvedWorkbenchWidgetOrientation, WorkbenchWidgetKey, WorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
 import { getWorkbenchWidgetDefinition, workbenchWidgetDefinitions } from '~/utils/workbench-widgets'
 
 const props = defineProps<{
@@ -25,18 +26,109 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const layout = useWorkbenchLayoutStore()
 const definition = computed(() => getWorkbenchWidgetDefinition(props.widget.key))
+const widgetTitle = computed(() => definition.value ? t(definition.value.titleKey) : '')
+const removeWidgetAriaLabel = computed(() => t('workbench.layout.removeWidgetByTitle', { title: widgetTitle.value }))
+const resizeWidgetAriaLabel = computed(() => t('workbench.layout.resizeWidgetByTitle', { title: widgetTitle.value }))
+const changeWidgetAriaLabel = computed(() => t('workbench.layout.changeWidgetByTitle', { title: widgetTitle.value }))
 const isDropTarget = computed(() => layout.dropTargetWidgetId === props.widget.id && layout.draggedWidgetId !== props.widget.id)
 const isDragging = computed(() => layout.draggedWidgetId === props.widget.id)
 const isResizing = computed(() => layout.resizingWidgetId === props.widget.id)
-const widgetMenuItems = computed(() => workbenchWidgetDefinitions.map((item) => ({
-  label: t(item.titleKey),
-  icon: item.icon,
-  selected: item.key === props.widget.key,
-  disabled: item.key === props.widget.key ? false : !layout.canUpdateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey),
-  onSelect: () => {
-    layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+const resolvedOrientation = computed<ResolvedWorkbenchWidgetOrientation>(() => {
+  if (props.widget.orientation === 'horizontal' || props.widget.orientation === 'vertical') {
+    return props.widget.orientation
   }
-})))
+
+  return props.widget.colSpan >= props.widget.rowSpan ? 'horizontal' : 'vertical'
+})
+const componentChromeClass = computed(() => props.widget.chrome === 'bare'
+  ? 'border-transparent bg-transparent shadow-none backdrop-blur-none dark:border-transparent dark:bg-transparent dark:shadow-none'
+  : 'border-white/65 bg-white/64 shadow-lg shadow-slate-900/7 backdrop-blur-2xl dark:border-white/14 dark:bg-white/9 dark:shadow-black/28')
+const cardContentClass = computed(() => props.widget.chrome === 'bare'
+  ? 'grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-0'
+  : 'grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-4')
+const shouldShowHeader = computed(() =>
+  props.widget.header.visible
+  && (props.widget.header.icon || props.widget.header.title || props.widget.header.description)
+)
+const shouldShowHeaderText = computed(() => props.widget.header.title || props.widget.header.description)
+const widgetMenuItems = computed(() => [
+  workbenchWidgetDefinitions.map((item) => ({
+    label: t(item.titleKey),
+    icon: item.icon,
+    checked: item.key === props.widget.key,
+    disabled: item.key === props.widget.key ? false : !layout.canUpdateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey),
+    onSelect: () => {
+      layout.updateWidgetKey(props.widget.id, item.key as WorkbenchWidgetKey)
+    }
+  })),
+  [
+    {
+      label: t('workbench.layout.chromeCard'),
+      icon: 'lucide:square',
+      checked: props.widget.chrome === 'card',
+      onSelect: () => layout.updateWidgetChrome(props.widget.id, 'card' satisfies WorkbenchWidgetChrome)
+    },
+    {
+      label: t('workbench.layout.chromeBare'),
+      icon: 'lucide:square-dashed',
+      checked: props.widget.chrome === 'bare',
+      onSelect: () => layout.updateWidgetChrome(props.widget.id, 'bare' satisfies WorkbenchWidgetChrome)
+    }
+  ],
+  [
+    {
+      label: t('workbench.layout.orientationAuto'),
+      icon: 'lucide:sparkles',
+      checked: props.widget.orientation === 'auto',
+      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'auto' satisfies WorkbenchWidgetOrientation)
+    },
+    {
+      label: t('workbench.layout.orientationHorizontal'),
+      icon: 'lucide:panel-top',
+      checked: props.widget.orientation === 'horizontal',
+      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'horizontal' satisfies WorkbenchWidgetOrientation)
+    },
+    {
+      label: t('workbench.layout.orientationVertical'),
+      icon: 'lucide:panel-left',
+      checked: props.widget.orientation === 'vertical',
+      onSelect: () => layout.updateWidgetOrientation(props.widget.id, 'vertical' satisfies WorkbenchWidgetOrientation)
+    }
+  ],
+  [
+    {
+      label: t('workbench.layout.showHeader'),
+      icon: 'lucide:panel-top-open',
+      type: 'checkbox' as const,
+      checked: props.widget.header.visible,
+      onUpdateChecked: (checked: boolean) => layout.updateWidgetHeader(props.widget.id, { visible: checked })
+    },
+    {
+      label: t('workbench.layout.showIcon'),
+      icon: 'lucide:badge',
+      type: 'checkbox' as const,
+      checked: props.widget.header.icon,
+      disabled: !props.widget.header.visible,
+      onUpdateChecked: (checked: boolean) => layout.updateWidgetHeader(props.widget.id, { icon: checked })
+    },
+    {
+      label: t('workbench.layout.showTitle'),
+      icon: 'lucide:heading',
+      type: 'checkbox' as const,
+      checked: props.widget.header.title,
+      disabled: !props.widget.header.visible,
+      onUpdateChecked: (checked: boolean) => layout.updateWidgetHeader(props.widget.id, { title: checked })
+    },
+    {
+      label: t('workbench.layout.showDescription'),
+      icon: 'lucide:text',
+      type: 'checkbox' as const,
+      checked: props.widget.header.description,
+      disabled: !props.widget.header.visible,
+      onUpdateChecked: (checked: boolean) => layout.updateWidgetHeader(props.widget.id, { description: checked })
+    }
+  ]
+])
 const dragOffset = reactive({
   x: 0,
   y: 0
@@ -74,8 +166,13 @@ let resizeHandleElement: HTMLElement | null = null
 let removeWidgetTimer: number | null = null
 let suppressEditActionClickTimer: number | null = null
 const componentProps = computed(() => {
+  const displayProps = {
+    orientation: resolvedOrientation.value
+  }
+
   if (props.widget.key === 'tool-catalog') {
     return {
+      ...displayProps,
       tools: props.tools,
       loading: props.loading
     }
@@ -83,11 +180,12 @@ const componentProps = computed(() => {
 
   if (props.widget.key === 'runtime') {
     return {
+      ...displayProps,
       runtime: props.runtime
     }
   }
 
-  return {}
+  return displayProps
 })
 
 interface DragTargetRect {
@@ -753,8 +851,9 @@ onUnmounted(() => {
     v-if="definition"
     ref="itemElement"
     :data-workbench-widget-id="widget.id"
-    class="toolbox-grid-item relative min-h-0 overflow-hidden rounded-lg border border-white/65 bg-white/64 text-slate-950 shadow-lg shadow-slate-900/7 backdrop-blur-2xl transition-[border-color,background,box-shadow,transform,opacity] duration-200 dark:border-white/14 dark:bg-white/9 dark:text-white dark:shadow-black/28"
+    class="toolbox-grid-item relative min-h-0 overflow-hidden rounded-lg border text-slate-950 transition-[border-color,background,box-shadow,transform,opacity] duration-200 dark:text-white"
     :class="[
+      componentChromeClass,
       editing ? 'toolbox-grid-item-editing cursor-grab active:cursor-grabbing' : '',
       props.selected ? 'toolbox-grid-item-selected ring-1 ring-cyan-400/45 shadow-[0_20px_40px_rgba(15,23,42,0.12)] dark:ring-cyan-200/30 dark:shadow-[0_20px_40px_rgba(0,0,0,0.32)]' : '',
       removeConfirmOpen ? 'toolbox-grid-item-remove-open' : '',
@@ -785,18 +884,18 @@ onUnmounted(() => {
       <UIcon name="lucide:move" class="size-6 text-cyan-100/70" />
     </div>
 
-    <div v-else class="toolbox-card-content relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 rounded-lg p-4">
-      <div class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
-      <header class="flex min-w-0 items-start justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-3">
-          <div class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
+    <div v-else class="toolbox-card-content relative grid h-full min-h-0" :class="cardContentClass">
+      <div v-if="widget.chrome === 'card'" class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
+      <header v-if="shouldShowHeader || editing" class="flex min-w-0 items-start justify-between gap-3">
+        <div v-if="shouldShowHeader" class="flex min-w-0 items-center gap-3">
+          <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
             <UIcon :name="definition.icon" class="size-5 text-slate-800 dark:text-white" />
           </div>
-          <div class="min-w-0">
-            <h2 class="truncate text-base font-semibold tracking-normal text-slate-950 dark:text-white">
+          <div v-if="shouldShowHeaderText" class="min-w-0">
+            <h2 v-if="widget.header.title" class="truncate text-base font-semibold tracking-normal text-slate-950 dark:text-white">
               {{ t(definition.titleKey) }}
             </h2>
-            <p class="truncate text-sm text-slate-600 dark:text-white/62">
+            <p v-if="widget.header.description" class="truncate text-sm text-slate-600 dark:text-white/62">
               {{ t(definition.descriptionKey) }}
             </p>
           </div>
@@ -813,14 +912,15 @@ onUnmounted(() => {
             :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
             :ui="{ content: 'workbench-floating-menu rounded-[1rem]' }"
           >
-            <button
+            <UButton
               type="button"
+              color="neutral"
+              variant="ghost"
+              icon="lucide:x"
               class="toolbox-remove-button cursor-pointer"
-              :aria-label="t('workbench.layout.removeWidget')"
+              :aria-label="removeWidgetAriaLabel"
               @click.stop="emit('select', props.widget.id)"
-            >
-              <UIcon name="lucide:x" class="size-4" />
-            </button>
+            />
 
             <template #content="{ close }">
               <div class="grid gap-1.5 p-2">
@@ -884,12 +984,12 @@ onUnmounted(() => {
                 icon="lucide:replace"
                 size="sm"
                 class="toolbox-change-button cursor-pointer"
-                :aria-label="t('workbench.layout.changeWidget')"
+                :aria-label="changeWidgetAriaLabel"
               >
                 {{ t('workbench.layout.changeWidget') }}
               </UButton>
               <template #item-trailing="{ item }">
-                <UIcon v-if="item.selected" name="lucide:check" class="size-4 text-cyan-700 dark:text-cyan-100" />
+                <UIcon v-if="item.checked" name="lucide:check" class="size-4 text-cyan-700 dark:text-cyan-100" />
               </template>
             </UDropdownMenu>
           </UTooltip>
@@ -901,7 +1001,7 @@ onUnmounted(() => {
         type="button"
         data-workbench-control="true"
         class="toolbox-resize-handle absolute bottom-1.5 right-1.5 z-30 cursor-nwse-resize rounded-md border border-white/65 bg-white/78 text-slate-700 shadow-sm shadow-slate-900/12 backdrop-blur-xl transition-[opacity,background,color] duration-200 hover:bg-cyan-50 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 dark:border-white/18 dark:bg-slate-950/72 dark:text-white/74 dark:shadow-black/35 dark:hover:bg-cyan-300/14"
-        :aria-label="t('workbench.layout.resizeWidget')"
+        :aria-label="resizeWidgetAriaLabel"
         @pointerdown="onResizePointerDown"
         @pointermove="onResizePointerMove"
         @pointerup="onResizePointerUp"
@@ -926,16 +1026,16 @@ onUnmounted(() => {
         aria-hidden="true"
       >
         <div class="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-70 blur-2xl" :class="definition.accentClass" />
-        <header class="relative flex min-w-0 items-start justify-between gap-3">
+        <header v-if="shouldShowHeader" class="relative flex min-w-0 items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-3">
-            <div class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
+            <div v-if="widget.header.icon" class="grid size-10 shrink-0 place-items-center rounded-lg border border-white/60 bg-white/58 shadow-sm shadow-slate-900/5 dark:border-white/16 dark:bg-white/10 dark:shadow-black/20">
               <UIcon :name="definition.icon" class="size-5 text-slate-800 dark:text-white" />
             </div>
-            <div class="min-w-0">
-              <h2 class="truncate text-base font-semibold tracking-normal text-slate-950 dark:text-white">
+            <div v-if="shouldShowHeaderText" class="min-w-0">
+              <h2 v-if="widget.header.title" class="truncate text-base font-semibold tracking-normal text-slate-950 dark:text-white">
                 {{ t(definition.titleKey) }}
               </h2>
-              <p class="truncate text-sm text-slate-600 dark:text-white/62">
+              <p v-if="widget.header.description" class="truncate text-sm text-slate-600 dark:text-white/62">
                 {{ t(definition.descriptionKey) }}
               </p>
             </div>

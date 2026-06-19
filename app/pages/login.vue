@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import hdxIcon from '~/assets/brand/hdx-icon.png'
+import ThemeSettingsPopover from '~/components/theme/ThemeSettingsPopover.vue'
 import { normalizeInternalRedirect } from '~/utils/internal-redirect'
 
 const { t } = useI18n()
 const { locale, setPreferredLocale } = useLocalePreference()
-const colorMode = useColorMode()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -15,7 +15,6 @@ const localeItems = [
   { label: 'English', value: 'en-US' }
 ]
 const localeMenuOpen = ref(false)
-const themeMenuOpen = ref(false)
 const localeMenuItems = computed(() => localeItems.map((item) => ({
   label: item.label,
   icon: 'lucide:languages',
@@ -25,35 +24,6 @@ const localeMenuItems = computed(() => localeItems.map((item) => ({
     localeMenuOpen.value = false
   }
 })))
-const themeMenuItems = computed(() => [
-  {
-    label: t('actions.themeSystem'),
-    icon: 'lucide:monitor',
-    selected: colorMode.preference === 'system',
-    onSelect: () => {
-      colorMode.preference = 'system'
-      themeMenuOpen.value = false
-    }
-  },
-  {
-    label: t('actions.themeLight'),
-    icon: 'lucide:sun',
-    selected: colorMode.preference === 'light',
-    onSelect: () => {
-      colorMode.preference = 'light'
-      themeMenuOpen.value = false
-    }
-  },
-  {
-    label: t('actions.themeDark'),
-    icon: 'lucide:moon',
-    selected: colorMode.preference === 'dark',
-    onSelect: () => {
-      colorMode.preference = 'dark'
-      themeMenuOpen.value = false
-    }
-  }
-])
 const form = reactive({
   identifier: '',
   password: ''
@@ -62,9 +32,16 @@ const showPassword = ref(false)
 const formErrorKey = ref<string | null>(null)
 const redirectPath = computed(() => normalizeInternalRedirect(route.query.redirect))
 const loginDisabled = computed(() => desktopOnline.available && !desktopOnline.configured)
+const loginPanelElement = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   void desktopOnline.loadConfig()
+
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    window.requestAnimationFrame(() => {
+      loginPanelElement.value?.querySelector<HTMLInputElement>('input[name="identifier"]')?.focus()
+    })
+  }
 })
 
 async function submitLogin() {
@@ -106,7 +83,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <main class="login-shell relative min-h-screen overflow-hidden bg-[#ecfeff] text-slate-950 transition-colors duration-300 dark:bg-[#111113] dark:text-white">
+  <main class="login-shell relative min-h-screen overflow-hidden text-slate-950 transition-colors duration-300 dark:text-white">
     <div class="login-backdrop absolute inset-0" />
     <div class="login-liquid-field" />
     <div class="login-glass-grid" />
@@ -118,11 +95,13 @@ useSeoMeta({
             <img
               :src="hdxIcon"
               :alt="t('app.iconAlt')"
+              width="394"
+              height="394"
               class="size-full rounded-full object-contain"
             >
           </div>
           <div class="max-w-xl">
-            <p class="text-sm font-medium text-cyan-700/80 dark:text-cyan-100/80">
+            <p class="login-brand-subtitle text-sm font-medium">
               {{ t('app.name') }}
             </p>
             <h1 class="mt-3 text-5xl font-semibold leading-tight tracking-normal text-slate-950 dark:text-white">
@@ -134,7 +113,7 @@ useSeoMeta({
 
       <div class="relative mx-auto w-full max-w-[27rem]">
         <div class="login-panel-glow" />
-        <div class="login-panel relative box-border w-full min-w-0 overflow-hidden rounded-[2rem] border border-white/65 bg-white/70 p-4 shadow-2xl shadow-cyan-950/10 backdrop-blur-2xl dark:border-white/28 dark:bg-white/18 dark:shadow-slate-950/35 sm:p-6">
+        <div ref="loginPanelElement" class="login-panel relative box-border w-full min-w-0 overflow-hidden rounded-[2rem] border border-white/65 bg-white/70 p-4 shadow-2xl shadow-cyan-950/10 backdrop-blur-2xl dark:border-white/28 dark:bg-white/18 dark:shadow-slate-950/35 sm:p-6">
           <div class="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
           <header class="mb-6 grid gap-4">
@@ -165,36 +144,15 @@ useSeoMeta({
                       <UIcon
                         v-if="item.selected"
                         name="lucide:check"
-                        class="size-4 text-cyan-700 dark:text-cyan-200"
+                        class="size-4 text-primary"
                       />
                     </template>
                   </UDropdownMenu>
                 </UTooltip>
-                <UTooltip :text="t('actions.theme')">
-                  <UDropdownMenu
-                    v-model:open="themeMenuOpen"
-                    :items="themeMenuItems"
-                    :content="{ align: 'end' }"
-                    :ui="{ content: 'login-floating-menu rounded-[1.25rem]' }"
-                  >
-                    <UButton
-                      type="button"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      icon="lucide:palette"
-                      :aria-label="t('actions.theme')"
-                      class="login-tool-button cursor-pointer"
-                    />
-                    <template #item-trailing="{ item }">
-                      <UIcon
-                        v-if="item.selected"
-                        name="lucide:check"
-                        class="size-4 text-cyan-700 dark:text-cyan-200"
-                      />
-                    </template>
-                  </UDropdownMenu>
-                </UTooltip>
+                <ThemeSettingsPopover
+                  button-class="login-tool-button cursor-pointer"
+                  content-class="login-floating-menu rounded-[1.25rem]"
+                />
               </div>
             </div>
             <p class="text-sm leading-6 text-slate-600 dark:text-white/76">
@@ -215,7 +173,7 @@ useSeoMeta({
           <section v-if="desktopOnline.available" class="mb-5 grid gap-3 border-y border-slate-900/10 py-4 dark:border-white/15">
             <div class="flex items-center justify-between gap-3">
               <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                <UIcon name="lucide:radio-tower" class="size-4 text-cyan-700 dark:text-cyan-100" />
+                <UIcon name="lucide:radio-tower" class="size-4 text-primary" />
                 {{ t('desktopOnline.title') }}
               </h2>
               <UBadge :color="desktopOnline.configured ? 'success' : 'warning'" variant="soft">
@@ -327,7 +285,6 @@ useSeoMeta({
                 icon="lucide:user"
                 class="w-full"
                 required
-                autofocus
               />
             </UFormField>
 
@@ -382,18 +339,18 @@ useSeoMeta({
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(122deg, transparent 0 20%, rgba(14, 165, 233, 0.12) 28%, transparent 45%),
-    linear-gradient(42deg, transparent 0 34%, rgba(244, 114, 182, 0.1) 47%, transparent 64%),
-    conic-gradient(from 214deg at 52% 48%, rgba(255, 255, 255, 0.22), transparent 23%, rgba(34, 211, 238, 0.16), transparent 57%, rgba(250, 204, 21, 0.12), transparent);
+    linear-gradient(122deg, transparent 0 20%, rgba(var(--hdx-theme-accent-rgb), 0.12) 28%, transparent 45%),
+    linear-gradient(42deg, transparent 0 34%, rgba(var(--hdx-theme-warm-rgb), 0.1) 47%, transparent 64%),
+    conic-gradient(from 214deg at 52% 48%, rgba(255, 255, 255, 0.22), transparent 23%, rgba(var(--hdx-theme-accent-rgb), 0.16), transparent 57%, rgba(var(--hdx-theme-sun-rgb), 0.12), transparent);
   opacity: 0.86;
   mix-blend-mode: multiply;
 }
 
 .dark .login-shell::after {
   background:
-    radial-gradient(ellipse at 14% 72%, rgba(45, 212, 191, 0.16), rgba(45, 212, 191, 0.06) 34%, transparent 64%),
-    radial-gradient(ellipse at 88% 20%, rgba(244, 114, 182, 0.13), rgba(244, 114, 182, 0.04) 32%, transparent 62%),
-    linear-gradient(128deg, rgba(255, 255, 255, 0.04), transparent 42%, rgba(167, 139, 250, 0.06));
+    radial-gradient(ellipse at 14% 72%, rgba(var(--hdx-theme-primary-rgb), 0.16), rgba(var(--hdx-theme-primary-rgb), 0.06) 34%, transparent 64%),
+    radial-gradient(ellipse at 88% 20%, rgba(var(--hdx-theme-warm-rgb), 0.13), rgba(var(--hdx-theme-warm-rgb), 0.04) 32%, transparent 62%),
+    linear-gradient(128deg, rgba(255, 255, 255, 0.04), transparent 42%, rgba(var(--hdx-theme-accent-rgb), 0.06));
   opacity: 0.84;
   filter: blur(18px);
   mix-blend-mode: screen;
@@ -401,16 +358,16 @@ useSeoMeta({
 
 .login-backdrop {
   background:
-    linear-gradient(135deg, #f8fdff 0%, #e0f7ff 36%, #f1e8ff 68%, #fff7ed 100%),
-    conic-gradient(from 120deg at 52% 48%, rgba(14, 165, 233, 0.12), rgba(255, 255, 255, 0.5), rgba(16, 185, 129, 0.1), rgba(244, 114, 182, 0.12), rgba(14, 165, 233, 0.12));
+    linear-gradient(135deg, color-mix(in srgb, var(--hdx-theme-primary) 6%, #f8fdff) 0%, color-mix(in srgb, var(--hdx-theme-primary) 13%, #e0f7ff) 36%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #f1e8ff) 68%, #fff7ed 100%),
+    conic-gradient(from 120deg at 52% 48%, rgba(var(--hdx-theme-accent-rgb), 0.12), rgba(255, 255, 255, 0.5), rgba(var(--hdx-theme-primary-rgb), 0.1), rgba(var(--hdx-theme-warm-rgb), 0.12), rgba(var(--hdx-theme-accent-rgb), 0.12));
 }
 
 .dark .login-backdrop {
   background:
-    radial-gradient(ellipse at 18% 78%, rgba(20, 184, 166, 0.18), transparent 58%),
-    radial-gradient(ellipse at 82% 18%, rgba(244, 114, 182, 0.14), transparent 56%),
-    radial-gradient(ellipse at 62% 64%, rgba(167, 139, 250, 0.08), transparent 62%),
-    linear-gradient(145deg, #111113 0%, #151316 46%, #100f13 100%);
+    radial-gradient(ellipse at 18% 78%, rgba(var(--hdx-theme-primary-rgb), 0.18), transparent 58%),
+    radial-gradient(ellipse at 82% 18%, rgba(var(--hdx-theme-warm-rgb), 0.14), transparent 56%),
+    radial-gradient(ellipse at 62% 64%, rgba(var(--hdx-theme-accent-rgb), 0.08), transparent 62%),
+    linear-gradient(145deg, #111113 0%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #151316) 46%, #100f13 100%);
 }
 
 .login-liquid-field {
@@ -418,9 +375,9 @@ useSeoMeta({
   inset: -12%;
   pointer-events: none;
   background:
-    linear-gradient(108deg, transparent 0 16%, rgba(125, 211, 252, 0.22) 30%, transparent 48%),
-    linear-gradient(38deg, transparent 0 32%, rgba(251, 113, 133, 0.13) 46%, transparent 64%),
-    linear-gradient(155deg, rgba(255, 255, 255, 0.46), transparent 42%, rgba(45, 212, 191, 0.16));
+    linear-gradient(108deg, transparent 0 16%, rgba(var(--hdx-theme-accent-rgb), 0.22) 30%, transparent 48%),
+    linear-gradient(38deg, transparent 0 32%, rgba(var(--hdx-theme-warm-rgb), 0.13) 46%, transparent 64%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.46), transparent 42%, rgba(var(--hdx-theme-primary-rgb), 0.16));
   filter: blur(18px);
   opacity: 0.78;
   transform: translate3d(0, 0, 0);
@@ -429,9 +386,9 @@ useSeoMeta({
 
 .dark .login-liquid-field {
   background:
-    radial-gradient(ellipse at 22% 72%, rgba(45, 212, 191, 0.2), transparent 52%),
-    radial-gradient(ellipse at 82% 26%, rgba(251, 113, 133, 0.12), transparent 58%),
-    linear-gradient(116deg, rgba(255, 255, 255, 0.07) 0%, transparent 46%, rgba(167, 139, 250, 0.08) 100%);
+    radial-gradient(ellipse at 22% 72%, rgba(var(--hdx-theme-primary-rgb), 0.2), transparent 52%),
+    radial-gradient(ellipse at 82% 26%, rgba(var(--hdx-theme-warm-rgb), 0.12), transparent 58%),
+    linear-gradient(116deg, rgba(255, 255, 255, 0.07) 0%, transparent 46%, rgba(var(--hdx-theme-accent-rgb), 0.08) 100%);
   opacity: 0.68;
   filter: blur(26px);
 }
@@ -441,8 +398,8 @@ useSeoMeta({
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(var(--hdx-theme-neutral-rgb), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--hdx-theme-neutral-rgb), 0.04) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(circle at center, black, transparent 72%);
   opacity: 0.42;
@@ -461,23 +418,41 @@ useSeoMeta({
   inset: -1.5rem;
   border-radius: 2.75rem;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(34, 211, 238, 0.18) 52%, rgba(251, 113, 133, 0.14)),
-    linear-gradient(45deg, rgba(45, 212, 191, 0.18), transparent 56%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(var(--hdx-theme-accent-rgb), 0.18) 52%, rgba(var(--hdx-theme-warm-rgb), 0.14)),
+    linear-gradient(45deg, rgba(var(--hdx-theme-primary-rgb), 0.18), transparent 56%);
   opacity: 0.68;
   filter: blur(20px);
 }
 
 .dark .login-panel-glow {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(45, 212, 191, 0.2) 52%, rgba(244, 114, 182, 0.12)),
-    linear-gradient(45deg, rgba(167, 139, 250, 0.12), transparent 58%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(var(--hdx-theme-primary-rgb), 0.2) 52%, rgba(var(--hdx-theme-warm-rgb), 0.12)),
+    linear-gradient(45deg, rgba(var(--hdx-theme-accent-rgb), 0.12), transparent 58%);
   opacity: 0.56;
 }
 
 .login-panel {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.48)),
-    linear-gradient(315deg, rgba(34, 211, 238, 0.16), rgba(16, 185, 129, 0.08));
+    linear-gradient(315deg, rgba(var(--hdx-theme-accent-rgb), 0.16), rgba(var(--hdx-theme-primary-rgb), 0.08));
+}
+
+.login-shell {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--hdx-theme-primary) 6%, #f8fdff) 0%, color-mix(in srgb, var(--hdx-theme-primary) 13%, #e0f7ff) 36%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #f1e8ff) 68%, #fff7ed 100%);
+}
+
+.dark .login-shell {
+  background:
+    linear-gradient(145deg, #111113 0%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #151316) 46%, #100f13 100%);
+}
+
+.login-brand-subtitle {
+  color: color-mix(in srgb, var(--hdx-theme-primary) 76%, #155e75);
+}
+
+.dark .login-brand-subtitle {
+  color: color-mix(in srgb, var(--hdx-theme-primary) 58%, #cffafe);
 }
 
 .login-brand-mark {
@@ -495,7 +470,7 @@ useSeoMeta({
 .dark .login-panel {
   background:
     linear-gradient(145deg, rgba(22, 21, 24, 0.86), rgba(18, 17, 20, 0.66)),
-    linear-gradient(315deg, rgba(20, 184, 166, 0.14), rgba(244, 114, 182, 0.08));
+    linear-gradient(315deg, rgba(var(--hdx-theme-primary-rgb), 0.14), rgba(var(--hdx-theme-warm-rgb), 0.08));
 }
 
 .login-panel-tools .login-tool-button {
@@ -514,7 +489,7 @@ useSeoMeta({
 }
 
 .login-panel-tools .login-tool-button:hover {
-  background: rgba(14, 165, 233, 0.12);
+  background: rgba(var(--hdx-theme-primary-rgb), 0.12);
 }
 
 .dark .login-panel-tools .login-tool-button {
@@ -542,9 +517,9 @@ useSeoMeta({
 }
 
 .login-panel input:focus {
-  border-color: rgba(125, 211, 252, 0.9);
+  border-color: rgba(var(--hdx-theme-primary-rgb), 0.72);
   box-shadow:
-    0 0 0 3px rgba(125, 211, 252, 0.22),
+    0 0 0 3px rgba(var(--hdx-theme-primary-rgb), 0.18),
     0 16px 36px rgba(15, 23, 42, 0.14);
 }
 
@@ -564,18 +539,18 @@ useSeoMeta({
 }
 
 .dark .login-panel input:focus {
-  border-color: rgba(103, 232, 249, 0.72);
+  border-color: rgba(var(--hdx-theme-primary-rgb), 0.72);
   box-shadow:
-    0 0 0 3px rgba(103, 232, 249, 0.16),
+    0 0 0 3px rgba(var(--hdx-theme-primary-rgb), 0.16),
     0 16px 36px rgba(2, 6, 23, 0.36);
 }
 
 .login-action {
-  box-shadow: 0 18px 44px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 18px 44px rgba(var(--hdx-theme-primary-rgb), 0.22);
 }
 
 .dark .login-action {
-  box-shadow: 0 18px 44px rgba(14, 165, 233, 0.28);
+  box-shadow: 0 18px 44px rgba(var(--hdx-theme-primary-rgb), 0.28);
 }
 
 .login-floating-menu {

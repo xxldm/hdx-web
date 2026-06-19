@@ -2,7 +2,14 @@ import { useStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { z } from 'zod'
-import { getWorkbenchWidgetMetadata, workbenchWidgetKeys, workbenchWidgetMetadata, type WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
+import {
+  getWorkbenchWidgetMetadata,
+  workbenchWidgetKeys,
+  workbenchWidgetMetadata,
+  workbenchWidgetOrientations,
+  type WorkbenchWidgetKey,
+  type WorkbenchWidgetOrientation
+} from '~/utils/workbench-widget-meta'
 
 const layoutStorageKey = 'hdx:web:workbench-layout:v1'
 const minGridSize = 1
@@ -12,6 +19,14 @@ const maxGap = 24
 const maxWidgetCount = 24
 export type WorkbenchDropPlacement = 'before' | 'after'
 export type WorkbenchPushDirection = 'up' | 'down' | 'left' | 'right'
+export type WorkbenchWidgetChrome = 'card' | 'bare'
+
+export interface WorkbenchWidgetHeaderPreference {
+  visible: boolean
+  icon: boolean
+  title: boolean
+  description: boolean
+}
 
 export interface WorkbenchGridPosition {
   column: number
@@ -19,6 +34,19 @@ export interface WorkbenchGridPosition {
 }
 
 const workbenchWidgetKeySchema = z.enum(workbenchWidgetKeys as [WorkbenchWidgetKey, ...WorkbenchWidgetKey[]])
+const workbenchWidgetChromeSchema = z.enum(['card', 'bare']).default('card')
+const workbenchWidgetOrientationSchema = z.enum([...workbenchWidgetOrientations] as [WorkbenchWidgetOrientation, ...WorkbenchWidgetOrientation[]]).default('auto')
+const workbenchWidgetHeaderSchema = z.object({
+  visible: z.boolean().default(true),
+  icon: z.boolean().default(true),
+  title: z.boolean().default(true),
+  description: z.boolean().default(true)
+}).default({
+  visible: true,
+  icon: true,
+  title: true,
+  description: true
+})
 
 export const workbenchLayoutWidgetSchema = z.object({
   id: z.string().min(1),
@@ -27,7 +55,10 @@ export const workbenchLayoutWidgetSchema = z.object({
   column: z.number().int().nonnegative().optional(),
   row: z.number().int().nonnegative().optional(),
   colSpan: z.number().int().min(1).max(maxGridSize),
-  rowSpan: z.number().int().min(1).max(maxGridSize)
+  rowSpan: z.number().int().min(1).max(maxGridSize),
+  chrome: workbenchWidgetChromeSchema,
+  orientation: workbenchWidgetOrientationSchema,
+  header: workbenchWidgetHeaderSchema
 })
 
 export const workbenchLayoutSchema = z.object({
@@ -49,6 +80,9 @@ export interface WorkbenchLayoutWidget {
   row: number
   colSpan: number
   rowSpan: number
+  chrome: WorkbenchWidgetChrome
+  orientation: WorkbenchWidgetOrientation
+  header: WorkbenchWidgetHeaderPreference
 }
 
 export interface WorkbenchLayout {
@@ -239,11 +273,12 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       return false
     }
 
+    const constrainedSpan = constrainWidgetSpan(key, definition.defaultLayout.colSpan, definition.defaultLayout.rowSpan, draft.value.rows, draft.value.columns)
     const candidateWidget = {
       ...widget,
       key,
-      colSpan: clampInteger(definition.defaultLayout.colSpan, 1, draft.value.columns),
-      rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, draft.value.rows)
+      colSpan: constrainedSpan.colSpan,
+      rowSpan: constrainedSpan.rowSpan
     }
 
     return canPlaceWidgetAt(
@@ -280,8 +315,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
         return {
           ...widget,
           key,
-          colSpan: clampInteger(definition.defaultLayout.colSpan, 1, draft.value.columns),
-          rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, draft.value.rows)
+          ...constrainWidgetSpan(key, definition.defaultLayout.colSpan, definition.defaultLayout.rowSpan, draft.value.rows, draft.value.columns)
         }
       })
     })
@@ -295,15 +329,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
         return widget
       }
 
-      const colSpan = clampInteger(patch.colSpan ?? widget.colSpan, 1, draft.value.columns)
-      const rowSpan = clampInteger(patch.rowSpan ?? widget.rowSpan, 1, draft.value.rows)
+      const constrainedSpan = constrainWidgetSpan(widget.key, patch.colSpan ?? widget.colSpan, patch.rowSpan ?? widget.rowSpan, draft.value.rows, draft.value.columns)
 
       return {
         ...widget,
-        colSpan,
-        rowSpan,
-        column: clampInteger(widget.column, 0, Math.max(draft.value.columns - colSpan, 0)),
-        row: clampInteger(widget.row, 0, Math.max(draft.value.rows - rowSpan, 0))
+        colSpan: constrainedSpan.colSpan,
+        rowSpan: constrainedSpan.rowSpan,
+        column: clampInteger(widget.column, 0, Math.max(draft.value.columns - constrainedSpan.colSpan, 0)),
+        row: clampInteger(widget.row, 0, Math.max(draft.value.rows - constrainedSpan.rowSpan, 0))
       }
     })
 
@@ -314,6 +347,29 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     draft.value = normalizeLayout({
       ...draft.value,
       widgets: nextWidgets
+    })
+  }
+
+  function updateWidgetChrome(widgetId: string, chrome: WorkbenchWidgetChrome) {
+    updateWidgetPreference(widgetId, { chrome })
+  }
+
+  function updateWidgetOrientation(widgetId: string, orientation: WorkbenchWidgetOrientation) {
+    updateWidgetPreference(widgetId, { orientation })
+  }
+
+  function updateWidgetHeader(widgetId: string, patch: Partial<WorkbenchWidgetHeaderPreference>) {
+    const widget = draft.value.widgets.find(widget => widget.id === widgetId)
+
+    if (!widget) {
+      return
+    }
+
+    updateWidgetPreference(widgetId, {
+      header: {
+        ...widget.header,
+        ...patch
+      }
     })
   }
 
@@ -504,6 +560,22 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     })
   }
 
+  function updateWidgetPreference(widgetId: string, patch: Partial<Pick<WorkbenchLayoutWidget, 'chrome' | 'orientation' | 'header'>>) {
+    draft.value = normalizeLayout({
+      ...draft.value,
+      widgets: draft.value.widgets.map((widget) => {
+        if (widget.id !== widgetId) {
+          return widget
+        }
+
+        return {
+          ...widget,
+          ...patch
+        }
+      })
+    })
+  }
+
   function clearDropTarget() {
     dropTargetWidgetId.value = null
     dropTargetPlacement.value = 'before'
@@ -549,6 +621,9 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     removeWidget,
     updateWidgetKey,
     updateWidgetSpan,
+    updateWidgetChrome,
+    updateWidgetOrientation,
+    updateWidgetHeader,
     beginDrag,
     markDropTarget,
     previewDragOverWidget,
@@ -575,7 +650,10 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
       key: definition.key,
       order: index,
       colSpan: definition.defaultLayout.colSpan,
-      rowSpan: definition.defaultLayout.rowSpan
+      rowSpan: definition.defaultLayout.rowSpan,
+      chrome: 'card',
+      orientation: 'auto',
+      header: createDefaultWidgetHeaderPreference()
     }))
   })
 }
@@ -757,8 +835,9 @@ function normalizeWidgets(widgets: WorkbenchLayoutWidgetInput[], rows: number, c
   const normalizedWidgets: WorkbenchLayoutWidget[] = []
 
   for (const { widget } of orderedWidgets) {
-    const colSpan = clampInteger(widget.colSpan, 1, columns)
-    const rowSpan = clampInteger(widget.rowSpan, 1, rows)
+    const constrainedSpan = constrainWidgetSpan(widget.key, widget.colSpan, widget.rowSpan, rows, columns)
+    const colSpan = constrainedSpan.colSpan
+    const rowSpan = constrainedSpan.rowSpan
     const preferredPosition = typeof widget.column === 'number' && typeof widget.row === 'number'
       ? {
           column: clampInteger(widget.column, 0, Math.max(columns - colSpan, 0)),
@@ -772,7 +851,10 @@ function normalizeWidgets(widgets: WorkbenchLayoutWidgetInput[], rows: number, c
       column: preferredPosition?.column ?? 0,
       row: preferredPosition?.row ?? 0,
       colSpan,
-      rowSpan
+      rowSpan,
+      chrome: widget.chrome,
+      orientation: normalizeWidgetOrientation(widget.key, widget.orientation),
+      header: { ...widget.header }
     }
     const position = preferredPosition && canPlaceWidgetAt(normalizedWidgets, candidateWidget, preferredPosition, rows, columns)
       ? preferredPosition
@@ -1149,7 +1231,10 @@ function sortedWidgets(widgets: WorkbenchLayoutWidget[]) {
 function cloneLayout(layout: WorkbenchLayout): WorkbenchLayout {
   return {
     ...layout,
-    widgets: layout.widgets.map(widget => ({ ...widget }))
+    widgets: layout.widgets.map(widget => ({
+      ...widget,
+      header: { ...widget.header }
+    }))
   }
 }
 
@@ -1166,9 +1251,41 @@ function createNewLayoutWidget(key: WorkbenchWidgetKey, order: number, rows: num
     order,
     column: 0,
     row: 0,
-    colSpan: clampInteger(definition.defaultLayout.colSpan, 1, columns),
-    rowSpan: clampInteger(definition.defaultLayout.rowSpan, 1, rows)
+    ...constrainWidgetSpan(key, definition.defaultLayout.colSpan, definition.defaultLayout.rowSpan, rows, columns),
+    chrome: 'card',
+    orientation: 'auto',
+    header: createDefaultWidgetHeaderPreference()
   }
+}
+
+function createDefaultWidgetHeaderPreference(): WorkbenchWidgetHeaderPreference {
+  return {
+    visible: true,
+    icon: true,
+    title: true,
+    description: true
+  }
+}
+
+function constrainWidgetSpan(key: WorkbenchWidgetKey, colSpan: number, rowSpan: number, rows: number, columns: number) {
+  const definition = getWorkbenchWidgetMetadata(key)
+  const constraints = definition?.constraints
+  const minColSpan = clampInteger(constraints?.minColSpan ?? 1, 1, columns)
+  const maxColSpan = clampInteger(constraints?.maxColSpan ?? columns, minColSpan, columns)
+  const minRowSpan = clampInteger(constraints?.minRowSpan ?? 1, 1, rows)
+  const maxRowSpan = clampInteger(constraints?.maxRowSpan ?? rows, minRowSpan, rows)
+
+  return {
+    colSpan: clampInteger(colSpan, minColSpan, maxColSpan),
+    rowSpan: clampInteger(rowSpan, minRowSpan, maxRowSpan)
+  }
+}
+
+function normalizeWidgetOrientation(key: WorkbenchWidgetKey, orientation: WorkbenchWidgetOrientation) {
+  const definition = getWorkbenchWidgetMetadata(key)
+  const supportedOrientations = definition?.supportedOrientations ?? workbenchWidgetOrientations
+
+  return supportedOrientations.includes(orientation) ? orientation : 'auto'
 }
 
 function clampInteger(value: number, min: number, max: number) {

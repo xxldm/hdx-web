@@ -1,4 +1,13 @@
 export type WorkbenchWidgetKey = 'quick-links' | 'tool-catalog' | 'notes' | 'runtime'
+export type WorkbenchWidgetOrientation = 'auto' | 'horizontal' | 'vertical'
+export type ResolvedWorkbenchWidgetOrientation = Exclude<WorkbenchWidgetOrientation, 'auto'>
+
+export interface WorkbenchWidgetConstraints {
+  minColSpan?: number
+  maxColSpan?: number
+  minRowSpan?: number
+  maxRowSpan?: number
+}
 
 export interface WorkbenchWidgetMetadata {
   key: WorkbenchWidgetKey
@@ -10,7 +19,11 @@ export interface WorkbenchWidgetMetadata {
     colSpan: number
     rowSpan: number
   }
+  constraints?: WorkbenchWidgetConstraints
+  supportedOrientations?: readonly WorkbenchWidgetOrientation[]
 }
+
+export const workbenchWidgetOrientations = ['auto', 'horizontal', 'vertical'] as const satisfies readonly WorkbenchWidgetOrientation[]
 
 export const workbenchWidgetMetadata = [
   {
@@ -22,7 +35,8 @@ export const workbenchWidgetMetadata = [
     defaultLayout: {
       colSpan: 2,
       rowSpan: 1
-    }
+    },
+    supportedOrientations: workbenchWidgetOrientations
   },
   {
     key: 'tool-catalog',
@@ -33,7 +47,8 @@ export const workbenchWidgetMetadata = [
     defaultLayout: {
       colSpan: 2,
       rowSpan: 2
-    }
+    },
+    supportedOrientations: workbenchWidgetOrientations
   },
   {
     key: 'notes',
@@ -44,7 +59,8 @@ export const workbenchWidgetMetadata = [
     defaultLayout: {
       colSpan: 1,
       rowSpan: 2
-    }
+    },
+    supportedOrientations: workbenchWidgetOrientations
   },
   {
     key: 'runtime',
@@ -55,7 +71,12 @@ export const workbenchWidgetMetadata = [
     defaultLayout: {
       colSpan: 1,
       rowSpan: 1
-    }
+    },
+    constraints: {
+      maxColSpan: 2,
+      maxRowSpan: 2
+    },
+    supportedOrientations: workbenchWidgetOrientations
   }
 ] as const satisfies readonly WorkbenchWidgetMetadata[]
 

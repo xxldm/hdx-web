@@ -12,6 +12,44 @@
     "themeLight": "Light",
     "themeDark": "Dark"
   },
+  "theme": {
+    "primary": "Primary",
+    "neutral": "Neutral",
+    "radius": "Radius",
+    "colorMode": "Color Mode",
+    "customPrimary": "Custom primary",
+    "customNeutral": "Custom neutral",
+    "reset": "Reset theme",
+    "colors": {
+      "black": "Black",
+      "red": "Red",
+      "orange": "Orange",
+      "amber": "Amber",
+      "yellow": "Yellow",
+      "lime": "Lime",
+      "green": "Green",
+      "emerald": "Emerald",
+      "teal": "Teal",
+      "cyan": "Cyan",
+      "sky": "Sky",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "purple": "Purple",
+      "fuchsia": "Fuchsia",
+      "pink": "Pink",
+      "rose": "Rose",
+      "slate": "Slate",
+      "gray": "Gray",
+      "zinc": "Zinc",
+      "neutral": "Neutral",
+      "stone": "Stone",
+      "taupe": "Taupe",
+      "mauve": "Mauve",
+      "mist": "Mist",
+      "olive": "Olive"
+    }
+  },
   "auth": {
     "loginTitle": "Sign in to HDX",
     "loginDescription": "Sign in to keep using your toolbox.",
@@ -117,6 +155,7 @@
       "reset": "Reset",
       "addWidget": "Add widget",
       "removeWidget": "Remove widget",
+      "removeWidgetByTitle": "Remove {title} widget",
       "confirmRemoveWidget": "Remove this widget?",
       "overview": "Layout overview",
       "grid": "Grid",
@@ -127,7 +166,18 @@
       "decrease": "Decrease {label}",
       "increase": "Increase {label}",
       "resizeWidget": "Drag to resize widget",
-      "changeWidget": "Change widget"
+      "resizeWidgetByTitle": "Drag to resize {title} widget",
+      "changeWidget": "Change widget",
+      "changeWidgetByTitle": "Change {title} widget",
+      "chromeCard": "Show card chrome",
+      "chromeBare": "Hide card chrome",
+      "orientationAuto": "Auto direction",
+      "orientationHorizontal": "Horizontal",
+      "orientationVertical": "Vertical",
+      "showHeader": "Show header",
+      "showIcon": "Show icon",
+      "showTitle": "Show title",
+      "showDescription": "Show description"
     }
   }
 }

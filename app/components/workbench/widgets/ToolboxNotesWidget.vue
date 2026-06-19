@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import type { ResolvedWorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
+
+defineProps<{
+  orientation?: ResolvedWorkbenchWidgetOrientation
+}>()
+
 const { t } = useI18n()
 
 const noteItems = computed(() => [

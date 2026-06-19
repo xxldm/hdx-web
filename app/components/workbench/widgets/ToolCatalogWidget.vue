@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { ToolRecord } from '~/types/hdx-api'
+import type { ResolvedWorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
 
 const props = defineProps<{
   tools?: ToolRecord[]
   loading?: boolean
+  orientation?: ResolvedWorkbenchWidgetOrientation
 }>()
 
 const { t } = useI18n()
