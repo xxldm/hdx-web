@@ -30,7 +30,7 @@ interface WorkbenchMenuItem {
   label: string
   icon: string
   disabled?: boolean
-  onSelect?: () => void
+  onSelect?: () => void | Promise<void>
   children?: WorkbenchMenuItem[]
 }
 
@@ -107,6 +107,7 @@ const accountMenuItems = computed<WorkbenchMenuItem[]>(() => [
       ]
     : [])
 ])
+const accountMenuId = 'workbench-account-menu'
 const accountAvatarText = computed(() => Array.from(displayName.value.trim()).slice(0, 2).join('').toUpperCase() || 'HD')
 const contentRowsClass = computed(() => errorKey.value ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]')
 
@@ -119,6 +120,11 @@ async function logout() {
 
   await auth.logout()
   await navigateTo('/login')
+}
+
+async function handleAccountMenuSelect(item: WorkbenchMenuItem, close?: () => void) {
+  await item.onSelect?.()
+  close?.()
 }
 
 function updateLayoutValue(setter: (value: number) => void, value: number, delta: number) {
@@ -304,23 +310,28 @@ useSeoMeta({
               :content="{ align: 'end' }"
               :ui="{ content: 'workbench-floating-menu workbench-account-menu hdx-radius-popover' }"
             >
-              <UButton
-                type="button"
-                color="neutral"
-                variant="ghost"
-                class="workbench-avatar-button workbench-account-trigger cursor-pointer"
-                :aria-label="t('workbench.account.menu')"
-              >
-                <UAvatar
-                  :alt="displayName"
-                  :text="accountAvatarText"
-                  size="sm"
-                  class="workbench-account-avatar"
-                />
-              </UButton>
+              <template #default="{ open }">
+                <UButton
+                  type="button"
+                  color="neutral"
+                  variant="ghost"
+                  class="workbench-avatar-button workbench-account-trigger cursor-pointer"
+                  :aria-label="t('workbench.account.menu')"
+                  aria-haspopup="menu"
+                  :aria-expanded="open ? 'true' : 'false'"
+                  :aria-controls="accountMenuId"
+                >
+                  <UAvatar
+                    :alt="displayName"
+                    :text="accountAvatarText"
+                    size="sm"
+                    class="workbench-account-avatar"
+                  />
+                </UButton>
+              </template>
 
-              <template #content>
-                <div class="grid min-w-44 gap-1 p-1.5">
+              <template #content="{ close }">
+                <div :id="accountMenuId" role="menu" :aria-label="t('workbench.account.menu')" class="grid min-w-44 gap-1 p-1.5">
                   <div class="border-b border-slate-900/8 px-2.5 py-2 dark:border-white/12">
                     <p class="text-xs text-slate-500 dark:text-white/55">
                       {{ t('workbench.account.current') }}
@@ -337,8 +348,9 @@ useSeoMeta({
                     variant="ghost"
                     :icon="item.icon"
                     :disabled="item.disabled"
+                    role="menuitem"
                     class="workbench-account-menu-item cursor-pointer justify-start hdx-radius-card"
-                    @click="item.onSelect?.()"
+                    @click="handleAccountMenuSelect(item, close)"
                   >
                     {{ item.label }}
                   </UButton>
