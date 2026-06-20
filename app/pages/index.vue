@@ -19,7 +19,7 @@ const localeItems = [
 const localeMenuOpen = ref(false)
 const localeMenuItems = computed(() => localeItems.map(item => ({
   label: item.label,
-  icon: 'lucide:languages',
+  icon: 'i-lucide-languages',
   selected: locale.value === item.value,
   onSelect: () => {
     void setPreferredLocale(item.value)
@@ -39,28 +39,28 @@ const layoutStats = computed(() => [
     label: t('workbench.layout.columns'),
     value: layout.columns,
     setter: layout.setColumns,
-    decreaseIcon: 'lucide:minus',
-    increaseIcon: 'lucide:plus'
+    decreaseIcon: 'i-lucide-minus',
+    increaseIcon: 'i-lucide-plus'
   },
   {
     label: t('workbench.layout.rows'),
     value: layout.rows,
     setter: layout.setRows,
-    decreaseIcon: 'lucide:minus',
-    increaseIcon: 'lucide:plus'
+    decreaseIcon: 'i-lucide-minus',
+    increaseIcon: 'i-lucide-plus'
   },
   {
     label: t('workbench.layout.gap'),
     value: layout.gap,
     setter: layout.setGap,
-    decreaseIcon: 'lucide:minus',
-    increaseIcon: 'lucide:plus'
+    decreaseIcon: 'i-lucide-minus',
+    increaseIcon: 'i-lucide-plus'
   }
 ])
 const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
   ...layoutStats.value.map(stat => ({
     label: `${stat.label}: ${stat.value}`,
-    icon: 'lucide:sliders-horizontal',
+    icon: 'i-lucide-sliders-horizontal',
     children: [
       {
         label: t('workbench.layout.decrease', { label: stat.label }),
@@ -76,31 +76,31 @@ const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
   })),
   {
     label: t('workbench.layout.reset'),
-    icon: 'lucide:sparkles',
+    icon: 'i-lucide-sparkles',
     onSelect: layout.resetLayout
   },
   {
     label: t('workbench.layout.save'),
-    icon: 'lucide:save',
+    icon: 'i-lucide-save',
     onSelect: layout.saveEditing
   },
   {
     label: t('workbench.layout.cancel'),
-    icon: 'lucide:rotate-ccw',
+    icon: 'i-lucide-rotate-ccw',
     onSelect: layout.cancelEditing
   }
 ])
 const accountMenuItems = computed<WorkbenchMenuItem[]>(() => [
   {
     label: t('workbench.account.settings'),
-    icon: 'lucide:settings',
+    icon: 'i-lucide-settings',
     disabled: true
   },
   ...(authenticated.value && !isLocalAdmin.value
     ? [
         {
           label: t('auth.logoutAction'),
-          icon: 'lucide:log-out',
+          icon: 'i-lucide-log-out',
           disabled: auth.loading,
           onSelect: logout
         }
@@ -147,7 +147,7 @@ useSeoMeta({
               type="button"
               color="neutral"
               variant="ghost"
-              icon="lucide:menu"
+              icon="i-lucide-menu"
               :aria-label="t('workbench.menu')"
               class="workbench-tool-button shrink-0 cursor-pointer"
             />
@@ -204,7 +204,7 @@ useSeoMeta({
                   type="button"
                   color="neutral"
                   variant="ghost"
-                  icon="lucide:sparkles"
+                  icon="i-lucide-sparkles"
                   :aria-label="t('workbench.layout.reset')"
                   class="workbench-tool-button cursor-pointer"
                   @click="layout.resetLayout()"
@@ -215,7 +215,7 @@ useSeoMeta({
                   type="button"
                   color="primary"
                   variant="solid"
-                  icon="lucide:save"
+                  icon="i-lucide-save"
                   :aria-label="t('workbench.layout.save')"
                   class="workbench-tool-button cursor-pointer"
                   @click="layout.saveEditing()"
@@ -226,7 +226,7 @@ useSeoMeta({
                   type="button"
                   color="neutral"
                   variant="soft"
-                  icon="lucide:rotate-ccw"
+                  icon="i-lucide-rotate-ccw"
                   :aria-label="t('workbench.layout.cancel')"
                   class="workbench-tool-button cursor-pointer"
                   @click="layout.cancelEditing()"
@@ -239,7 +239,7 @@ useSeoMeta({
               type="button"
               color="primary"
               variant="soft"
-              icon="lucide:layout-grid"
+              icon="i-lucide-layout-grid"
               class="workbench-edit-button hidden cursor-pointer sm:inline-flex"
               @click="layout.startEditing()"
             >
@@ -256,7 +256,7 @@ useSeoMeta({
                 type="button"
                 color="primary"
                 variant="soft"
-                icon="lucide:sliders-horizontal"
+                icon="i-lucide-sliders-horizontal"
                 :aria-label="t('workbench.layout.edit')"
                 class="workbench-tool-button cursor-pointer lg:hidden"
               />
@@ -267,7 +267,7 @@ useSeoMeta({
                 type="button"
                 color="primary"
                 variant="soft"
-                icon="lucide:layout-grid"
+                icon="i-lucide-layout-grid"
                 :aria-label="t('workbench.layout.edit')"
                 class="workbench-tool-button cursor-pointer sm:hidden"
                 @click="layout.startEditing()"
@@ -285,12 +285,12 @@ useSeoMeta({
                   type="button"
                   color="neutral"
                   variant="ghost"
-                  icon="lucide:languages"
+                  icon="i-lucide-languages"
                   :aria-label="t('actions.language')"
                   class="workbench-tool-button cursor-pointer"
                 />
                 <template #item-trailing="{ item }">
-                  <UIcon v-if="item.selected" name="lucide:check" class="size-4 text-primary" />
+                  <UIcon v-if="item.selected" name="i-lucide-check" class="size-4 text-primary" />
                 </template>
               </UDropdownMenu>
             </UTooltip>
@@ -352,7 +352,7 @@ useSeoMeta({
       <section class="grid h-full min-h-0 gap-3 overflow-hidden" :class="contentRowsClass">
         <div v-if="errorKey" class="border border-amber-300/45 bg-amber-50/72 p-3 text-sm text-amber-900 shadow-sm shadow-amber-950/8 backdrop-blur-xl hdx-radius-card dark:border-amber-200/20 dark:bg-amber-300/10 dark:text-amber-100">
           <div class="flex items-start gap-2">
-            <UIcon name="lucide:triangle-alert" class="mt-0.5 size-4 shrink-0" />
+            <UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0" />
             <span>{{ t('workbench.unavailable') }} {{ t(errorKey) }}</span>
           </div>
         </div>

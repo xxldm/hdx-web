@@ -17,7 +17,7 @@ const localeItems = [
 const localeMenuOpen = ref(false)
 const localeMenuItems = computed(() => localeItems.map((item) => ({
   label: item.label,
-  icon: 'lucide:languages',
+  icon: 'i-lucide-languages',
   selected: locale.value === item.value,
   onSelect: () => {
     void setPreferredLocale(item.value)
@@ -136,14 +136,14 @@ useSeoMeta({
                       color="neutral"
                       variant="ghost"
                       size="sm"
-                      icon="lucide:languages"
+                      icon="i-lucide-languages"
                       :aria-label="t('actions.language')"
                       class="login-tool-button cursor-pointer"
                     />
                     <template #item-trailing="{ item }">
                       <UIcon
                         v-if="item.selected"
-                        name="lucide:check"
+                        name="i-lucide-check"
                         class="size-4 text-primary"
                       />
                     </template>
@@ -165,7 +165,7 @@ useSeoMeta({
             v-if="formErrorKey"
             color="error"
             variant="soft"
-            icon="lucide:circle-alert"
+            icon="i-lucide-circle-alert"
             :title="t('auth.loginFailedTitle')"
             :description="t(formErrorKey)"
             class="mb-4"
@@ -174,7 +174,7 @@ useSeoMeta({
           <section v-if="desktopOnline.available" class="mb-5 grid gap-3 border-y border-slate-900/10 py-4 dark:border-white/15">
             <div class="flex items-center justify-between gap-3">
               <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                <UIcon name="lucide:radio-tower" class="size-4 text-primary" />
+                <UIcon name="i-lucide-radio-tower" class="size-4 text-primary" />
                 {{ t('desktopOnline.title') }}
               </h2>
               <UBadge :color="desktopOnline.configured ? 'success' : 'warning'" variant="soft">
@@ -186,7 +186,7 @@ useSeoMeta({
               v-if="desktopOnline.errorMessage"
               color="error"
               variant="soft"
-              icon="lucide:circle-alert"
+              icon="i-lucide-circle-alert"
               :title="t('desktopOnline.configError')"
               :description="desktopOnline.errorMessage"
             />
@@ -194,7 +194,7 @@ useSeoMeta({
               v-else-if="desktopOnline.statusMessage"
               :color="desktopOnline.checkResult?.ok === false ? 'warning' : 'success'"
               variant="soft"
-              icon="lucide:plug-zap"
+              icon="i-lucide-plug-zap"
               :title="t('desktopOnline.status')"
               :description="desktopOnline.statusMessage"
             />
@@ -207,7 +207,7 @@ useSeoMeta({
                   inputmode="url"
                   autocomplete="url"
                   placeholder="https://auth.example.com"
-                  icon="lucide:key-round"
+                  icon="i-lucide-key-round"
                   class="w-full"
                 />
               </UFormField>
@@ -218,7 +218,7 @@ useSeoMeta({
                   inputmode="url"
                   autocomplete="url"
                   placeholder="https://api.example.com"
-                  icon="lucide:network"
+                  icon="i-lucide-network"
                   class="w-full"
                 />
               </UFormField>
@@ -228,7 +228,7 @@ useSeoMeta({
                   type="number"
                   min="1"
                   max="60"
-                  icon="lucide:timer"
+                  icon="i-lucide-timer"
                   class="w-full"
                 />
               </UFormField>
@@ -239,7 +239,7 @@ useSeoMeta({
                 type="button"
                 color="neutral"
                 variant="soft"
-                leading-icon="lucide:plug-zap"
+                leading-icon="i-lucide-plug-zap"
                 :loading="desktopOnline.checking"
                 class="cursor-pointer justify-center"
                 @click="checkOnlineConnection"
@@ -250,7 +250,7 @@ useSeoMeta({
                 type="button"
                 color="primary"
                 variant="soft"
-                leading-icon="lucide:save"
+                leading-icon="i-lucide-save"
                 :loading="desktopOnline.saving"
                 class="cursor-pointer justify-center"
                 @click="saveOnlineConfig"
@@ -283,7 +283,7 @@ useSeoMeta({
                 type="text"
                 autocomplete="username"
                 :placeholder="t('auth.identifierPlaceholder')"
-                icon="lucide:user"
+                icon="i-lucide-user"
                 class="w-full"
                 required
               />
@@ -296,7 +296,7 @@ useSeoMeta({
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 :placeholder="t('auth.passwordPlaceholder')"
-                icon="lucide:lock-keyhole"
+                icon="i-lucide-lock-keyhole"
                 class="w-full"
                 required
               >
@@ -306,7 +306,7 @@ useSeoMeta({
                     variant="ghost"
                     color="neutral"
                     size="xs"
-                    :icon="showPassword ? 'lucide:eye-off' : 'lucide:eye'"
+                    :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                     :aria-label="showPassword ? t('auth.hidePassword') : t('auth.showPassword')"
                     class="cursor-pointer"
                     @click="showPassword = !showPassword"
@@ -319,7 +319,7 @@ useSeoMeta({
               type="submit"
               color="primary"
               size="lg"
-              leading-icon="lucide:log-in"
+              leading-icon="i-lucide-log-in"
               :loading="auth.loginLoading"
               :disabled="loginDisabled"
               class="login-action mt-2 w-full cursor-pointer justify-center"

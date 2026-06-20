@@ -102,7 +102,7 @@ UI/UX 工作必须使用本目录下的 `ui-ux-pro-max` 技能：
 Nuxt UI 使用规则：
 
 - 优先使用 `UButton`、`UForm`、`UFormField`、`UAlert`、`USkeleton`、`UColorModeSelect` 等组件。
-- 图标优先使用 `lucide:*`。
+- 图标优先使用 `i-lucide-*`。
 - 使用语义色、组件 `variant` 和 `size`，避免在组件里重复硬编码样式。
 - 表单使用 Zod schema 绑定校验。
 

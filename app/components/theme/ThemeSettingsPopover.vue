@@ -28,17 +28,17 @@ const colorModeItems = computed(() => [
   {
     value: 'light' as const,
     label: t('actions.themeLight'),
-    icon: 'lucide:sun'
+    icon: 'i-lucide-sun'
   },
   {
     value: 'dark' as const,
     label: t('actions.themeDark'),
-    icon: 'lucide:moon'
+    icon: 'i-lucide-moon'
   },
   {
     value: 'system' as const,
     label: t('actions.themeSystem'),
-    icon: 'lucide:monitor'
+    icon: 'i-lucide-monitor'
   }
 ])
 const panelClass = computed(() => props.colorModeOnly
@@ -81,7 +81,7 @@ watch(open, (isOpen) => {
         type="button"
         color="neutral"
         variant="ghost"
-        icon="lucide:palette"
+        icon="i-lucide-palette"
         :size="props.buttonSize"
         :aria-label="t('actions.theme')"
         :class="props.buttonClass"
@@ -100,7 +100,7 @@ watch(open, (isOpen) => {
               color="neutral"
               variant="ghost"
               size="xs"
-              icon="lucide:rotate-ccw"
+              icon="i-lucide-rotate-ccw"
               class="cursor-pointer hdx-radius-card"
               :aria-label="t('theme.reset')"
               @click="theme.resetTheme()"

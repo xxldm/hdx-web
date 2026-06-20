@@ -367,7 +367,7 @@ if (import.meta.client) {
               class="toolbox-add-widget-button pointer-events-auto cursor-pointer"
             >
               <span class="grid justify-items-center gap-2">
-                <UIcon name="lucide:plus" class="size-6" />
+                <UIcon name="i-lucide-plus" class="size-6" />
                 <span class="text-sm font-semibold">{{ t('workbench.layout.addWidget') }}</span>
               </span>
             </UButton>

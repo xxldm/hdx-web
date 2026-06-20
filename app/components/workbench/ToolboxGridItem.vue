@@ -69,7 +69,7 @@ const widgetMenuItems = computed(() => [
   [
     {
       label: t('workbench.layout.chromeCard'),
-      icon: 'lucide:square',
+      icon: 'i-lucide-square',
       type: 'checkbox' as const,
       checked: props.widget.chrome === 'card',
       active: props.widget.chrome === 'card',
@@ -81,7 +81,7 @@ const widgetMenuItems = computed(() => [
     },
     {
       label: t('workbench.layout.chromeBare'),
-      icon: 'lucide:square-dashed',
+      icon: 'i-lucide-square-dashed',
       type: 'checkbox' as const,
       checked: props.widget.chrome === 'bare',
       active: props.widget.chrome === 'bare',
@@ -95,7 +95,7 @@ const widgetMenuItems = computed(() => [
   [
     {
       label: t('workbench.layout.orientationAuto'),
-      icon: 'lucide:sparkles',
+      icon: 'i-lucide-sparkles',
       type: 'checkbox' as const,
       checked: props.widget.orientation === 'auto',
       active: props.widget.orientation === 'auto',
@@ -107,7 +107,7 @@ const widgetMenuItems = computed(() => [
     },
     {
       label: t('workbench.layout.orientationHorizontal'),
-      icon: 'lucide:panel-top',
+      icon: 'i-lucide-panel-top',
       type: 'checkbox' as const,
       checked: props.widget.orientation === 'horizontal',
       active: props.widget.orientation === 'horizontal',
@@ -119,7 +119,7 @@ const widgetMenuItems = computed(() => [
     },
     {
       label: t('workbench.layout.orientationVertical'),
-      icon: 'lucide:panel-left',
+      icon: 'i-lucide-panel-left',
       type: 'checkbox' as const,
       checked: props.widget.orientation === 'vertical',
       active: props.widget.orientation === 'vertical',
@@ -133,14 +133,14 @@ const widgetMenuItems = computed(() => [
   [
     {
       label: t('workbench.layout.showHeader'),
-      icon: 'lucide:panel-top-open',
+      icon: 'i-lucide-panel-top-open',
       type: 'checkbox' as const,
       checked: props.widget.header.visible,
       onUpdateChecked: (checked: boolean) => layout.updateWidgetHeader(props.widget.id, { visible: checked })
     },
     {
       label: t('workbench.layout.showIcon'),
-      icon: 'lucide:badge',
+      icon: 'i-lucide-badge',
       type: 'checkbox' as const,
       checked: props.widget.header.icon,
       disabled: !props.widget.header.visible,
@@ -148,7 +148,7 @@ const widgetMenuItems = computed(() => [
     },
     {
       label: t('workbench.layout.showTitle'),
-      icon: 'lucide:heading',
+      icon: 'i-lucide-heading',
       type: 'checkbox' as const,
       checked: props.widget.header.title,
       disabled: !props.widget.header.visible,
@@ -156,7 +156,7 @@ const widgetMenuItems = computed(() => [
     },
     {
       label: t('workbench.layout.showDescription'),
-      icon: 'lucide:text',
+      icon: 'i-lucide-text',
       type: 'checkbox' as const,
       checked: props.widget.header.description,
       disabled: !props.widget.header.visible,
@@ -968,7 +968,7 @@ onUnmounted(() => {
     @pointercancel="onItemPointerCancel"
   >
     <div v-if="isDragging" class="toolbox-drag-placeholder grid h-full min-h-0 place-items-center hdx-radius-card" aria-hidden="true">
-      <UIcon name="lucide:move" class="size-6 text-cyan-100/70" />
+      <UIcon name="i-lucide-move" class="size-6 text-cyan-100/70" />
     </div>
 
     <div v-else class="toolbox-card-content relative grid h-full min-h-0" :class="cardContentClass">
@@ -1003,7 +1003,7 @@ onUnmounted(() => {
               type="button"
               color="neutral"
               variant="ghost"
-              icon="lucide:x"
+              icon="i-lucide-x"
               class="toolbox-remove-button cursor-pointer"
               :aria-label="removeWidgetAriaLabel"
               @click.stop="emit('select', props.widget.id)"
@@ -1074,7 +1074,7 @@ onUnmounted(() => {
                 type="button"
                 color="neutral"
                 variant="ghost"
-                icon="lucide:replace"
+                icon="i-lucide-replace"
                 size="sm"
                 class="toolbox-change-button cursor-pointer"
                 :aria-label="changeWidgetAriaLabel"
@@ -1090,7 +1090,7 @@ onUnmounted(() => {
         v-if="editing && resizeLimitFeedbackText"
         class="toolbox-resize-limit-hint pointer-events-none absolute bottom-11 right-3 z-30 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-50/86 px-2.5 py-1 text-xs font-medium text-amber-950 shadow-lg shadow-amber-900/12 backdrop-blur-xl dark:border-amber-200/18 dark:bg-amber-300/16 dark:text-amber-50 dark:shadow-black/28"
       >
-        <UIcon name="lucide:circle-alert" class="size-3.5 shrink-0" />
+        <UIcon name="i-lucide-circle-alert" class="size-3.5 shrink-0" />
         <span class="truncate">{{ resizeLimitFeedbackText }}</span>
       </div>
 

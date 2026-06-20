@@ -45,7 +45,7 @@ const visibleTools = computed(() => (props.tools ?? []).slice(0, 5))
 
     <div v-else class="grid place-items-center border border-dashed border-slate-300/80 bg-white/38 p-5 text-center hdx-radius-card dark:border-white/20 dark:bg-white/6">
       <div class="grid justify-items-center gap-2">
-        <UIcon name="lucide:folder-plus" class="size-7 text-slate-400 dark:text-white/45" />
+        <UIcon name="i-lucide-folder-plus" class="size-7 text-slate-400 dark:text-white/45" />
         <p class="max-w-56 text-sm text-slate-600 dark:text-white/64">
           {{ t('workbench.emptyTools') }}
         </p>

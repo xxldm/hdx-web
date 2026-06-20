@@ -30,7 +30,7 @@ const noteItems = computed(() => [
       type="button"
       color="primary"
       variant="soft"
-      icon="lucide:pen-line"
+      icon="i-lucide-pen-line"
       class="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 border border-rose-200/70 bg-white/55 px-3 text-sm font-semibold text-rose-700 shadow-sm shadow-rose-950/5 transition-colors duration-200 hdx-radius-card hover:bg-white/78 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 dark:border-rose-200/20 dark:bg-white/10 dark:text-rose-100 dark:hover:bg-white/16"
     >
       {{ t('workbench.notes.action') }}

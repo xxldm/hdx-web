@@ -10,17 +10,17 @@ const { t } = useI18n()
 const quickLinks = computed(() => [
   {
     label: t('workbench.quickLinks.newTool'),
-    icon: 'lucide:plus',
+    icon: 'i-lucide-plus',
     tone: 'text-cyan-700 dark:text-cyan-100'
   },
   {
     label: t('workbench.quickLinks.collectIdea'),
-    icon: 'lucide:lightbulb',
+    icon: 'i-lucide-lightbulb',
     tone: 'text-amber-700 dark:text-amber-100'
   },
   {
     label: t('workbench.quickLinks.openFolder'),
-    icon: 'lucide:folder-open',
+    icon: 'i-lucide-folder-open',
     tone: 'text-indigo-700 dark:text-indigo-100'
   }
 ])
