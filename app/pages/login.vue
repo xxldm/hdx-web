@@ -10,6 +10,10 @@ const router = useRouter()
 const auth = useAuthStore()
 const desktopOnline = useDesktopOnlineStore()
 
+definePageMeta({
+  layout: false
+})
+
 const localeItems = [
   { label: '简体中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' }

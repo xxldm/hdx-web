@@ -9,6 +9,7 @@ defineProps<{
   tools: ToolRecord[]
   runtime: RuntimeInfo | null
   loading: boolean
+  highlightedWidgetKey?: WorkbenchWidgetKey | null
 }>()
 
 const { t } = useI18n()
@@ -341,6 +342,7 @@ if (import.meta.client) {
           :tools="tools"
           :runtime="runtime"
           :loading="loading"
+          :highlighted="highlightedWidgetKey === widget.key"
           @select="onSelectWidget"
           @leave="onLeaveWidget"
         />

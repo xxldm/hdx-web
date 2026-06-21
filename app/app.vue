@@ -17,6 +17,8 @@ useHead({
 
 <template>
   <UApp :locale="nuxtUiLocale">
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </UApp>
 </template>

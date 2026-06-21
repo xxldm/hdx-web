@@ -106,6 +106,29 @@
     "toolDisabled": "停用",
     "widgetLibrary": "可摆放组件",
     "menu": "菜单",
+    "navigation": {
+      "title": "工具箱菜单",
+      "description": "把常用入口收在这里，顺手的可以固定到顶栏。",
+      "pinned": "顶栏固定菜单",
+      "pin": "固定到顶栏",
+      "unpin": "从顶栏移除",
+      "pinLimit": "最多固定 {count} 个",
+      "groups": {
+        "toolbox": "工具箱",
+        "status": "状态",
+        "space": "空间"
+      },
+      "items": {
+        "home": {
+          "title": "工具箱首页",
+          "description": "回到当前工具箱"
+        },
+        "settings": {
+          "title": "设置",
+          "description": "后续放主题、账户和偏好"
+        }
+      }
+    },
     "account": {
       "menu": "账户菜单",
       "current": "当前用户",

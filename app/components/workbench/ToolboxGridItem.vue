@@ -14,6 +14,7 @@ const props = defineProps<{
   widget: PlacedWorkbenchWidget
   editing: boolean
   selected?: boolean
+  highlighted?: boolean
   tools: ToolRecord[]
   runtime: RuntimeInfo | null
   loading: boolean
@@ -254,11 +255,13 @@ const componentProps = computed(() => {
     v-if="definition"
     ref="itemElement"
     :data-workbench-widget-id="widget.id"
+    :data-workbench-widget-key="widget.key"
     class="toolbox-grid-item relative min-h-0 overflow-hidden border text-slate-950 transition-[border-color,background,box-shadow,transform,opacity] duration-200 hdx-radius-card dark:text-white"
     :class="[
       componentChromeClass,
       editing ? 'toolbox-grid-item-editing cursor-grab active:cursor-grabbing' : '',
       props.selected ? 'toolbox-grid-item-selected ring-1 ring-cyan-400/45 shadow-[0_20px_40px_rgba(15,23,42,0.12)] dark:ring-cyan-200/30 dark:shadow-[0_20px_40px_rgba(0,0,0,0.32)]' : '',
+      props.highlighted ? 'toolbox-grid-item-navigation-highlighted' : '',
       removeConfirmOpen ? 'toolbox-grid-item-remove-open' : '',
       isRemoving ? 'toolbox-grid-item-removing' : '',
       isDropTarget ? 'border-cyan-400 bg-cyan-50/70 shadow-cyan-900/16 dark:border-cyan-200/55 dark:bg-cyan-300/12' : '',
@@ -543,6 +546,20 @@ const componentProps = computed(() => {
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.28),
     inset 0 0 0 1px rgba(251, 191, 36, 0.22);
+}
+
+.toolbox-grid-item-navigation-highlighted {
+  border-color: color-mix(in srgb, var(--hdx-theme-primary) 58%, white);
+  box-shadow:
+    0 20px 48px rgba(var(--hdx-theme-primary-rgb), 0.16),
+    inset 0 0 0 2px rgba(var(--hdx-theme-primary-rgb), 0.2);
+}
+
+.dark .toolbox-grid-item-navigation-highlighted {
+  border-color: rgba(var(--hdx-theme-primary-rgb), 0.58);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 2px rgba(var(--hdx-theme-primary-rgb), 0.22);
 }
 
 .toolbox-grid-item-resize-limited .toolbox-resize-handle {

@@ -106,6 +106,29 @@
     "toolDisabled": "Disabled",
     "widgetLibrary": "Widget shelf",
     "menu": "Menu",
+    "navigation": {
+      "title": "Toolbox menu",
+      "description": "Keep common entries here and pin the handy ones to the top bar.",
+      "pinned": "Pinned top-bar menu",
+      "pin": "Pin to top bar",
+      "unpin": "Remove from top bar",
+      "pinLimit": "Pin up to {count}",
+      "groups": {
+        "toolbox": "Toolbox",
+        "status": "Status",
+        "space": "Space"
+      },
+      "items": {
+        "home": {
+          "title": "Toolbox home",
+          "description": "Back to the current toolbox"
+        },
+        "settings": {
+          "title": "Settings",
+          "description": "Themes, account, and preferences later"
+        }
+      }
+    },
     "account": {
       "menu": "Account menu",
       "current": "Current user",
