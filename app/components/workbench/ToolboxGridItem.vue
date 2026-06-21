@@ -2,13 +2,12 @@
 import type { RuntimeInfo, ToolRecord } from '~/types/hdx-api'
 import type {
   PlacedWorkbenchWidget,
-  WorkbenchWidgetChrome,
-  WorkbenchDropPlacement,
-  WorkbenchGridPosition,
-  WorkbenchPushDirection
+  WorkbenchWidgetChrome
 } from '~/stores/workbench-layout'
 import type { ResolvedWorkbenchWidgetOrientation, WorkbenchWidgetKey, WorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
-import { constrainWorkbenchWidgetSpan } from '~/utils/workbench-widget-meta'
+import { useWorkbenchWidgetDrag } from '~/composables/use-workbench-widget-drag'
+import { useWorkbenchWidgetEditSurface } from '~/composables/use-workbench-widget-edit-surface'
+import { useWorkbenchWidgetResize } from '~/composables/use-workbench-widget-resize'
 import { getWorkbenchWidgetDefinition, workbenchWidgetDefinitions } from '~/utils/workbench-widgets'
 
 const props = defineProps<{
@@ -164,19 +163,52 @@ const widgetMenuItems = computed(() => [
     }
   ]
 ])
-const dragOffset = reactive({
-  x: 0,
-  y: 0
-})
-const dragFixedRect = reactive({
-  width: 0,
-  height: 0
-})
 const itemElement = ref<HTMLElement | null>(null)
-const removeConfirmOpen = ref(false)
-const isRemoving = ref(false)
-const suppressNextEditActionClick = ref(false)
-const resizeLimitFeedback = shallowRef<ResizeLimitFeedback | null>(null)
+const {
+  removeConfirmOpen,
+  isRemoving,
+  onConfirmRemoveWidget,
+  onCancelRemoveWidget,
+  armEditActionClickGuard,
+  onEditActionClickCapture
+} = useWorkbenchWidgetEditSurface({
+  widgetId: () => props.widget.id,
+  editing: () => props.editing,
+  selected: () => props.selected
+})
+const {
+  dragOffset,
+  dragFixedRect,
+  dragOrigin,
+  onItemPointerDown,
+  onItemPointerLeave,
+  onItemPointerMove,
+  onItemPointerUp,
+  onItemPointerCancel
+} = useWorkbenchWidgetDrag({
+  itemElement,
+  widget: () => props.widget,
+  editing: () => props.editing,
+  selected: () => props.selected,
+  isRemoveConfirmOpen: () => removeConfirmOpen.value,
+  closeRemoveConfirm: onCancelRemoveWidget,
+  armEditActionClickGuard,
+  selectWidget: widgetId => emit('select', widgetId),
+  leaveWidget: widgetId => emit('leave', widgetId)
+})
+const {
+  resizeLimitFeedback,
+  onResizePointerDown,
+  onResizePointerMove,
+  onResizePointerUp,
+  onResizePointerCancel
+} = useWorkbenchWidgetResize({
+  itemElement,
+  widget: () => props.widget,
+  editing: () => props.editing,
+  selectWidget: widgetId => emit('select', widgetId),
+  closeRemoveConfirm: onCancelRemoveWidget
+})
 const resizeLimitFeedbackText = computed(() => {
   if (resizeLimitFeedback.value === 'min') {
     return t('workbench.layout.resizeMinLimitReached')
@@ -192,30 +224,6 @@ const resizeLimitFeedbackText = computed(() => {
 
   return ''
 })
-let dragPointerId: number | null = null
-let dragStartX = 0
-let dragStartY = 0
-let dragStartLeft = 0
-let dragStartTop = 0
-let dragStartOrder = 0
-let dragStartColumn = 0
-let dragStartRow = 0
-let dragStartColSpan = 1
-let dragStartRowSpan = 1
-let dragGrabColumnOffset = 0
-let dragGrabRowOffset = 0
-let dragHasStarted = false
-let resizePointerId: number | null = null
-let resizeStartX = 0
-let resizeStartY = 0
-let resizeStartColSpan = 1
-let resizeStartRowSpan = 1
-let resizeCellWidth = 1
-let resizeCellHeight = 1
-let resizeGap = 0
-let resizeHandleElement: HTMLElement | null = null
-let removeWidgetTimer: number | null = null
-let suppressEditActionClickTimer: number | null = null
 const componentProps = computed(() => {
   const displayProps = {
     orientation: resolvedOrientation.value
@@ -239,697 +247,6 @@ const componentProps = computed(() => {
   return displayProps
 })
 
-interface DragTargetRect {
-  id: string
-  left: number
-  right: number
-  top: number
-  bottom: number
-  width: number
-  height: number
-  column: number
-  row: number
-  colSpan: number
-  rowSpan: number
-  order: number
-}
-
-interface DragPreviewRect {
-  left: number
-  right: number
-  top: number
-  bottom: number
-  width: number
-  height: number
-}
-
-interface DragGridRect {
-  column: number
-  row: number
-  colSpan: number
-  rowSpan: number
-}
-
-type ResizeLimitFeedback = 'min' | 'max' | 'boundary'
-
-interface ResizeSpan {
-  colSpan: number
-  rowSpan: number
-}
-
-interface WidgetDropTarget {
-  id: string
-  placement: WorkbenchDropPlacement
-  pushDirection: WorkbenchPushDirection
-  position: WorkbenchGridPosition
-}
-
-let dragTargetRects: DragTargetRect[] = []
-
-function onItemPointerDown(event: PointerEvent) {
-  if (!props.editing || event.button !== 0 || isWorkbenchControl(event.target)) {
-    return
-  }
-
-  removeConfirmOpen.value = false
-
-  if (event.pointerType && event.pointerType !== 'mouse' && !props.selected) {
-    event.preventDefault()
-    event.stopPropagation()
-    armEditActionClickGuard()
-    emit('select', props.widget.id)
-    return
-  }
-
-  emit('select', props.widget.id)
-  startLocalDrag(event)
-}
-
-function onItemPointerLeave(event: PointerEvent) {
-  if (event.pointerType && event.pointerType !== 'mouse') {
-    return
-  }
-
-  if (removeConfirmOpen.value) {
-    return
-  }
-
-  emit('leave', props.widget.id)
-}
-
-function startLocalDrag(event: PointerEvent) {
-  event.preventDefault()
-  removeWindowDragListeners()
-  const itemRect = itemElement.value?.getBoundingClientRect()
-
-  if (!itemRect) {
-    return
-  }
-
-  dragPointerId = event.pointerId
-  dragStartX = event.clientX
-  dragStartY = event.clientY
-  dragStartLeft = itemRect.left
-  dragStartTop = itemRect.top
-  dragStartOrder = props.widget.order
-  dragStartColumn = props.widget.column
-  dragStartRow = props.widget.row
-  dragStartColSpan = props.widget.colSpan
-  dragStartRowSpan = props.widget.rowSpan
-  const grabOffset = calculateGrabGridOffset(event.clientX, event.clientY, itemRect)
-  dragGrabColumnOffset = grabOffset.column
-  dragGrabRowOffset = grabOffset.row
-  dragFixedRect.width = itemRect.width
-  dragFixedRect.height = itemRect.height
-  dragTargetRects = collectDragTargetRects()
-  dragHasStarted = false
-  itemElement.value?.setPointerCapture(event.pointerId)
-  window.addEventListener('pointermove', onWindowDragPointerMove)
-  window.addEventListener('pointerup', onWindowDragPointerUp)
-  window.addEventListener('pointercancel', onWindowDragPointerCancel)
-}
-
-function onItemPointerMove(event: PointerEvent) {
-  if (!props.editing || dragPointerId !== event.pointerId) {
-    return
-  }
-
-  const offsetX = event.clientX - dragStartX
-  const offsetY = event.clientY - dragStartY
-
-  if (!dragHasStarted && Math.hypot(offsetX, offsetY) < 6) {
-    return
-  }
-
-  if (!dragHasStarted) {
-    dragHasStarted = true
-    layout.beginDrag(props.widget.id)
-  }
-
-  event.preventDefault()
-  dragOffset.x = offsetX
-  dragOffset.y = offsetY
-  previewWidgetUnderPointer(event.clientX, event.clientY)
-}
-
-function onItemPointerUp(event: PointerEvent) {
-  if (dragPointerId !== event.pointerId) {
-    return
-  }
-
-  if (dragHasStarted) {
-    const target = getWidgetDropTargetUnderPointer(event.clientX, event.clientY)
-
-    if (target && target.id !== props.widget.id) {
-      layout.dropOnPosition(target.position, target.id, target.placement, target.pushDirection)
-    } else if (target) {
-      layout.dropOnPosition(target.position)
-    } else if (isPointerInsideGrid(event.clientX, event.clientY)) {
-      layout.dropOnPosition(getGridPositionUnderPointer(event.clientX, event.clientY))
-    } else if (layout.dropTargetWidgetId) {
-      layout.dropOnMarkedTarget()
-    } else {
-      layout.endDrag()
-    }
-  }
-
-  endLocalDrag(event.pointerId)
-}
-
-function onItemPointerCancel(event: PointerEvent) {
-  if (dragPointerId !== event.pointerId) {
-    return
-  }
-
-  cancelLocalDrag(event.pointerId)
-}
-
-function onWindowDragPointerMove(event: PointerEvent) {
-  onItemPointerMove(event)
-}
-
-function onWindowDragPointerUp(event: PointerEvent) {
-  onItemPointerUp(event)
-}
-
-function onWindowDragPointerCancel(event: PointerEvent) {
-  onItemPointerCancel(event)
-}
-
-function onResizePointerDown(event: PointerEvent) {
-  if (!props.editing || event.button !== 0) {
-    return
-  }
-
-  event.preventDefault()
-  event.stopPropagation()
-  removeConfirmOpen.value = false
-  emit('select', props.widget.id)
-
-  const grid = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')
-  const itemRect = itemElement.value?.getBoundingClientRect()
-
-  if (!grid || !itemRect) {
-    return
-  }
-
-  resizePointerId = event.pointerId
-  resizeStartX = event.clientX
-  resizeStartY = event.clientY
-  resizeStartColSpan = props.widget.colSpan
-  resizeStartRowSpan = props.widget.rowSpan
-  resizeLimitFeedback.value = null
-  resizeGap = layout.gap
-  resizeCellWidth = Math.max((itemRect.width - resizeGap * (props.widget.colSpan - 1)) / props.widget.colSpan, 1)
-  resizeCellHeight = Math.max((itemRect.height - resizeGap * (props.widget.rowSpan - 1)) / props.widget.rowSpan, 1)
-  layout.beginResize(props.widget.id)
-  const resizeHandle = event.currentTarget as HTMLElement
-  resizeHandleElement = resizeHandle
-  resizeHandle.setPointerCapture(event.pointerId)
-  window.addEventListener('pointermove', onWindowResizePointerMove)
-  window.addEventListener('pointerup', onWindowResizePointerUp)
-  window.addEventListener('pointercancel', onWindowResizePointerCancel)
-}
-
-function onResizePointerMove(event: PointerEvent) {
-  if (!props.editing || resizePointerId !== event.pointerId) {
-    return
-  }
-
-  event.preventDefault()
-
-  const stepWidth = resizeCellWidth + resizeGap
-  const stepHeight = resizeCellHeight + resizeGap
-  const colDelta = Math.round((event.clientX - resizeStartX) / stepWidth)
-  const rowDelta = Math.round((event.clientY - resizeStartY) / stepHeight)
-  const requestedSpan = {
-    colSpan: resizeStartColSpan + colDelta,
-    rowSpan: resizeStartRowSpan + rowDelta
-  }
-
-  resizeLimitFeedback.value = getResizeLimitFeedback(requestedSpan, constrainResizeSpan(requestedSpan))
-
-  layout.updateWidgetSpan(props.widget.id, requestedSpan)
-}
-
-function onResizePointerUp(event: PointerEvent) {
-  if (resizePointerId !== event.pointerId) {
-    return
-  }
-
-  endLocalResize()
-}
-
-function onResizePointerCancel(event: PointerEvent) {
-  if (resizePointerId !== event.pointerId) {
-    return
-  }
-
-  endLocalResize()
-}
-
-function onWindowResizePointerMove(event: PointerEvent) {
-  onResizePointerMove(event)
-}
-
-function onWindowResizePointerUp(event: PointerEvent) {
-  onResizePointerUp(event)
-}
-
-function onWindowResizePointerCancel(event: PointerEvent) {
-  onResizePointerCancel(event)
-}
-
-function endLocalDrag(pointerId?: number) {
-  const capturedPointerId = dragPointerId
-  dragPointerId = null
-  dragHasStarted = false
-  dragOffset.x = 0
-  dragOffset.y = 0
-  dragFixedRect.width = 0
-  dragFixedRect.height = 0
-  dragStartOrder = 0
-  dragStartColumn = 0
-  dragStartRow = 0
-  dragStartColSpan = 1
-  dragStartRowSpan = 1
-  dragGrabColumnOffset = 0
-  dragGrabRowOffset = 0
-  dragTargetRects = []
-  removeWindowDragListeners()
-
-  if (capturedPointerId !== null && pointerId === capturedPointerId && itemElement.value?.hasPointerCapture(pointerId)) {
-    itemElement.value.releasePointerCapture(pointerId)
-  }
-}
-
-function cancelLocalDrag(pointerId?: number) {
-  if (dragHasStarted) {
-    layout.endDrag()
-  }
-
-  endLocalDrag(pointerId)
-}
-
-function endLocalResize(target?: HTMLElement) {
-  const capturedPointerId = resizePointerId
-  const capturedTarget = target ?? resizeHandleElement
-  resizePointerId = null
-  resizeHandleElement = null
-  resizeLimitFeedback.value = null
-  layout.endResize()
-  removeWindowResizeListeners()
-
-  if (capturedPointerId !== null && capturedTarget?.hasPointerCapture(capturedPointerId)) {
-    capturedTarget.releasePointerCapture(capturedPointerId)
-  }
-}
-
-function removeWindowDragListeners() {
-  window.removeEventListener('pointermove', onWindowDragPointerMove)
-  window.removeEventListener('pointerup', onWindowDragPointerUp)
-  window.removeEventListener('pointercancel', onWindowDragPointerCancel)
-}
-
-function removeWindowResizeListeners() {
-  window.removeEventListener('pointermove', onWindowResizePointerMove)
-  window.removeEventListener('pointerup', onWindowResizePointerUp)
-  window.removeEventListener('pointercancel', onWindowResizePointerCancel)
-}
-
-function previewWidgetUnderPointer(clientX: number, clientY: number) {
-  const target = getWidgetDropTargetUnderPointer(clientX, clientY)
-
-  if (target) {
-    layout.previewDragOverPosition(target.id, target.position, target.placement, target.pushDirection)
-    return
-  }
-
-  if (!target && isPointerInsideGrid(clientX, clientY)) {
-    layout.previewDragOverPosition(null, getGridPositionUnderPointer(clientX, clientY))
-    return
-  }
-
-  layout.previewDragOverWidget(null)
-}
-
-function getWidgetDropTargetUnderPointer(clientX: number, clientY: number) {
-  const dragRect = createDragPreviewRect(clientX, clientY)
-  return createDropTargetFromGridCollision(dragTargetRects, clientX, clientY, dragRect)
-}
-
-function createDragPreviewRect(clientX: number, clientY: number): DragPreviewRect {
-  const left = dragStartLeft + clientX - dragStartX
-  const top = dragStartTop + clientY - dragStartY
-  const width = dragFixedRect.width
-  const height = dragFixedRect.height
-
-  return {
-    left,
-    right: left + width,
-    top,
-    bottom: top + height,
-    width,
-    height
-  }
-}
-
-function createDropTargetFromGridCollision(targetRects: DragTargetRect[], clientX: number, clientY: number, dragRect: DragPreviewRect): WidgetDropTarget | null {
-  const projectedRect = projectPointerToAnchoredGrid(clientX, clientY)
-
-  if (!projectedRect) {
-    return null
-  }
-
-  if (isDragProjectedAtStart(projectedRect)) {
-    return null
-  }
-
-  const targetRect = sortTargetRectsByGrid(targetRects).find(rect => gridRectsCollide(projectedRect, rect))
-  return targetRect ? createDropTargetFromRect(targetRect, dragRect, projectedRect) : null
-}
-
-function getGridPositionUnderPointer(clientX: number, clientY: number): WorkbenchGridPosition {
-  const projectedRect = projectPointerToAnchoredGrid(clientX, clientY)
-
-  return {
-    column: projectedRect?.column ?? dragStartColumn,
-    row: projectedRect?.row ?? dragStartRow
-  }
-}
-
-function projectPointerToAnchoredGrid(clientX: number, clientY: number): DragGridRect | null {
-  const gridRect = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')?.getBoundingClientRect()
-
-  if (!gridRect) {
-    return null
-  }
-
-  const pointerCell = projectPointerToGridCell(clientX, clientY, gridRect)
-  const maxColumn = Math.max(layout.columns - props.widget.colSpan, 0)
-  const maxRow = Math.max(layout.rows - props.widget.rowSpan, 0)
-
-  return {
-    column: clampNumber(pointerCell.column - dragGrabColumnOffset, 0, maxColumn),
-    row: clampNumber(pointerCell.row - dragGrabRowOffset, 0, maxRow),
-    colSpan: props.widget.colSpan,
-    rowSpan: props.widget.rowSpan
-  }
-}
-
-function projectPointerToGridCell(clientX: number, clientY: number, gridRect: DOMRect) {
-  const gap = layout.gap
-  const cellWidth = Math.max((gridRect.width - gap * (layout.columns - 1)) / layout.columns, 1)
-  const cellHeight = Math.max((gridRect.height - gap * (layout.rows - 1)) / layout.rows, 1)
-  const columnStep = cellWidth + gap
-  const rowStep = cellHeight + gap
-
-  return {
-    column: clampNumber(Math.floor((clientX - gridRect.left) / columnStep), 0, layout.columns - 1),
-    row: clampNumber(Math.floor((clientY - gridRect.top) / rowStep), 0, layout.rows - 1)
-  }
-}
-
-function calculateGrabGridOffset(clientX: number, clientY: number, itemRect: DOMRect) {
-  const gap = layout.gap
-  const cellWidth = Math.max((itemRect.width - gap * (props.widget.colSpan - 1)) / props.widget.colSpan, 1)
-  const cellHeight = Math.max((itemRect.height - gap * (props.widget.rowSpan - 1)) / props.widget.rowSpan, 1)
-  const columnStep = cellWidth + gap
-  const rowStep = cellHeight + gap
-  const localX = clampNumber(clientX - itemRect.left, 0, Math.max(itemRect.width - 1, 0))
-  const localY = clampNumber(clientY - itemRect.top, 0, Math.max(itemRect.height - 1, 0))
-
-  return {
-    column: clampNumber(Math.floor(localX / columnStep), 0, props.widget.colSpan - 1),
-    row: clampNumber(Math.floor(localY / rowStep), 0, props.widget.rowSpan - 1)
-  }
-}
-
-function isDragProjectedAtStart(projectedRect: DragGridRect) {
-  return projectedRect.column === dragStartColumn && projectedRect.row === dragStartRow
-}
-
-function sortTargetRectsByGrid(targetRects: DragTargetRect[]) {
-  return [...targetRects].sort((left, right) => {
-    if (left.row !== right.row) {
-      return left.row - right.row
-    }
-
-    if (left.column !== right.column) {
-      return left.column - right.column
-    }
-
-    return left.id.localeCompare(right.id)
-  })
-}
-
-function gridRectsCollide(left: DragGridRect, right: DragGridRect) {
-  if (left.column + left.colSpan <= right.column) {
-    return false
-  }
-
-  if (left.column >= right.column + right.colSpan) {
-    return false
-  }
-
-  if (left.row + left.rowSpan <= right.row) {
-    return false
-  }
-
-  if (left.row >= right.row + right.rowSpan) {
-    return false
-  }
-
-  return true
-}
-
-function collectDragTargetRects() {
-  const grid = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')
-  const placedWidgetsById = new Map(layout.placedWidgets.map(widget => [widget.id, widget]))
-
-  if (!grid) {
-    return []
-  }
-
-  return [...grid.querySelectorAll<HTMLElement>('[data-workbench-widget-id]')]
-    .filter(element => element.dataset.workbenchWidgetId && element.dataset.workbenchWidgetId !== props.widget.id)
-    .map((element) => {
-      const rect = element.getBoundingClientRect()
-      const placedWidget = placedWidgetsById.get(element.dataset.workbenchWidgetId ?? '')
-
-      return {
-        id: element.dataset.workbenchWidgetId ?? '',
-        left: rect.left,
-        right: rect.right,
-        top: rect.top,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-        column: placedWidget?.column ?? 0,
-        row: placedWidget?.row ?? 0,
-        colSpan: placedWidget?.colSpan ?? 1,
-        rowSpan: placedWidget?.rowSpan ?? 1,
-        order: placedWidget?.order ?? 0
-      }
-    })
-    .filter(rect => rect.id)
-}
-
-function createDropTargetFromRect(rect: DragTargetRect, dragRect: DragPreviewRect, projectedRect?: DragGridRect | null): WidgetDropTarget {
-  const dragCenterX = dragRect.left + dragRect.width / 2
-  const dragCenterY = dragRect.top + dragRect.height / 2
-  const rectCenterX = rect.left + rect.width / 2
-  const rectCenterY = rect.top + rect.height / 2
-  const horizontal = resolveDropAxis(rect, dragCenterX, dragCenterY, rectCenterX, rectCenterY)
-  const placement = resolveDropPlacementByEdge(rect, dragRect, horizontal)
-  const pushDirection = resolvePushDirection(horizontal, dragCenterX, dragCenterY, rectCenterX, rectCenterY)
-
-  return {
-    id: rect.id,
-    placement,
-    pushDirection,
-    position: {
-      column: projectedRect?.column ?? rect.column,
-      row: projectedRect?.row ?? rect.row
-    }
-  }
-}
-
-function resolveDropAxis(rect: DragTargetRect, dragCenterX: number, dragCenterY: number, rectCenterX: number, rectCenterY: number) {
-  const sourceRowsOverlapTarget = gridRangesOverlap(dragStartRow, dragStartRowSpan, rect.row, rect.rowSpan)
-  const sourceColumnsOverlapTarget = gridRangesOverlap(dragStartColumn, dragStartColSpan, rect.column, rect.colSpan)
-
-  if (sourceRowsOverlapTarget && !sourceColumnsOverlapTarget) {
-    return true
-  }
-
-  if (sourceColumnsOverlapTarget && !sourceRowsOverlapTarget) {
-    return false
-  }
-
-  return Math.abs(dragCenterX - rectCenterX) >= Math.abs(dragCenterY - rectCenterY)
-}
-
-function resolveDropPlacementByEdge(rect: DragTargetRect, dragRect: DragPreviewRect, horizontal: boolean): WorkbenchDropPlacement {
-  const rectCenter = horizontal
-    ? rect.left + rect.width / 2
-    : rect.top + rect.height / 2
-
-  if (dragStartOrder < rect.order) {
-    const sourceEnd = horizontal ? dragRect.right : dragRect.bottom
-    return sourceEnd >= rectCenter ? 'after' : 'before'
-  }
-
-  if (dragStartOrder > rect.order) {
-    const sourceStart = horizontal ? dragRect.left : dragRect.top
-    return sourceStart <= rectCenter ? 'before' : 'after'
-  }
-
-  const dragCenter = horizontal
-    ? dragRect.left + dragRect.width / 2
-    : dragRect.top + dragRect.height / 2
-
-  return dragCenter >= rectCenter ? 'after' : 'before'
-}
-
-function resolvePushDirection(
-  horizontal: boolean,
-  dragCenterX: number,
-  dragCenterY: number,
-  rectCenterX: number,
-  rectCenterY: number
-): WorkbenchPushDirection {
-  if (horizontal) {
-    return dragCenterX >= rectCenterX ? 'right' : 'left'
-  }
-
-  return dragCenterY >= rectCenterY ? 'down' : 'up'
-}
-
-function gridRangesOverlap(sourceStart: number, sourceSpan: number, targetStart: number, targetSpan: number) {
-  return sourceStart < targetStart + targetSpan && sourceStart + sourceSpan > targetStart
-}
-
-function isPointerInsideGrid(clientX: number, clientY: number) {
-  const gridRect = itemElement.value?.closest<HTMLElement>('[data-workbench-grid]')?.getBoundingClientRect()
-
-  if (!gridRect) {
-    return false
-  }
-
-  return clientX >= gridRect.left && clientX <= gridRect.right && clientY >= gridRect.top && clientY <= gridRect.bottom
-}
-
-function isWorkbenchControl(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest('[data-workbench-control="true"]'))
-}
-
-function onConfirmRemoveWidget() {
-  if (isRemoving.value) {
-    return
-  }
-
-  removeConfirmOpen.value = false
-  isRemoving.value = true
-  removeWidgetTimer = window.setTimeout(() => {
-    removeWidgetTimer = null
-    layout.removeWidget(props.widget.id)
-  }, 220)
-}
-
-function onCancelRemoveWidget() {
-  removeConfirmOpen.value = false
-}
-
-function armEditActionClickGuard() {
-  suppressNextEditActionClick.value = true
-
-  if (suppressEditActionClickTimer !== null) {
-    window.clearTimeout(suppressEditActionClickTimer)
-  }
-
-  suppressEditActionClickTimer = window.setTimeout(() => {
-    suppressEditActionClickTimer = null
-    suppressNextEditActionClick.value = false
-  }, 350)
-}
-
-function clearEditActionClickGuard() {
-  suppressNextEditActionClick.value = false
-
-  if (suppressEditActionClickTimer !== null) {
-    window.clearTimeout(suppressEditActionClickTimer)
-    suppressEditActionClickTimer = null
-  }
-}
-
-function onEditActionClickCapture(event: MouseEvent) {
-  if (!suppressNextEditActionClick.value) {
-    return
-  }
-
-  event.preventDefault()
-  event.stopPropagation()
-  event.stopImmediatePropagation()
-  clearEditActionClickGuard()
-}
-
-watch(() => props.selected, (selected) => {
-  if (!selected) {
-    removeConfirmOpen.value = false
-    clearEditActionClickGuard()
-  }
-})
-
-watch(() => props.editing, (editing) => {
-  if (editing) {
-    return
-  }
-
-  removeConfirmOpen.value = false
-  clearEditActionClickGuard()
-})
-
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function constrainResizeSpan(span: ResizeSpan) {
-  return constrainWorkbenchWidgetSpan(props.widget.key, span.colSpan, span.rowSpan, layout.rows, layout.columns)
-}
-
-function getResizeLimitFeedback(requestedSpan: ResizeSpan, constrainedSpan: ResizeSpan): ResizeLimitFeedback | null {
-  const reachedMin = requestedSpan.colSpan < constrainedSpan.colSpan || requestedSpan.rowSpan < constrainedSpan.rowSpan
-  const reachedMax = requestedSpan.colSpan > constrainedSpan.colSpan || requestedSpan.rowSpan > constrainedSpan.rowSpan
-
-  if (reachedMin && reachedMax) {
-    return 'boundary'
-  }
-
-  if (reachedMax) {
-    return 'max'
-  }
-
-  if (reachedMin) {
-    return 'min'
-  }
-
-  return null
-}
-
-onUnmounted(() => {
-  cancelLocalDrag()
-
-  if (resizePointerId !== null) {
-    endLocalResize()
-  }
-
-  if (removeWidgetTimer !== null) {
-    window.clearTimeout(removeWidgetTimer)
-  }
-
-  clearEditActionClickGuard()
-})
 </script>
 
 <template>
@@ -956,8 +273,8 @@ onUnmounted(() => {
       gridRowEnd: `span ${widget.rowSpan}`,
       '--workbench-drag-x': `${dragOffset.x}px`,
       '--workbench-drag-y': `${dragOffset.y}px`,
-      '--workbench-drag-left': `${dragStartLeft}px`,
-      '--workbench-drag-top': `${dragStartTop}px`,
+      '--workbench-drag-left': `${dragOrigin.left}px`,
+      '--workbench-drag-top': `${dragOrigin.top}px`,
       '--workbench-drag-width': `${dragFixedRect.width}px`,
       '--workbench-drag-height': `${dragFixedRect.height}px`
     }"
@@ -1115,8 +432,8 @@ onUnmounted(() => {
         v-if="isDragging"
         class="toolbox-drag-preview fixed grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden border border-white/65 bg-white/70 p-4 text-slate-950 shadow-2xl shadow-slate-950/22 backdrop-blur-2xl hdx-radius-card dark:border-white/16 dark:bg-slate-950/80 dark:text-white dark:shadow-black/45"
         :style="{
-          left: `${dragStartLeft}px`,
-          top: `${dragStartTop}px`,
+          left: `${dragOrigin.left}px`,
+          top: `${dragOrigin.top}px`,
           width: `${dragFixedRect.width}px`,
           height: `${dragFixedRect.height}px`,
           transform: `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) scale(1.015)`

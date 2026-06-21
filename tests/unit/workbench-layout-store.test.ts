@@ -167,6 +167,32 @@ describe('workbench layout store', () => {
     })
   })
 
+  it('keeps the dragged multi-row widget anchored while pushing a top widget down', () => {
+    const widgets = [
+      createWidget('tool-catalog', 0, 0, 0, 2, 2),
+      createWidget('notes', 1, 0, 2, 2, 2)
+    ]
+
+    const movedWidgets = moveLayoutWidget(
+      widgets,
+      4,
+      4,
+      'notes',
+      { column: 0, row: 0 },
+      'tool-catalog',
+      'down'
+    )
+
+    expect(movedWidgets.find(widget => widget.id === 'notes')).toMatchObject({
+      column: 0,
+      row: 0
+    })
+    expect(movedWidgets.find(widget => widget.id === 'tool-catalog')).toMatchObject({
+      column: 0,
+      row: 2
+    })
+  })
+
   it('saves draft changes to local storage', async () => {
     const store = useWorkbenchLayoutStore()
 

@@ -950,7 +950,7 @@ function pushWidgetsFromDrop(
     const requiredSteps = getRequiredPushSteps(movedSource, collidingWidget, pushDirection)
 
     for (let step = 0; step < requiredSteps; step += 1) {
-      if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns)) {
+      if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns, [sourceWidget.id])) {
         return null
       }
     }
@@ -968,7 +968,8 @@ function shiftWidgetChainOneCell(
   widgetId: string,
   pushDirection: WorkbenchPushDirection,
   rows: number,
-  columns: number
+  columns: number,
+  ignoredCollisionWidgetIds: string[] = []
 ) {
   const snapshot = cloneWidgetMap(widgetsById)
   const widget = widgetsById.get(widgetId)
@@ -989,19 +990,20 @@ function shiftWidgetChainOneCell(
     return false
   }
 
+  const ignoredCollisionIds = new Set(ignoredCollisionWidgetIds)
   const collidingWidgets = sortWidgetsForPush(
-    getCollidingWidgets(candidateWidget, widgetsById, widgetId),
+    getCollidingWidgets(candidateWidget, widgetsById, widgetId, ignoredCollisionIds),
     pushDirection
   )
 
   for (const collidingWidget of collidingWidgets) {
-    if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns)) {
+    if (!shiftWidgetChainOneCell(widgetsById, collidingWidget.id, pushDirection, rows, columns, ignoredCollisionWidgetIds)) {
       restoreWidgetMap(widgetsById, snapshot)
       return false
     }
   }
 
-  if (getCollidingWidgets(candidateWidget, widgetsById, widgetId).length > 0) {
+  if (getCollidingWidgets(candidateWidget, widgetsById, widgetId, ignoredCollisionIds).length > 0) {
     restoreWidgetMap(widgetsById, snapshot)
     return false
   }
@@ -1073,10 +1075,11 @@ function sortWidgetsForPush(widgets: WorkbenchLayoutWidget[], pushDirection: Wor
 function getCollidingWidgets(
   widget: WorkbenchLayoutWidget,
   widgetsById: Map<string, WorkbenchLayoutWidget>,
-  ignoredWidgetId: string
+  ignoredWidgetId: string,
+  ignoredWidgetIds: Set<string> = new Set()
 ) {
   return [...widgetsById.values()].filter(existingWidget =>
-    existingWidget.id !== ignoredWidgetId && gridWidgetsCollide(widget, existingWidget)
+    existingWidget.id !== ignoredWidgetId && !ignoredWidgetIds.has(existingWidget.id) && gridWidgetsCollide(widget, existingWidget)
   )
 }
 
