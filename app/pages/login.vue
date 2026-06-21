@@ -128,13 +128,13 @@ useSeoMeta({
                 </h2>
               </div>
               <div class="login-panel-tools flex shrink-0 items-center gap-1.5 border border-slate-900/10 bg-white/65 p-1 text-slate-700 shadow-lg shadow-cyan-950/10 backdrop-blur-2xl hdx-radius-popover dark:border-white/25 dark:bg-white/18 dark:text-white dark:shadow-cyan-950/25">
-                <UTooltip :text="t('actions.language')">
-                  <UDropdownMenu
-                    v-model:open="localeMenuOpen"
-                    :items="localeMenuItems"
-                    :content="{ align: 'end' }"
-                    :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
-                  >
+                <UDropdownMenu
+                  v-model:open="localeMenuOpen"
+                  :items="localeMenuItems"
+                  :content="{ align: 'end' }"
+                  :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
+                >
+                  <UTooltip :text="t('actions.language')">
                     <UButton
                       type="button"
                       color="neutral"
@@ -144,15 +144,15 @@ useSeoMeta({
                       :aria-label="t('actions.language')"
                       class="hdx-toolbar-button cursor-pointer"
                     />
-                    <template #item-trailing="{ item }">
-                      <UIcon
-                        v-if="item.selected"
-                        name="i-lucide-check"
-                        class="size-4 text-primary"
-                      />
-                    </template>
-                  </UDropdownMenu>
-                </UTooltip>
+                  </UTooltip>
+                  <template #item-trailing="{ item }">
+                    <UIcon
+                      v-if="item.selected"
+                      name="i-lucide-check"
+                      class="size-4 text-primary"
+                    />
+                  </template>
+                </UDropdownMenu>
                 <ThemeSettingsPopover
                   color-mode-only
                   button-class="hdx-toolbar-button cursor-pointer"

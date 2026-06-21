@@ -213,23 +213,25 @@ onMounted(() => {
             />
           </UTooltip>
 
-          <NuxtLink
-            to="/"
-            class="workbench-brand-link flex min-w-0 items-center gap-3"
-            :aria-label="t('workbench.navigation.items.home.title')"
-          >
-            <div class="grid size-11 shrink-0 place-items-center overflow-hidden border border-white/70 bg-white/65 p-1.5 shadow-sm shadow-slate-900/6 hdx-radius-card dark:border-white/18 dark:bg-white/10">
-              <img :src="hdxIcon" :alt="t('app.iconAlt')" width="394" height="394" class="size-full rounded-full object-contain">
-            </div>
-            <div class="min-w-0">
-              <p class="workbench-subtitle truncate text-xs font-medium">
-                {{ t('app.subtitle') }}
-              </p>
-              <h1 class="truncate text-xl font-semibold tracking-normal text-slate-950 dark:text-white">
-                {{ t('workbench.title') }}
-              </h1>
-            </div>
-          </NuxtLink>
+          <UTooltip :text="t('workbench.navigation.items.home.title')">
+            <NuxtLink
+              to="/"
+              class="workbench-brand-link flex min-w-0 items-center gap-3"
+              :aria-label="t('workbench.navigation.items.home.title')"
+            >
+              <div class="grid size-11 shrink-0 place-items-center overflow-hidden border border-white/70 bg-white/65 p-1.5 shadow-sm shadow-slate-900/6 hdx-radius-card dark:border-white/18 dark:bg-white/10">
+                <img :src="hdxIcon" :alt="t('app.iconAlt')" width="394" height="394" class="size-full rounded-full object-contain">
+              </div>
+              <div class="min-w-0">
+                <p class="workbench-subtitle truncate text-xs font-medium">
+                  {{ t('app.subtitle') }}
+                </p>
+                <h1 class="truncate text-xl font-semibold tracking-normal text-slate-950 dark:text-white">
+                  {{ t('workbench.title') }}
+                </h1>
+              </div>
+            </NuxtLink>
+          </UTooltip>
 
           <WorkbenchPinnedNavigation
             v-if="!layout.editing && pinnedItems.length > 0"
@@ -241,13 +243,13 @@ onMounted(() => {
           <div class="ml-auto flex min-w-0 items-center justify-end gap-2">
             <div id="workbench-topbar-actions" class="contents" />
 
-            <UTooltip :text="t('actions.language')">
-              <UDropdownMenu
-                v-model:open="localeMenuOpen"
-                :items="localeMenuItems"
-                :content="{ align: 'end' }"
-                :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
-              >
+            <UDropdownMenu
+              v-model:open="localeMenuOpen"
+              :items="localeMenuItems"
+              :content="{ align: 'end' }"
+              :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
+            >
+              <UTooltip :text="t('actions.language')">
                 <UButton
                   type="button"
                   color="neutral"
@@ -256,11 +258,11 @@ onMounted(() => {
                   :aria-label="t('actions.language')"
                   class="hdx-toolbar-button cursor-pointer"
                 />
-                <template #item-trailing="{ item }">
-                  <UIcon v-if="item.selected" name="i-lucide-check" class="size-4 text-primary" />
-                </template>
-              </UDropdownMenu>
-            </UTooltip>
+              </UTooltip>
+              <template #item-trailing="{ item }">
+                <UIcon v-if="item.selected" name="i-lucide-check" class="size-4 text-primary" />
+              </template>
+            </UDropdownMenu>
 
             <ThemeSettingsPopover button-class="hdx-toolbar-button cursor-pointer" />
 
