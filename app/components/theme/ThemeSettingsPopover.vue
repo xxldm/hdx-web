@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
   buttonClass: '',
   buttonSize: 'sm',
   colorModeOnly: false,
-  contentClass: 'workbench-floating-menu hdx-radius-popover'
+  contentClass: 'hdx-floating-menu hdx-radius-popover'
 })
 
 const { t } = useI18n()
@@ -42,9 +42,12 @@ const colorModeItems = computed(() => [
   }
 ])
 const panelClass = computed(() => props.colorModeOnly
-  ? 'theme-settings-panel grid w-[min(20rem,calc(100vw-2rem))] gap-3 p-3'
+  ? 'theme-settings-panel grid w-[min(16rem,calc(100vw-2rem))] gap-3 p-3'
   : 'theme-settings-panel grid max-h-[min(42rem,calc(100vh-2rem))] w-[min(32rem,calc(100vw-2rem))] gap-5 overflow-y-auto p-4'
 )
+const colorModeGridClass = computed(() => props.colorModeOnly ? 'grid gap-2' : 'grid grid-cols-3 gap-2')
+const colorModeButtonClass = computed(() => props.colorModeOnly ? 'theme-choice-button justify-start' : 'theme-choice-button justify-center')
+const colorModeLabelClass = computed(() => props.colorModeOnly ? 'min-w-0' : 'truncate')
 
 function isPrimarySelected(key: ThemePrimaryColorKey) {
   return theme.preference.primaryMode === 'preset' && theme.preference.primary === key
@@ -225,20 +228,19 @@ watch(open, (isOpen) => {
           <h2 class="text-sm font-semibold text-[color:var(--ui-text-highlighted)]">
             {{ t('theme.colorMode') }}
           </h2>
-          <div class="grid grid-cols-3 gap-2">
+          <div :class="colorModeGridClass">
             <UButton
               v-for="item in colorModeItems"
               :key="item.value"
               type="button"
               color="neutral"
               variant="ghost"
-              class="theme-choice-button justify-center"
-              :class="theme.activeColorMode === item.value ? 'theme-choice-button-active' : ''"
+              :class="[colorModeButtonClass, theme.activeColorMode === item.value ? 'theme-choice-button-active' : '']"
               :aria-pressed="theme.activeColorMode === item.value"
               @click="theme.setColorMode(item.value)"
             >
               <UIcon :name="item.icon" class="size-4 shrink-0" />
-              <span class="truncate">{{ item.label }}</span>
+              <span :class="colorModeLabelClass">{{ item.label }}</span>
             </UButton>
           </div>
         </section>

@@ -997,7 +997,7 @@ onUnmounted(() => {
             v-model:open="removeConfirmOpen"
             mode="click"
             :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
-            :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
+            :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
           >
             <UButton
               type="button"
@@ -1063,7 +1063,7 @@ onUnmounted(() => {
               :items="widgetMenuItems"
               :content="{ align: 'start' }"
               :ui="{
-                content: 'workbench-floating-menu hdx-radius-popover',
+                content: 'hdx-floating-menu hdx-radius-popover',
                 item: 'workbench-widget-menu-item',
                 itemLeadingIcon: 'workbench-widget-menu-icon',
                 itemTrailing: 'workbench-widget-menu-trailing',

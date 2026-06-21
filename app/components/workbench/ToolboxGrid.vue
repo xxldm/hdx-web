@@ -356,7 +356,7 @@ if (import.meta.client) {
             v-model:open="addMenuOpen"
             :items="widgetMenuItems"
             :content="{ align: 'center' }"
-            :ui="{ content: 'workbench-floating-menu hdx-radius-popover' }"
+            :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
             @update:open="onAddMenuOpenUpdate"
           >
             <UButton

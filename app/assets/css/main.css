@@ -37,6 +37,220 @@ body {
   background: var(--ui-bg);
 }
 
+.hdx-app-scene {
+  background: var(--hdx-app-shell-bg, var(--ui-bg));
+}
+
+.hdx-app-scene-login {
+  --hdx-app-shell-bg: linear-gradient(135deg, color-mix(in srgb, var(--hdx-theme-primary) 6%, #f8fdff) 0%, color-mix(in srgb, var(--hdx-theme-primary) 13%, #e0f7ff) 36%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #f1e8ff) 68%, #fff7ed 100%);
+  --hdx-liquid-inset: -12%;
+  --hdx-liquid-blur: 18px;
+  --hdx-liquid-opacity: 0.78;
+  --hdx-liquid-duration: 14s;
+  --hdx-liquid-from-x: -1.2rem;
+  --hdx-liquid-from-y: 0.4rem;
+  --hdx-liquid-rotate: 8deg;
+}
+
+.dark .hdx-app-scene-login {
+  --hdx-app-shell-bg: linear-gradient(145deg, #111113 0%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #151316) 46%, #100f13 100%);
+}
+
+.hdx-app-scene-workbench {
+  --hdx-app-shell-bg: var(--hdx-workbench-shell-bg, linear-gradient(135deg, #fbfeff 0%, #e8fbff 42%, #f8efff 72%, #fff8ed 100%));
+  --hdx-liquid-blur: 22px;
+  --hdx-liquid-opacity: 0.78;
+  --hdx-liquid-duration: 18s;
+  --hdx-liquid-rotate: 5deg;
+}
+
+.dark .hdx-app-scene-workbench {
+  --hdx-app-shell-bg: var(--hdx-workbench-shell-dark-bg, linear-gradient(145deg, #101014 0%, #15141a 48%, #111015 100%));
+}
+
+.hdx-app-scene-login::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(122deg, transparent 0 20%, rgba(var(--hdx-theme-accent-rgb), 0.12) 28%, transparent 45%),
+    linear-gradient(42deg, transparent 0 34%, rgba(var(--hdx-theme-warm-rgb), 0.1) 47%, transparent 64%),
+    conic-gradient(from 214deg at 52% 48%, rgba(255, 255, 255, 0.22), transparent 23%, rgba(var(--hdx-theme-accent-rgb), 0.16), transparent 57%, rgba(var(--hdx-theme-sun-rgb), 0.12), transparent);
+  opacity: 0.86;
+  mix-blend-mode: multiply;
+}
+
+.dark .hdx-app-scene-login::after {
+  background:
+    radial-gradient(ellipse at 14% 72%, rgba(var(--hdx-theme-primary-rgb), 0.16), rgba(var(--hdx-theme-primary-rgb), 0.06) 34%, transparent 64%),
+    radial-gradient(ellipse at 88% 20%, rgba(var(--hdx-theme-warm-rgb), 0.13), rgba(var(--hdx-theme-warm-rgb), 0.04) 32%, transparent 62%),
+    linear-gradient(128deg, rgba(255, 255, 255, 0.04), transparent 42%, rgba(var(--hdx-theme-accent-rgb), 0.06));
+  opacity: 0.84;
+  filter: blur(18px);
+  mix-blend-mode: screen;
+}
+
+.hdx-app-backdrop,
+.hdx-app-liquid-field,
+.hdx-app-grid-lines {
+  pointer-events: none;
+}
+
+.hdx-app-backdrop {
+  background: var(--hdx-app-backdrop-bg);
+}
+
+.hdx-app-scene-login .hdx-app-backdrop {
+  --hdx-app-backdrop-bg:
+    linear-gradient(135deg, color-mix(in srgb, var(--hdx-theme-primary) 6%, #f8fdff) 0%, color-mix(in srgb, var(--hdx-theme-primary) 13%, #e0f7ff) 36%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #f1e8ff) 68%, #fff7ed 100%),
+    conic-gradient(from 120deg at 52% 48%, rgba(var(--hdx-theme-accent-rgb), 0.12), rgba(255, 255, 255, 0.5), rgba(var(--hdx-theme-primary-rgb), 0.1), rgba(var(--hdx-theme-warm-rgb), 0.12), rgba(var(--hdx-theme-accent-rgb), 0.12));
+}
+
+.dark .hdx-app-scene-login .hdx-app-backdrop {
+  --hdx-app-backdrop-bg:
+    radial-gradient(ellipse at 18% 78%, rgba(var(--hdx-theme-primary-rgb), 0.18), transparent 58%),
+    radial-gradient(ellipse at 82% 18%, rgba(var(--hdx-theme-warm-rgb), 0.14), transparent 56%),
+    radial-gradient(ellipse at 62% 64%, rgba(var(--hdx-theme-accent-rgb), 0.08), transparent 62%),
+    linear-gradient(145deg, #111113 0%, color-mix(in srgb, var(--hdx-theme-primary) 8%, #151316) 46%, #100f13 100%);
+}
+
+.hdx-app-scene-workbench .hdx-app-backdrop {
+  --hdx-app-backdrop-bg:
+    radial-gradient(ellipse at 12% 12%, rgba(var(--hdx-theme-accent-rgb), 0.24), transparent 48%),
+    radial-gradient(ellipse at 82% 18%, rgba(var(--hdx-theme-warm-rgb), 0.16), transparent 42%),
+    radial-gradient(ellipse at 54% 88%, rgba(var(--hdx-theme-primary-rgb), 0.18), transparent 48%),
+    linear-gradient(135deg, color-mix(in srgb, var(--hdx-theme-primary) 8%, #fbfeff) 0%, color-mix(in srgb, var(--hdx-theme-primary) 14%, #e8fbff) 42%, color-mix(in srgb, var(--hdx-theme-primary) 10%, #f8efff) 72%, #fff8ed 100%);
+}
+
+.dark .hdx-app-scene-workbench .hdx-app-backdrop {
+  --hdx-app-backdrop-bg:
+    radial-gradient(ellipse at 14% 18%, rgba(var(--hdx-theme-accent-rgb), 0.16), transparent 46%),
+    radial-gradient(ellipse at 88% 14%, rgba(var(--hdx-theme-warm-rgb), 0.12), transparent 44%),
+    radial-gradient(ellipse at 46% 92%, rgba(var(--hdx-theme-primary-rgb), 0.1), transparent 48%),
+    linear-gradient(145deg, #101014 0%, color-mix(in srgb, var(--hdx-theme-primary) 10%, #15141a) 48%, #111015 100%);
+}
+
+.hdx-app-liquid-field {
+  position: absolute;
+  inset: var(--hdx-liquid-inset, 0);
+  background: var(--hdx-liquid-bg);
+  filter: blur(var(--hdx-liquid-blur, 22px));
+  opacity: var(--hdx-liquid-opacity, 0.78);
+  transform: translate3d(0, 0, 0);
+  animation: hdx-liquid-drift var(--hdx-liquid-duration, 18s) ease-in-out infinite alternate;
+}
+
+.hdx-app-scene-login .hdx-app-liquid-field {
+  --hdx-liquid-bg:
+    linear-gradient(108deg, transparent 0 16%, rgba(var(--hdx-theme-accent-rgb), 0.22) 30%, transparent 48%),
+    linear-gradient(38deg, transparent 0 32%, rgba(var(--hdx-theme-warm-rgb), 0.13) 46%, transparent 64%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.46), transparent 42%, rgba(var(--hdx-theme-primary-rgb), 0.16));
+}
+
+.dark .hdx-app-scene-login .hdx-app-liquid-field {
+  --hdx-liquid-bg:
+    radial-gradient(ellipse at 22% 72%, rgba(var(--hdx-theme-primary-rgb), 0.2), transparent 52%),
+    radial-gradient(ellipse at 82% 26%, rgba(var(--hdx-theme-warm-rgb), 0.12), transparent 58%),
+    linear-gradient(116deg, rgba(255, 255, 255, 0.07) 0%, transparent 46%, rgba(var(--hdx-theme-accent-rgb), 0.08) 100%);
+  --hdx-liquid-blur: 26px;
+  --hdx-liquid-opacity: 0.68;
+}
+
+.hdx-app-scene-workbench .hdx-app-liquid-field {
+  --hdx-liquid-bg:
+    linear-gradient(105deg, transparent 0 16%, rgba(var(--hdx-theme-accent-rgb), 0.16) 30%, transparent 48%),
+    linear-gradient(35deg, transparent 0 35%, rgba(var(--hdx-theme-warm-rgb), 0.11) 48%, transparent 66%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.5), transparent 42%, rgba(var(--hdx-theme-primary-rgb), 0.14));
+}
+
+.dark .hdx-app-scene-workbench .hdx-app-liquid-field {
+  --hdx-liquid-bg:
+    radial-gradient(ellipse at 22% 72%, rgba(var(--hdx-theme-primary-rgb), 0.15), transparent 52%),
+    radial-gradient(ellipse at 82% 26%, rgba(var(--hdx-theme-warm-rgb), 0.1), transparent 58%),
+    linear-gradient(116deg, rgba(255, 255, 255, 0.05) 0%, transparent 46%, rgba(var(--hdx-theme-accent-rgb), 0.06) 100%);
+  --hdx-liquid-opacity: 0.64;
+}
+
+.hdx-app-grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(var(--hdx-theme-neutral-rgb), 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--hdx-theme-neutral-rgb), 0.04) 1px, transparent 1px);
+  background-size: var(--hdx-grid-line-size, 52px) var(--hdx-grid-line-size, 52px);
+  mask-image: var(--hdx-grid-line-mask, radial-gradient(ellipse at 48% 42%, black, transparent 78%));
+  opacity: var(--hdx-grid-line-opacity, 0.36);
+}
+
+.hdx-app-scene-login .hdx-app-grid-lines {
+  --hdx-grid-line-size: 56px;
+  --hdx-grid-line-mask: radial-gradient(circle at center, black, transparent 72%);
+  --hdx-grid-line-opacity: 0.42;
+}
+
+.dark .hdx-app-scene-login .hdx-app-grid-lines {
+  --hdx-grid-line-mask: radial-gradient(ellipse at 36% 58%, black, transparent 76%);
+  --hdx-grid-line-opacity: 0.3;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.dark .hdx-app-scene-workbench .hdx-app-grid-lines {
+  --hdx-grid-line-mask: radial-gradient(ellipse at 38% 48%, black, transparent 78%);
+  --hdx-grid-line-opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+.hdx-floating-menu {
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: var(--hdx-radius-popover) !important;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.dark .hdx-floating-menu {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.42);
+}
+
+.hdx-toolbar-button {
+  align-items: center;
+  justify-content: center;
+  width: var(--hdx-toolbar-button-size, 2.25rem);
+  min-width: var(--hdx-toolbar-button-size, 2.25rem);
+  height: var(--hdx-toolbar-button-size, 2.25rem);
+  padding: 0;
+  border-radius: var(--hdx-radius-toolbar-item);
+  border-color: transparent;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.72);
+  gap: 0;
+  line-height: 1;
+}
+
+.hdx-toolbar-button:hover {
+  background: rgba(var(--hdx-theme-primary-rgb), 0.12);
+}
+
+.dark .hdx-toolbar-button {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.dark .hdx-toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.login-panel-tools {
+  --hdx-toolbar-button-size: 2rem;
+}
+
 .hdx-radius-control {
   border-radius: var(--hdx-radius-control);
 }
@@ -65,6 +279,27 @@ body {
   border-radius: var(--hdx-radius-toolbar-item);
 }
 
+@keyframes hdx-liquid-drift {
+  from {
+    transform: translate3d(var(--hdx-liquid-from-x, -1rem), var(--hdx-liquid-from-y, 0.5rem), 0) rotate(0deg);
+  }
+
+  to {
+    transform: translate3d(var(--hdx-liquid-to-x, 1rem), var(--hdx-liquid-to-y, -1rem), 0) rotate(var(--hdx-liquid-rotate, 5deg));
+  }
+}
+
+@media (max-width: 640px) {
+  .hdx-app-scene-login .hdx-app-liquid-field {
+    --hdx-liquid-opacity: 0.62;
+  }
+
+  .hdx-app-scene-login .hdx-app-grid-lines {
+    --hdx-grid-line-size: 44px;
+    --hdx-grid-line-opacity: 0.28;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -73,5 +308,9 @@ body {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .hdx-app-liquid-field {
+    animation: none;
   }
 }
