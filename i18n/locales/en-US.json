@@ -142,37 +142,10 @@
     "localeMode": "Locale state",
     "themeMode": "Theme state",
     "themeManaged": "Switchable",
-    "quickLinks": {
-      "newTool": "New tool",
-      "collectIdea": "Capture idea",
-      "openFolder": "Open folder"
-    },
-    "notes": {
-      "first": "Put the most-used things here first.",
-      "second": "Future modules can bring their own widgets here.",
-      "third": "Hide anything you do not need right now.",
-      "action": "Write one"
-    },
     "widgets": {
-      "quickLinks": {
-        "title": "Quick actions",
-        "description": "Keep handy actions up front"
-      },
       "timer": {
         "title": "Timer",
         "description": "Starts at 10 minutes and keeps time in the background"
-      },
-      "toolCatalog": {
-        "title": "Tool catalog",
-        "description": "Tools already connected"
-      },
-      "notes": {
-        "title": "Scratch notes",
-        "description": "Ideas and loose tasks"
-      },
-      "runtime": {
-        "title": "Connection",
-        "description": "Current service snapshot"
       }
     },
     "timer": {

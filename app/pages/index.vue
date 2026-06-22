@@ -4,12 +4,10 @@ import ToolboxGrid from '~/components/workbench/ToolboxGrid.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const workbench = useWorkbenchStore()
 const layout = useWorkbenchLayoutStore()
-const { runtime, tools, loading, errorKey } = storeToRefs(workbench)
-const { loading: layoutLoading, saving: layoutSaving, errorKey: layoutErrorKey } = storeToRefs(layout)
+const { saving: layoutSaving, errorKey: layoutErrorKey } = storeToRefs(layout)
 const { highlightedWidgetKey } = useWorkbenchWidgetHighlight()
-const activeErrorKeys = computed(() => [errorKey.value, layoutErrorKey.value].filter((key): key is string => Boolean(key)))
+const activeErrorKeys = computed(() => [layoutErrorKey.value].filter((key): key is string => Boolean(key)))
 const contentRowsClass = computed(() => activeErrorKeys.value.length > 0 ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]')
 interface WorkbenchMenuItem {
   label: string
@@ -77,10 +75,7 @@ const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
 
 const actorScope = auth.session?.subject ?? 'anonymous'
 
-await Promise.all([
-  callOnce(`workbench-overview:${actorScope}`, () => workbench.loadOverview(), { mode: 'navigation' }),
-  callOnce(`workbench-layout:${actorScope}`, () => layout.loadLayout(), { mode: 'navigation' })
-])
+await callOnce(`workbench-layout:${actorScope}`, () => layout.loadLayout(), { mode: 'navigation' })
 
 function updateLayoutValue(setter: (value: number) => void, value: number, delta: number) {
   setter(value + delta)
@@ -222,9 +217,6 @@ useSeoMeta({
       </div>
 
       <ToolboxGrid
-        :tools="tools"
-        :runtime="runtime"
-        :loading="loading || layoutLoading"
         :highlighted-widget-key="highlightedWidgetKey"
       />
     </section>

@@ -1,7 +1,7 @@
 import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
 
-export type WorkbenchNavigationGroupKey = 'toolbox' | 'status' | 'space'
-export type WorkbenchNavigationItemId = 'home' | 'quick-links' | 'tool-catalog' | 'notes' | 'runtime' | 'settings'
+export type WorkbenchNavigationGroupKey = 'toolbox' | 'space'
+export type WorkbenchNavigationItemId = 'home' | 'timer' | 'settings'
 
 export interface WorkbenchNavigationGroup {
   key: WorkbenchNavigationGroupKey
@@ -27,10 +27,6 @@ export const workbenchNavigationGroups: readonly WorkbenchNavigationGroup[] = [
     titleKey: 'workbench.navigation.groups.toolbox'
   },
   {
-    key: 'status',
-    titleKey: 'workbench.navigation.groups.status'
-  },
-  {
     key: 'space',
     titleKey: 'workbench.navigation.groups.space'
   }
@@ -46,43 +42,14 @@ export const workbenchNavigationItems: readonly WorkbenchNavigationItem[] = [
     to: '/'
   },
   {
-    id: 'quick-links',
+    id: 'timer',
     groupKey: 'toolbox',
-    titleKey: 'workbench.widgets.quickLinks.title',
-    descriptionKey: 'workbench.widgets.quickLinks.description',
-    icon: 'i-lucide-sparkles',
-    widgetKey: 'quick-links',
+    titleKey: 'workbench.widgets.timer.title',
+    descriptionKey: 'workbench.widgets.timer.description',
+    icon: 'i-lucide-timer',
+    widgetKey: 'timer',
     pinnable: true,
     defaultPinned: true
-  },
-  {
-    id: 'tool-catalog',
-    groupKey: 'toolbox',
-    titleKey: 'workbench.widgets.toolCatalog.title',
-    descriptionKey: 'workbench.widgets.toolCatalog.description',
-    icon: 'i-lucide-boxes',
-    widgetKey: 'tool-catalog',
-    pinnable: true,
-    defaultPinned: true
-  },
-  {
-    id: 'notes',
-    groupKey: 'toolbox',
-    titleKey: 'workbench.widgets.notes.title',
-    descriptionKey: 'workbench.widgets.notes.description',
-    icon: 'i-lucide-notebook-pen',
-    widgetKey: 'notes',
-    pinnable: true,
-    defaultPinned: true
-  },
-  {
-    id: 'runtime',
-    groupKey: 'status',
-    titleKey: 'workbench.widgets.runtime.title',
-    descriptionKey: 'workbench.widgets.runtime.description',
-    icon: 'i-lucide-activity',
-    widgetKey: 'runtime',
-    pinnable: true
   },
   {
     id: 'settings',

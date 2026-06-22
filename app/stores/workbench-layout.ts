@@ -103,7 +103,7 @@ export interface WorkbenchLayoutSummary {
   occupiedCells: number
 }
 
-export const defaultWorkbenchLayoutWidgetKeys = ['quick-links', 'tool-catalog', 'notes', 'runtime'] as const satisfies readonly WorkbenchWidgetKey[]
+export const defaultWorkbenchLayoutWidgetKeys = ['timer'] as const satisfies readonly WorkbenchWidgetKey[]
 export const emptyWorkbenchLayout = createEmptyWorkbenchLayout()
 export const defaultWorkbenchLayout = createDefaultWorkbenchLayout()
 
@@ -227,7 +227,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   }
 
   function addWidget(key?: WorkbenchWidgetKey) {
-    const widgetKey = key ?? findFirstAvailableWidgetKey(draft.value.widgets) ?? 'quick-links'
+    const widgetKey = key ?? findFirstAvailableWidgetKey(draft.value.widgets) ?? 'timer'
     const widget = createNewLayoutWidget(widgetKey, draft.value.widgets.length, draft.value.rows, draft.value.columns)
 
     if (!widget) {
@@ -693,14 +693,14 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
       }
 
       return {
-      id: `default-${definition.key}`,
-      key: definition.key,
-      order: index,
-      colSpan: definition.defaultLayout.colSpan,
-      rowSpan: definition.defaultLayout.rowSpan,
-      chrome: 'card',
-      orientation: 'auto',
-      header: createDefaultWidgetHeaderPreference()
+        id: `default-${definition.key}`,
+        key: definition.key,
+        order: index,
+        colSpan: definition.defaultLayout.colSpan,
+        rowSpan: definition.defaultLayout.rowSpan,
+        chrome: 'card',
+        orientation: 'auto',
+        header: createDefaultWidgetHeaderPreference()
       }
     })
   })

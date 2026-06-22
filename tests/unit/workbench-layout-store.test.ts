@@ -27,11 +27,36 @@ describe('workbench layout store', () => {
     expect(layout).toEqual(createDefaultWorkbenchLayout())
   })
 
-  it('keeps the default layout as an explicit curated set instead of every registry widget', () => {
+  it('drops stale placeholder widget keys by falling back to the current default layout', () => {
+    const layout = readStoredLayout(JSON.stringify({
+      version: 1,
+      rows: 4,
+      columns: 4,
+      gap: 12,
+      widgets: [
+        {
+          id: 'default-quick-links',
+          key: 'quick-links',
+          order: 0,
+          column: 0,
+          row: 0,
+          colSpan: 2,
+          rowSpan: 1,
+          chrome: 'card',
+          orientation: 'auto',
+          header: createHeader()
+        }
+      ]
+    }))
+
+    expect(layout).toEqual(createDefaultWorkbenchLayout())
+  })
+
+  it('keeps the default layout as an explicit curated set of real widgets', () => {
     const layout = createDefaultWorkbenchLayout()
 
     expect(layout.widgets.map(widget => widget.key)).toEqual([...defaultWorkbenchLayoutWidgetKeys])
-    expect(layout.widgets.some(widget => widget.key === 'timer')).toBe(false)
+    expect(layout.widgets.map(widget => widget.id)).toEqual(['default-timer'])
   })
 
   it('migrates order-only widgets to explicit grid coordinates', () => {
@@ -57,12 +82,7 @@ describe('workbench layout store', () => {
     expect(placedWidgets[0]).toMatchObject({
       chrome: 'card',
       orientation: 'auto',
-      header: {
-        visible: true,
-        icon: true,
-        title: true,
-        description: true
-      }
+      header: createHeader()
     })
   })
 
@@ -156,30 +176,30 @@ describe('workbench layout store', () => {
 
   it('pushes affected widgets by the minimum required rows when a short widget moves back upward', () => {
     const widgets = [
-      createWidget('quick-links', 0, 0, 2, 4, 1),
-      createWidget('notes', 1, 0, 0, 2, 2),
-      createWidget('runtime', 2, 2, 0, 2, 1)
+      createWidget('short', 0, 0, 2, 4, 1),
+      createWidget('tall', 1, 0, 0, 2, 2),
+      createWidget('side', 2, 2, 0, 2, 1)
     ]
 
     const movedWidgets = moveLayoutWidget(
       widgets,
       4,
       4,
-      'quick-links',
+      'short',
       { column: 0, row: 0 },
-      'notes',
+      'tall',
       'down'
     )
 
-    expect(movedWidgets.find(widget => widget.id === 'quick-links')).toMatchObject({
+    expect(movedWidgets.find(widget => widget.id === 'short')).toMatchObject({
       column: 0,
       row: 0
     })
-    expect(movedWidgets.find(widget => widget.id === 'notes')).toMatchObject({
+    expect(movedWidgets.find(widget => widget.id === 'tall')).toMatchObject({
       column: 0,
       row: 1
     })
-    expect(movedWidgets.find(widget => widget.id === 'runtime')).toMatchObject({
+    expect(movedWidgets.find(widget => widget.id === 'side')).toMatchObject({
       column: 2,
       row: 1
     })
@@ -187,25 +207,25 @@ describe('workbench layout store', () => {
 
   it('keeps the dragged multi-row widget anchored while pushing a top widget down', () => {
     const widgets = [
-      createWidget('tool-catalog', 0, 0, 0, 2, 2),
-      createWidget('notes', 1, 0, 2, 2, 2)
+      createWidget('top', 0, 0, 0, 2, 2),
+      createWidget('dragged', 1, 0, 2, 2, 2)
     ]
 
     const movedWidgets = moveLayoutWidget(
       widgets,
       4,
       4,
-      'notes',
+      'dragged',
       { column: 0, row: 0 },
-      'tool-catalog',
+      'top',
       'down'
     )
 
-    expect(movedWidgets.find(widget => widget.id === 'notes')).toMatchObject({
+    expect(movedWidgets.find(widget => widget.id === 'dragged')).toMatchObject({
       column: 0,
       row: 0
     })
-    expect(movedWidgets.find(widget => widget.id === 'tool-catalog')).toMatchObject({
+    expect(movedWidgets.find(widget => widget.id === 'top')).toMatchObject({
       column: 0,
       row: 2
     })
@@ -240,9 +260,9 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.beginDrag('default-runtime')
+    store.beginDrag('default-timer')
     store.previewDragOverPosition(null, { column: 3, row: 3 })
-    store.beginResize('default-runtime')
+    store.beginResize('default-timer')
     store.resetState()
 
     expect(store.initialized).toBe(false)
@@ -272,43 +292,44 @@ describe('workbench layout store', () => {
 
   it('moves a widget earlier or later through the current layout rules', async () => {
     const store = await createLoadedStore()
-    const runtimeIndexBeforeMove = store.widgets.findIndex(widget => widget.id === 'default-runtime')
-    const targetBeforeMove = store.widgets[runtimeIndexBeforeMove - 1]
-
-    expect(targetBeforeMove).toBeTruthy()
 
     store.startEditing()
-    store.moveWidget('default-runtime', -1)
+    expect(store.addWidgetAt('timer', { column: 1, row: 0 })).toBe(true)
 
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
-      column: targetBeforeMove?.column,
-      row: targetBeforeMove?.row
+    const addedWidget = store.widgets.find(widget => widget.id !== 'default-timer')
+    expect(addedWidget).toBeTruthy()
+
+    store.moveWidget(addedWidget?.id ?? '', -1)
+
+    expect(store.widgets.find(widget => widget.id === addedWidget?.id)).toMatchObject({
+      column: 0,
+      row: 0
     })
-    expect(store.widgets.find(widget => widget.id === targetBeforeMove?.id)).not.toMatchObject({
-      column: targetBeforeMove?.column,
-      row: targetBeforeMove?.row
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).not.toMatchObject({
+      column: 0,
+      row: 0
     })
     expect(store.placedWidgets).toHaveLength(store.widgets.length)
   })
 
   it('previews drag coordinates while keeping cancel rollback available', async () => {
     const store = await createLoadedStore()
-    const runtimeBeforeDrag = store.widgets.find(widget => widget.id === 'default-runtime')
+    const timerBeforeDrag = store.widgets.find(widget => widget.id === 'default-timer')
 
     store.startEditing()
-    store.beginDrag('default-runtime')
+    store.beginDrag('default-timer')
     store.previewDragOverPosition(null, { column: 3, row: 3 })
 
-    expect(store.placedWidgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+    expect(store.placedWidgets.find(widget => widget.id === 'default-timer')).toMatchObject({
       column: 3,
       row: 3
     })
 
     store.endDrag()
 
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
-      column: runtimeBeforeDrag?.column,
-      row: runtimeBeforeDrag?.row
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
+      column: timerBeforeDrag?.column,
+      row: timerBeforeDrag?.row
     })
   })
 
@@ -316,11 +337,11 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.beginDrag('default-runtime')
+    store.beginDrag('default-timer')
     store.previewDragOverPosition(null, { column: 3, row: 3 })
     store.dropOnMarkedTarget()
 
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
       column: 3,
       row: 3
     })
@@ -344,45 +365,19 @@ describe('workbench layout store', () => {
 
     store.startEditing()
 
-    expect(store.canAddWidgetAt('runtime', { column: 0, row: 0 })).toBe(false)
-    expect(store.addWidgetAt('runtime', { column: 0, row: 0 })).toBe(false)
-  })
-
-  it('does not change widget key when the target widget size no longer fits at the current position', async () => {
-    const store = await createLoadedStore()
-
-    store.startEditing()
-    expect(store.canUpdateWidgetKey('default-runtime', 'tool-catalog')).toBe(false)
-    expect(store.updateWidgetKey('default-runtime', 'tool-catalog')).toBe(false)
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
-      key: 'runtime',
-      colSpan: 1,
-      rowSpan: 1
-    })
-  })
-
-  it('changes widget key when the target widget size still fits at the current position', async () => {
-    const store = await createLoadedStore()
-
-    store.startEditing()
-    expect(store.canUpdateWidgetKey('default-quick-links', 'runtime')).toBe(true)
-    expect(store.updateWidgetKey('default-quick-links', 'runtime')).toBe(true)
-    expect(store.widgets.find(widget => widget.id === 'default-quick-links')).toMatchObject({
-      key: 'runtime',
-      colSpan: 1,
-      rowSpan: 1
-    })
+    expect(store.canAddWidgetAt('timer', { column: 0, row: 0 })).toBe(false)
+    expect(store.addWidgetAt('timer', { column: 0, row: 0 })).toBe(false)
   })
 
   it('tracks resize state while widget spans update', async () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.beginResize('default-runtime')
-    store.updateWidgetSpan('default-runtime', { colSpan: 1, rowSpan: 2 })
+    store.beginResize('default-timer')
+    store.updateWidgetSpan('default-timer', { colSpan: 1, rowSpan: 2 })
 
-    expect(store.resizingWidgetId).toBe('default-runtime')
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+    expect(store.resizingWidgetId).toBe('default-timer')
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
       colSpan: 1,
       rowSpan: 2
     })
@@ -396,14 +391,14 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.updateWidgetChrome('default-runtime', 'bare')
-    store.updateWidgetOrientation('default-runtime', 'vertical')
-    store.updateWidgetHeader('default-runtime', {
+    store.updateWidgetChrome('default-timer', 'bare')
+    store.updateWidgetOrientation('default-timer', 'vertical')
+    store.updateWidgetHeader('default-timer', {
       visible: false,
       icon: false
     })
 
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
       chrome: 'bare',
       orientation: 'vertical',
       header: {
@@ -415,18 +410,15 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('clamps widgets to optional registry constraints when resizing', async () => {
+  it('allows registered widgets without constraints to grow to the grid boundary', async () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.removeWidget('default-quick-links')
-    store.removeWidget('default-tool-catalog')
-    store.removeWidget('default-notes')
-    store.updateWidgetSpan('default-runtime', { colSpan: 4, rowSpan: 4 })
+    store.updateWidgetSpan('default-timer', { colSpan: 4, rowSpan: 4 })
 
-    expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
-      colSpan: 2,
-      rowSpan: 2
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
+      colSpan: 4,
+      rowSpan: 4
     })
   })
 
@@ -434,21 +426,18 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    store.updateWidgetSpan('default-tool-catalog', { colSpan: 4, rowSpan: 4 })
+    expect(store.addWidgetAt('timer', { column: 1, row: 0 })).toBe(true)
+    store.updateWidgetSpan('default-timer', { colSpan: 4, rowSpan: 4 })
 
-    expect(store.widgets.find(widget => widget.id === 'default-tool-catalog')).toMatchObject({
-      colSpan: 2,
-      rowSpan: 2
+    expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
+      colSpan: 1,
+      rowSpan: 1
     })
     expect(store.placedWidgets).toHaveLength(store.widgets.length)
   })
 
   it('shares widget span constraints with resize feedback helpers', () => {
-    expect(constrainWorkbenchWidgetSpan('runtime', 4, 4, 4, 4)).toEqual({
-      colSpan: 2,
-      rowSpan: 2
-    })
-    expect(constrainWorkbenchWidgetSpan('quick-links', 10, 10, 3, 4)).toEqual({
+    expect(constrainWorkbenchWidgetSpan('timer', 10, 10, 3, 4)).toEqual({
       colSpan: 4,
       rowSpan: 3
     })
@@ -464,7 +453,7 @@ async function createLoadedStore() {
 function createLegacyWidget(id: string, order: number, colSpan: number, rowSpan: number) {
   return {
     id,
-    key: 'quick-links' as const,
+    key: 'timer' as const,
     order,
     colSpan,
     rowSpan
@@ -474,7 +463,7 @@ function createLegacyWidget(id: string, order: number, colSpan: number, rowSpan:
 function createWidget(id: string, order: number, column: number, row: number, colSpan: number, rowSpan: number): WorkbenchLayoutWidget {
   return {
     id,
-    key: 'quick-links',
+    key: 'timer',
     order,
     column,
     row,
@@ -482,11 +471,15 @@ function createWidget(id: string, order: number, column: number, row: number, co
     rowSpan,
     chrome: 'card',
     orientation: 'auto',
-    header: {
-      visible: true,
-      icon: true,
-      title: true,
-      description: true
-    }
+    header: createHeader()
+  }
+}
+
+function createHeader() {
+  return {
+    visible: true,
+    icon: true,
+    title: true,
+    description: true
   }
 }

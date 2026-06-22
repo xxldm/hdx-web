@@ -142,37 +142,10 @@
     "localeMode": "语言状态",
     "themeMode": "主题状态",
     "themeManaged": "可切换",
-    "quickLinks": {
-      "newTool": "新工具",
-      "collectIdea": "记灵感",
-      "openFolder": "打开目录"
-    },
-    "notes": {
-      "first": "今天先把最常用的东西放上来。",
-      "second": "后续模块会把自己的组件送到这里。",
-      "third": "不需要的组件可以随时收起。",
-      "action": "写一条"
-    },
     "widgets": {
-      "quickLinks": {
-        "title": "快捷入口",
-        "description": "把顺手动作放在前面"
-      },
       "timer": {
         "title": "计时器",
         "description": "默认 10 分钟，离开页面也继续计时"
-      },
-      "toolCatalog": {
-        "title": "工具目录",
-        "description": "已经接入的工具"
-      },
-      "notes": {
-        "title": "随手记",
-        "description": "先放想法和待办"
-      },
-      "runtime": {
-        "title": "连接状态",
-        "description": "当前服务概况"
       }
     },
     "timer": {

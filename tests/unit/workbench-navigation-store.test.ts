@@ -17,35 +17,41 @@ describe('workbench navigation store', () => {
   it('falls back to default pinned items when stored data is invalid', () => {
     const preference = readStoredWorkbenchNavigationPreference('{bad json')
 
-    expect(preference.pinnedItemIds).toEqual(['quick-links', 'tool-catalog', 'notes'])
+    expect(preference.pinnedItemIds).toEqual(['timer'])
   })
 
-  it('filters unknown, duplicate, and non-pinnable menu ids', () => {
+  it('filters stale placeholder, unknown, duplicate, and non-pinnable menu ids', () => {
     const preference = readStoredWorkbenchNavigationPreference(JSON.stringify({
       version: 1,
-      pinnedItemIds: ['quick-links', 'unknown', 'quick-links', 'home', 'settings', 'runtime']
+      pinnedItemIds: ['quick-links', 'timer', 'unknown', 'timer', 'home', 'settings', 'runtime']
     }))
 
-    expect(preference.pinnedItemIds).toEqual(['quick-links', 'runtime'])
+    expect(preference.pinnedItemIds).toEqual(['timer'])
   })
 
   it('toggles pinned menu items and persists the preference', async () => {
     const store = useWorkbenchNavigationStore()
 
-    store.unpinItem('quick-links')
-    store.pinItem('runtime')
+    store.unpinItem('timer')
     await nextTick()
 
-    expect(store.pinnedItemIds).toEqual(['tool-catalog', 'notes', 'runtime'])
-    expect(readStoredWorkbenchNavigationPreference(localStorage.getItem(workbenchNavigationStorageKey) ?? '').pinnedItemIds).toEqual(['tool-catalog', 'notes', 'runtime'])
+    expect(store.pinnedItemIds).toEqual([])
+    expect(readStoredWorkbenchNavigationPreference(localStorage.getItem(workbenchNavigationStorageKey) ?? '').pinnedItemIds).toEqual([])
+
+    store.pinItem('timer')
+    await nextTick()
+
+    expect(store.pinnedItemIds).toEqual(['timer'])
+    expect(readStoredWorkbenchNavigationPreference(localStorage.getItem(workbenchNavigationStorageKey) ?? '').pinnedItemIds).toEqual(['timer'])
   })
 
-  it('does not pin more than the configured limit', () => {
+  it('does not pin non-pinnable menu items', () => {
     const store = useWorkbenchNavigationStore()
 
-    store.pinItem('runtime')
+    store.pinItem('settings')
 
     expect(store.pinnedItemIds.length).toBeLessThanOrEqual(maxPinnedWorkbenchNavigationItems)
+    expect(store.pinnedItemIds).toEqual(['timer'])
     expect(store.canPinItem('settings')).toBe(false)
   })
 })

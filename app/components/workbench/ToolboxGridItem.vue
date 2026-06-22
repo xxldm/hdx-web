@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { RuntimeInfo, ToolRecord } from '~/types/hdx-api'
 import type {
   PlacedWorkbenchWidget,
   WorkbenchWidgetChrome
@@ -15,9 +14,6 @@ const props = defineProps<{
   editing: boolean
   selected?: boolean
   highlighted?: boolean
-  tools: ToolRecord[]
-  runtime: RuntimeInfo | null
-  loading: boolean
 }>()
 const emit = defineEmits<{
   select: [widgetId: string]
@@ -226,26 +222,9 @@ const resizeLimitFeedbackText = computed(() => {
   return ''
 })
 const componentProps = computed(() => {
-  const displayProps = {
+  return {
     orientation: resolvedOrientation.value
   }
-
-  if (props.widget.key === 'tool-catalog') {
-    return {
-      ...displayProps,
-      tools: props.tools,
-      loading: props.loading
-    }
-  }
-
-  if (props.widget.key === 'runtime') {
-    return {
-      ...displayProps,
-      runtime: props.runtime
-    }
-  }
-
-  return displayProps
 })
 
 </script>

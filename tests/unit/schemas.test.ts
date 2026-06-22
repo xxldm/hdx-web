@@ -61,8 +61,8 @@ describe('hdx api schemas', () => {
       gap: 12,
       widgets: [
         {
-          id: 'default-quick-links',
-          key: 'quick-links',
+          id: 'default-timer',
+          key: 'timer',
           order: 0,
           column: 0,
           row: 0,

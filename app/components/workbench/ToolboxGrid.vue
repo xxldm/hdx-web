@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import ToolboxGridItem from '~/components/workbench/ToolboxGridItem.vue'
 import type { PlacedWorkbenchWidget, WorkbenchGridPosition } from '~/stores/workbench-layout'
-import type { RuntimeInfo, ToolRecord } from '~/types/hdx-api'
 import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
 import { workbenchWidgetDefinitions } from '~/utils/workbench-widgets'
 
 defineProps<{
-  tools: ToolRecord[]
-  runtime: RuntimeInfo | null
-  loading: boolean
   highlightedWidgetKey?: WorkbenchWidgetKey | null
 }>()
 
@@ -339,9 +335,6 @@ if (import.meta.client) {
           :widget="widget"
           :editing="layout.editing"
           :selected="selectedWidgetId === widget.id"
-          :tools="tools"
-          :runtime="runtime"
-          :loading="loading"
           :highlighted="highlightedWidgetKey === widget.key"
           @select="onSelectWidget"
           @leave="onLeaveWidget"
