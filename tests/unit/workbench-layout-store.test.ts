@@ -1,7 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createDefaultWorkbenchLayout, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
+import { createDefaultWorkbenchLayout, defaultWorkbenchLayoutWidgetKeys, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
 import { constrainWorkbenchWidgetSpan } from '../../app/utils/workbench-widget-meta'
 
 describe('workbench layout store', () => {
@@ -14,6 +14,13 @@ describe('workbench layout store', () => {
     const layout = readStoredLayout('{bad json')
 
     expect(layout).toEqual(createDefaultWorkbenchLayout())
+  })
+
+  it('keeps the default layout as an explicit curated set instead of every registry widget', () => {
+    const layout = createDefaultWorkbenchLayout()
+
+    expect(layout.widgets.map(widget => widget.key)).toEqual([...defaultWorkbenchLayoutWidgetKeys])
+    expect(layout.widgets.some(widget => widget.key === 'timer')).toBe(false)
   })
 
   it('migrates order-only widgets to explicit grid coordinates', () => {
@@ -205,22 +212,25 @@ describe('workbench layout store', () => {
     expect(readStoredLayout(localStorage.getItem('hdx:web:workbench-layout:v1') ?? '').columns).toBe(3)
   })
 
-  it('moves a widget earlier or later by swapping coordinates', () => {
+  it('moves a widget earlier or later through the current layout rules', () => {
     const store = useWorkbenchLayoutStore()
-    const runtimeBeforeMove = store.widgets.find(widget => widget.id === 'default-runtime')
-    const notesBeforeMove = store.widgets.find(widget => widget.id === 'default-notes')
+    const runtimeIndexBeforeMove = store.widgets.findIndex(widget => widget.id === 'default-runtime')
+    const targetBeforeMove = store.widgets[runtimeIndexBeforeMove - 1]
+
+    expect(targetBeforeMove).toBeTruthy()
 
     store.startEditing()
     store.moveWidget('default-runtime', -1)
 
     expect(store.widgets.find(widget => widget.id === 'default-runtime')).toMatchObject({
-      column: notesBeforeMove?.column,
-      row: notesBeforeMove?.row
+      column: targetBeforeMove?.column,
+      row: targetBeforeMove?.row
     })
-    expect(store.widgets.find(widget => widget.id === 'default-notes')).toMatchObject({
-      column: runtimeBeforeMove?.column,
-      row: runtimeBeforeMove?.row
+    expect(store.widgets.find(widget => widget.id === targetBeforeMove?.id)).not.toMatchObject({
+      column: targetBeforeMove?.column,
+      row: targetBeforeMove?.row
     })
+    expect(store.placedWidgets).toHaveLength(store.widgets.length)
   })
 
   it('previews drag coordinates while keeping cancel rollback available', () => {
@@ -262,10 +272,10 @@ describe('workbench layout store', () => {
     const store = useWorkbenchLayoutStore()
 
     store.startEditing()
-    expect(store.addWidgetAt('runtime', { column: 3, row: 3 })).toBe(true)
+    expect(store.addWidgetAt('timer', { column: 3, row: 3 })).toBe(true)
 
-    expect(store.widgets.find(widget => widget.id.startsWith('runtime-'))).toMatchObject({
-      key: 'runtime',
+    expect(store.widgets.find(widget => widget.id.startsWith('timer-'))).toMatchObject({
+      key: 'timer',
       column: 3,
       row: 3
     })

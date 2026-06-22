@@ -8,6 +8,9 @@ config.global.stubs = {
   UButton: true,
   UFormField: true,
   UInput: true,
+  UInputNumber: true,
+  UProgress: true,
   USelect: true,
+  UTooltip: true,
   UColorModeSelect: true
 }

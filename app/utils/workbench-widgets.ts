@@ -3,6 +3,7 @@ import ToolCatalogWidget from '~/components/workbench/widgets/ToolCatalogWidget.
 import ToolboxNotesWidget from '~/components/workbench/widgets/ToolboxNotesWidget.vue'
 import ToolboxQuickLinksWidget from '~/components/workbench/widgets/ToolboxQuickLinksWidget.vue'
 import ToolboxRuntimeWidget from '~/components/workbench/widgets/ToolboxRuntimeWidget.vue'
+import ToolboxTimerWidget from '~/components/workbench/widgets/ToolboxTimerWidget.vue'
 import { workbenchWidgetMetadata, workbenchWidgetMetadataByKey, type WorkbenchWidgetKey, type WorkbenchWidgetMetadata } from '~/utils/workbench-widget-meta'
 
 export interface WorkbenchWidgetDefinition extends WorkbenchWidgetMetadata {
@@ -11,6 +12,7 @@ export interface WorkbenchWidgetDefinition extends WorkbenchWidgetMetadata {
 
 const widgetComponents: Record<WorkbenchWidgetKey, Component> = {
   'quick-links': ToolboxQuickLinksWidget,
+  timer: ToolboxTimerWidget,
   'tool-catalog': ToolCatalogWidget,
   notes: ToolboxNotesWidget,
   runtime: ToolboxRuntimeWidget

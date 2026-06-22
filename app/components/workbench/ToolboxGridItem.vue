@@ -32,7 +32,7 @@ const removeWidgetAriaLabel = computed(() => t('workbench.layout.removeWidgetByT
 const resizeWidgetAriaLabel = computed(() => t('workbench.layout.resizeWidgetByTitle', { title: widgetTitle.value }))
 const changeWidgetAriaLabel = computed(() => t('workbench.layout.changeWidgetByTitle', { title: widgetTitle.value }))
 const isDropTarget = computed(() => layout.dropTargetWidgetId === props.widget.id && layout.draggedWidgetId !== props.widget.id)
-const isDragging = computed(() => layout.draggedWidgetId === props.widget.id)
+const isDragging = computed(() => props.editing && layout.draggedWidgetId === props.widget.id)
 const isResizing = computed(() => layout.resizingWidgetId === props.widget.id)
 const resolvedOrientation = computed<ResolvedWorkbenchWidgetOrientation>(() => {
   if (props.widget.orientation === 'horizontal' || props.widget.orientation === 'vertical') {

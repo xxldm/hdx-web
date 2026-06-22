@@ -158,6 +158,10 @@
         "title": "快捷入口",
         "description": "把顺手动作放在前面"
       },
+      "timer": {
+        "title": "计时器",
+        "description": "默认 10 分钟，离开页面也继续计时"
+      },
       "toolCatalog": {
         "title": "工具目录",
         "description": "已经接入的工具"
@@ -169,6 +173,20 @@
       "runtime": {
         "title": "连接状态",
         "description": "当前服务概况"
+      }
+    },
+    "timer": {
+      "durationMinutes": "时长",
+      "minutesUnit": "分钟",
+      "start": "开始",
+      "pause": "暂停",
+      "resume": "继续",
+      "reset": "重置",
+      "status": {
+        "idle": "准备开始",
+        "running": "计时中",
+        "paused": "已暂停",
+        "finished": "已结束"
       }
     },
     "layout": {

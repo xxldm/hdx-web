@@ -158,6 +158,10 @@
         "title": "Quick actions",
         "description": "Keep handy actions up front"
       },
+      "timer": {
+        "title": "Timer",
+        "description": "Starts at 10 minutes and keeps time in the background"
+      },
       "toolCatalog": {
         "title": "Tool catalog",
         "description": "Tools already connected"
@@ -169,6 +173,20 @@
       "runtime": {
         "title": "Connection",
         "description": "Current service snapshot"
+      }
+    },
+    "timer": {
+      "durationMinutes": "Duration",
+      "minutesUnit": "min",
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "reset": "Reset",
+      "status": {
+        "idle": "Ready",
+        "running": "Running",
+        "paused": "Paused",
+        "finished": "Done"
       }
     },
     "layout": {

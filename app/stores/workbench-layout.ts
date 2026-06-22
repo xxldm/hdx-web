@@ -6,7 +6,6 @@ import {
   constrainWorkbenchWidgetSpan,
   getWorkbenchWidgetMetadata,
   workbenchWidgetKeys,
-  workbenchWidgetMetadata,
   workbenchWidgetOrientations,
   type WorkbenchWidgetKey,
   type WorkbenchWidgetOrientation
@@ -105,6 +104,7 @@ export interface WorkbenchLayoutSummary {
   occupiedCells: number
 }
 
+export const defaultWorkbenchLayoutWidgetKeys = ['quick-links', 'tool-catalog', 'notes', 'runtime'] as const satisfies readonly WorkbenchWidgetKey[]
 export const defaultWorkbenchLayout = createDefaultWorkbenchLayout()
 
 export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
@@ -646,7 +646,14 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
     rows: 4,
     columns: 4,
     gap: 12,
-    widgets: workbenchWidgetMetadata.map((definition, index) => ({
+    widgets: defaultWorkbenchLayoutWidgetKeys.map((key, index) => {
+      const definition = getWorkbenchWidgetMetadata(key)
+
+      if (!definition) {
+        throw new Error(`默认工具箱布局引用了未注册组件：${key}`)
+      }
+
+      return {
       id: `default-${definition.key}`,
       key: definition.key,
       order: index,
@@ -655,7 +662,8 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
       chrome: 'card',
       orientation: 'auto',
       header: createDefaultWidgetHeaderPreference()
-    }))
+      }
+    })
   })
 }
 

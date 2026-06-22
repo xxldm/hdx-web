@@ -1,4 +1,4 @@
-export type WorkbenchWidgetKey = 'quick-links' | 'tool-catalog' | 'notes' | 'runtime'
+export type WorkbenchWidgetKey = 'quick-links' | 'timer' | 'tool-catalog' | 'notes' | 'runtime'
 export type WorkbenchWidgetOrientation = 'auto' | 'horizontal' | 'vertical'
 export type ResolvedWorkbenchWidgetOrientation = Exclude<WorkbenchWidgetOrientation, 'auto'>
 
@@ -34,6 +34,18 @@ export const workbenchWidgetMetadata = [
     accentClass: 'from-cyan-300/70 via-sky-300/50 to-indigo-300/60 dark:from-cyan-300/30 dark:via-sky-400/20 dark:to-indigo-400/25',
     defaultLayout: {
       colSpan: 2,
+      rowSpan: 1
+    },
+    supportedOrientations: workbenchWidgetOrientations
+  },
+  {
+    key: 'timer',
+    titleKey: 'workbench.widgets.timer.title',
+    descriptionKey: 'workbench.widgets.timer.description',
+    icon: 'i-lucide-timer',
+    accentClass: 'from-amber-200/70 via-orange-200/50 to-rose-200/55 dark:from-amber-200/24 dark:via-orange-300/18 dark:to-rose-300/20',
+    defaultLayout: {
+      colSpan: 1,
       rowSpan: 1
     },
     supportedOrientations: workbenchWidgetOrientations
