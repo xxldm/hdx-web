@@ -1,13 +1,24 @@
 import { setActivePinia, createPinia } from 'pinia'
-import { nextTick } from 'vue'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDefaultWorkbenchLayout, defaultWorkbenchLayoutWidgetKeys, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
 import { constrainWorkbenchWidgetSpan } from '../../app/utils/workbench-widget-meta'
+
+const fetchWorkbenchLayoutMock = vi.hoisted(() => vi.fn())
+const saveWorkbenchLayoutMock = vi.hoisted(() => vi.fn())
+
+vi.mock('../../app/utils/hdx-api-client', () => ({
+  fetchWorkbenchLayout: fetchWorkbenchLayoutMock,
+  saveWorkbenchLayout: saveWorkbenchLayoutMock
+}))
 
 describe('workbench layout store', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    fetchWorkbenchLayoutMock.mockReset()
+    fetchWorkbenchLayoutMock.mockResolvedValue(createDefaultWorkbenchLayout())
+    saveWorkbenchLayoutMock.mockReset()
+    saveWorkbenchLayoutMock.mockImplementation(async value => value)
   })
 
   it('falls back to the default layout when stored data is invalid', () => {
@@ -200,20 +211,47 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('saves draft changes to local storage', async () => {
+  it('loads layout from backend as the source of truth', async () => {
+    const remoteLayout = {
+      ...createDefaultWorkbenchLayout(),
+      columns: 3
+    }
+    fetchWorkbenchLayoutMock.mockResolvedValueOnce(remoteLayout)
     const store = useWorkbenchLayoutStore()
+
+    await store.loadLayout()
+
+    expect(store.columns).toBe(3)
+    expect(localStorage.getItem('hdx:web:workbench-layout:v1')).toBeNull()
+  })
+
+  it('uses an empty layout when backend layout loading fails', async () => {
+    fetchWorkbenchLayoutMock.mockRejectedValueOnce(new Error('offline'))
+    const store = useWorkbenchLayoutStore()
+
+    await store.loadLayout()
+
+    expect(store.widgets).toEqual([])
+    expect(store.errorKey).toBe('workbench.layout.loadFailed')
+    expect(store.loading).toBe(false)
+  })
+
+  it('saves draft changes through backend persistence', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.setColumns(3)
-    store.saveEditing()
-    await nextTick()
+    await store.saveEditing()
 
     expect(store.columns).toBe(3)
-    expect(readStoredLayout(localStorage.getItem('hdx:web:workbench-layout:v1') ?? '').columns).toBe(3)
+    expect(saveWorkbenchLayoutMock).toHaveBeenCalledWith(expect.objectContaining({
+      columns: 3
+    }))
+    expect(localStorage.getItem('hdx:web:workbench-layout:v1')).toBeNull()
   })
 
-  it('moves a widget earlier or later through the current layout rules', () => {
-    const store = useWorkbenchLayoutStore()
+  it('moves a widget earlier or later through the current layout rules', async () => {
+    const store = await createLoadedStore()
     const runtimeIndexBeforeMove = store.widgets.findIndex(widget => widget.id === 'default-runtime')
     const targetBeforeMove = store.widgets[runtimeIndexBeforeMove - 1]
 
@@ -233,8 +271,8 @@ describe('workbench layout store', () => {
     expect(store.placedWidgets).toHaveLength(store.widgets.length)
   })
 
-  it('previews drag coordinates while keeping cancel rollback available', () => {
-    const store = useWorkbenchLayoutStore()
+  it('previews drag coordinates while keeping cancel rollback available', async () => {
+    const store = await createLoadedStore()
     const runtimeBeforeDrag = store.widgets.find(widget => widget.id === 'default-runtime')
 
     store.startEditing()
@@ -254,8 +292,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('commits previewed coordinates on drop', () => {
-    const store = useWorkbenchLayoutStore()
+  it('commits previewed coordinates on drop', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.beginDrag('default-runtime')
@@ -268,8 +306,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('adds a widget at a requested empty coordinate', () => {
-    const store = useWorkbenchLayoutStore()
+  it('adds a widget at a requested empty coordinate', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     expect(store.addWidgetAt('timer', { column: 3, row: 3 })).toBe(true)
@@ -281,8 +319,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('does not add a widget at an occupied coordinate', () => {
-    const store = useWorkbenchLayoutStore()
+  it('does not add a widget at an occupied coordinate', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
 
@@ -290,8 +328,8 @@ describe('workbench layout store', () => {
     expect(store.addWidgetAt('runtime', { column: 0, row: 0 })).toBe(false)
   })
 
-  it('does not change widget key when the target widget size no longer fits at the current position', () => {
-    const store = useWorkbenchLayoutStore()
+  it('does not change widget key when the target widget size no longer fits at the current position', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     expect(store.canUpdateWidgetKey('default-runtime', 'tool-catalog')).toBe(false)
@@ -303,8 +341,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('changes widget key when the target widget size still fits at the current position', () => {
-    const store = useWorkbenchLayoutStore()
+  it('changes widget key when the target widget size still fits at the current position', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     expect(store.canUpdateWidgetKey('default-quick-links', 'runtime')).toBe(true)
@@ -316,8 +354,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('tracks resize state while widget spans update', () => {
-    const store = useWorkbenchLayoutStore()
+  it('tracks resize state while widget spans update', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.beginResize('default-runtime')
@@ -334,8 +372,8 @@ describe('workbench layout store', () => {
     expect(store.resizingWidgetId).toBeNull()
   })
 
-  it('persists widget chrome, orientation, and header display preferences', () => {
-    const store = useWorkbenchLayoutStore()
+  it('persists widget chrome, orientation, and header display preferences', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.updateWidgetChrome('default-runtime', 'bare')
@@ -357,8 +395,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('clamps widgets to optional registry constraints when resizing', () => {
-    const store = useWorkbenchLayoutStore()
+  it('clamps widgets to optional registry constraints when resizing', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.removeWidget('default-quick-links')
@@ -372,8 +410,8 @@ describe('workbench layout store', () => {
     })
   })
 
-  it('keeps the last valid layout when a span update would collide with another widget', () => {
-    const store = useWorkbenchLayoutStore()
+  it('keeps the last valid layout when a span update would collide with another widget', async () => {
+    const store = await createLoadedStore()
 
     store.startEditing()
     store.updateWidgetSpan('default-tool-catalog', { colSpan: 4, rowSpan: 4 })
@@ -396,6 +434,12 @@ describe('workbench layout store', () => {
     })
   })
 })
+
+async function createLoadedStore() {
+  const store = useWorkbenchLayoutStore()
+  await store.loadLayout()
+  return store
+}
 
 function createLegacyWidget(id: string, order: number, colSpan: number, rowSpan: number) {
   return {

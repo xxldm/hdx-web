@@ -3,7 +3,7 @@ import { fetchBackend } from './backend-fetch'
 import { requireBackendAccessToken } from './auth-session'
 
 type AuthenticatedBackendFetchOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   body?: Record<string, unknown>
   query?: Record<string, string | number | boolean | null | undefined>
 }

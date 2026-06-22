@@ -6,8 +6,10 @@ const { t } = useI18n()
 const workbench = useWorkbenchStore()
 const layout = useWorkbenchLayoutStore()
 const { runtime, tools, loading, errorKey } = storeToRefs(workbench)
+const { loading: layoutLoading, saving: layoutSaving, errorKey: layoutErrorKey } = storeToRefs(layout)
 const { highlightedWidgetKey } = useWorkbenchWidgetHighlight()
-const contentRowsClass = computed(() => errorKey.value ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]')
+const activeErrorKeys = computed(() => [errorKey.value, layoutErrorKey.value].filter((key): key is string => Boolean(key)))
+const contentRowsClass = computed(() => activeErrorKeys.value.length > 0 ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]')
 interface WorkbenchMenuItem {
   label: string
   icon: string
@@ -63,7 +65,7 @@ const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
   {
     label: t('workbench.layout.save'),
     icon: 'i-lucide-save',
-    onSelect: layout.saveEditing
+    onSelect: () => layout.saveEditing()
   },
   {
     label: t('workbench.layout.cancel'),
@@ -72,7 +74,10 @@ const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
   }
 ])
 
-await callOnce('workbench-overview', () => workbench.loadOverview())
+await Promise.all([
+  callOnce('workbench-overview', () => workbench.loadOverview()),
+  callOnce('workbench-layout', () => layout.loadLayout())
+])
 
 function updateLayoutValue(setter: (value: number) => void, value: number, delta: number) {
   setter(value + delta)
@@ -145,6 +150,7 @@ useSeoMeta({
               variant="solid"
               icon="i-lucide-save"
               :aria-label="t('workbench.layout.save')"
+              :loading="layoutSaving"
               class="hdx-toolbar-button cursor-pointer"
               @click="layout.saveEditing()"
             />
@@ -205,17 +211,17 @@ useSeoMeta({
     </ClientOnly>
 
     <section class="grid h-full min-h-0 gap-3 overflow-hidden" :class="contentRowsClass">
-      <div v-if="errorKey" class="border border-amber-300/45 bg-amber-50/72 p-3 text-sm text-amber-900 shadow-sm shadow-amber-950/8 backdrop-blur-xl hdx-radius-card dark:border-amber-200/20 dark:bg-amber-300/10 dark:text-amber-100">
-        <div class="flex items-start gap-2">
+      <div v-if="activeErrorKeys.length > 0" class="grid gap-2 border border-amber-300/45 bg-amber-50/72 p-3 text-sm text-amber-900 shadow-sm shadow-amber-950/8 backdrop-blur-xl hdx-radius-card dark:border-amber-200/20 dark:bg-amber-300/10 dark:text-amber-100">
+        <div v-for="activeErrorKey in activeErrorKeys" :key="activeErrorKey" class="flex items-start gap-2">
           <UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0" />
-          <span>{{ t('workbench.unavailable') }} {{ t(errorKey) }}</span>
+          <span>{{ t('workbench.unavailable') }} {{ t(activeErrorKey) }}</span>
         </div>
       </div>
 
       <ToolboxGrid
         :tools="tools"
         :runtime="runtime"
-        :loading="loading"
+        :loading="loading || layoutLoading"
         :highlighted-widget-key="highlightedWidgetKey"
       />
     </section>

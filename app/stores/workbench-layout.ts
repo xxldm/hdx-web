@@ -1,7 +1,7 @@
-import { useStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { z } from 'zod'
+import { fetchWorkbenchLayout, saveWorkbenchLayout } from '~/utils/hdx-api-client'
 import {
   constrainWorkbenchWidgetSpan,
   getWorkbenchWidgetMetadata,
@@ -11,7 +11,6 @@ import {
   type WorkbenchWidgetOrientation
 } from '~/utils/workbench-widget-meta'
 
-const layoutStorageKey = 'hdx:web:workbench-layout:v1'
 const minGridSize = 1
 const maxGridSize = 8
 const minGap = 2
@@ -66,7 +65,7 @@ export const workbenchLayoutSchema = z.object({
   rows: z.number().int().min(minGridSize).max(maxGridSize),
   columns: z.number().int().min(minGridSize).max(maxGridSize),
   gap: z.number().int().min(minGap).max(maxGap),
-  widgets: z.array(workbenchLayoutWidgetSchema).min(1).max(maxWidgetCount)
+  widgets: z.array(workbenchLayoutWidgetSchema).max(maxWidgetCount)
 })
 
 type WorkbenchLayoutWidgetInput = z.infer<typeof workbenchLayoutWidgetSchema>
@@ -105,25 +104,17 @@ export interface WorkbenchLayoutSummary {
 }
 
 export const defaultWorkbenchLayoutWidgetKeys = ['quick-links', 'tool-catalog', 'notes', 'runtime'] as const satisfies readonly WorkbenchWidgetKey[]
+export const emptyWorkbenchLayout = createEmptyWorkbenchLayout()
 export const defaultWorkbenchLayout = createDefaultWorkbenchLayout()
 
 export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
-  const storedLayout = useStorage<WorkbenchLayout>(
-    layoutStorageKey,
-    cloneLayout(defaultWorkbenchLayout),
-    undefined,
-    {
-      deep: true,
-      mergeDefaults: false,
-      serializer: {
-        read: readStoredLayout,
-        write: value => JSON.stringify(normalizeLayout(value))
-      }
-    }
-  )
-
+  const remoteLayout = ref<WorkbenchLayout | null>(null)
+  const initialized = ref(false)
+  const loading = ref(false)
+  const saving = ref(false)
+  const errorKey = ref<string | null>(null)
   const editing = ref(false)
-  const draft = ref<WorkbenchLayout>(cloneLayout(storedLayout.value))
+  const draft = ref<WorkbenchLayout>(cloneLayout(emptyWorkbenchLayout))
   const draggedWidgetId = ref<string | null>(null)
   const dropTargetWidgetId = ref<string | null>(null)
   const dropTargetPlacement = ref<WorkbenchDropPlacement>('before')
@@ -132,7 +123,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const dropTargetRow = ref<number | null>(null)
   const resizingWidgetId = ref<string | null>(null)
 
-  const layout = computed(() => editing.value ? draft.value : storedLayout.value)
+  const layout = computed(() => editing.value ? draft.value : remoteLayout.value ?? emptyWorkbenchLayout)
   const previewLayout = computed(() => {
     if (!editing.value || !draggedWidgetId.value || dropTargetColumn.value === null || dropTargetRow.value === null) {
       return layout.value
@@ -169,26 +160,52 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     occupiedCells: occupiedCells.value
   }))
 
+  async function loadLayout() {
+    loading.value = true
+    errorKey.value = null
+
+    try {
+      remoteLayout.value = normalizeLayout(await fetchWorkbenchLayout())
+      draft.value = cloneLayout(remoteLayout.value)
+    } catch {
+      remoteLayout.value = null
+      draft.value = cloneLayout(emptyWorkbenchLayout)
+      errorKey.value = 'workbench.layout.loadFailed'
+    } finally {
+      initialized.value = true
+      loading.value = false
+    }
+  }
+
   function startEditing() {
-    draft.value = cloneLayout(storedLayout.value)
+    draft.value = cloneLayout(currentPersistedLayout())
     clearDragTarget()
     resizingWidgetId.value = null
     editing.value = true
   }
 
   function cancelEditing() {
-    draft.value = cloneLayout(storedLayout.value)
+    draft.value = cloneLayout(currentPersistedLayout())
     clearDragTarget()
     resizingWidgetId.value = null
     editing.value = false
   }
 
-  function saveEditing() {
-    storedLayout.value = normalizeLayout(draft.value)
-    draft.value = cloneLayout(storedLayout.value)
-    clearDragTarget()
-    resizingWidgetId.value = null
-    editing.value = false
+  async function saveEditing() {
+    saving.value = true
+    errorKey.value = null
+
+    try {
+      remoteLayout.value = normalizeLayout(await saveWorkbenchLayout(normalizeLayout(draft.value)))
+      draft.value = cloneLayout(remoteLayout.value)
+      clearDragTarget()
+      resizingWidgetId.value = null
+      editing.value = false
+    } catch {
+      errorKey.value = 'workbench.layout.saveFailed'
+    } finally {
+      saving.value = false
+    }
   }
 
   function resetLayout() {
@@ -590,7 +607,15 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     clearDropTarget()
   }
 
+  function currentPersistedLayout() {
+    return remoteLayout.value ?? emptyWorkbenchLayout
+  }
+
   return {
+    initialized,
+    loading,
+    saving,
+    errorKey,
     editing,
     draggedWidgetId,
     dropTargetWidgetId,
@@ -608,6 +633,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     totalCells,
     emptyCellCount,
     summary,
+    loadLayout,
     startEditing,
     cancelEditing,
     saveEditing,
@@ -664,6 +690,16 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
       header: createDefaultWidgetHeaderPreference()
       }
     })
+  })
+}
+
+export function createEmptyWorkbenchLayout(): WorkbenchLayout {
+  return normalizeLayout({
+    version: 1,
+    rows: 4,
+    columns: 4,
+    gap: 12,
+    widgets: []
   })
 }
 

@@ -1,5 +1,5 @@
-import type { CreateToolRequest, RuntimeInfo, ToolRecord } from '~/types/hdx-api'
-import { runtimeInfoSchema, toolRecordSchema, toolRecordsSchema } from '~/types/hdx-api'
+import type { CreateToolRequest, RuntimeInfo, ToolRecord, WorkbenchLayoutRecord } from '~/types/hdx-api'
+import { runtimeInfoSchema, toolRecordSchema, toolRecordsSchema, workbenchLayoutSchema } from '~/types/hdx-api'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthPublicSessionSchema } from '~/types/hdx-auth'
 import type {
@@ -28,7 +28,8 @@ export async function fetchAuthSession(): Promise<WebAuthPublicSession> {
   }
 
   return parseApiResponse(webAuthPublicSessionSchema, await $fetch<unknown>('/api/hdx/v1/auth/session', {
-    credentials: 'same-origin'
+    credentials: 'same-origin',
+    headers: getSameOriginRequestHeaders()
   }))
 }
 
@@ -75,7 +76,9 @@ export async function fetchRuntimeInfo(): Promise<RuntimeInfo> {
     return parseApiResponse(runtimeInfoSchema, await invoke<unknown>('hdx_runtime_info'))
   }
 
-  return parseApiResponse(runtimeInfoSchema, await $fetch<unknown>('/api/hdx/v1/runtime'))
+  return parseApiResponse(runtimeInfoSchema, await $fetch<unknown>('/api/hdx/v1/runtime', {
+    headers: getSameOriginRequestHeaders()
+  }))
 }
 
 export async function fetchTools(): Promise<ToolRecord[]> {
@@ -85,7 +88,9 @@ export async function fetchTools(): Promise<ToolRecord[]> {
     return parseApiResponse(toolRecordsSchema, await invoke<unknown>('hdx_tools_list'))
   }
 
-  return parseApiResponse(toolRecordsSchema, await $fetch<unknown>('/api/hdx/v1/tools'))
+  return parseApiResponse(toolRecordsSchema, await $fetch<unknown>('/api/hdx/v1/tools', {
+    headers: getSameOriginRequestHeaders()
+  }))
 }
 
 export async function createTool(input: CreateToolRequest): Promise<ToolRecord> {
@@ -99,6 +104,40 @@ export async function createTool(input: CreateToolRequest): Promise<ToolRecord> 
     method: 'POST',
     body: input
   }))
+}
+
+export async function fetchWorkbenchLayout(): Promise<WorkbenchLayoutRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(workbenchLayoutSchema, await invoke<unknown>('hdx_workbench_layout_get'))
+  }
+
+  return parseApiResponse(workbenchLayoutSchema, await $fetch<unknown>('/api/hdx/v1/workbench/layout', {
+    headers: getSameOriginRequestHeaders()
+  }))
+}
+
+export async function saveWorkbenchLayout(input: WorkbenchLayoutRecord): Promise<WorkbenchLayoutRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(workbenchLayoutSchema, await invoke<unknown>('hdx_workbench_layout_save', { input }))
+  }
+
+  return parseApiResponse(workbenchLayoutSchema, await $fetch<unknown>('/api/hdx/v1/workbench/layout', {
+    method: 'PUT',
+    body: input,
+    headers: getSameOriginRequestHeaders()
+  }))
+}
+
+function getSameOriginRequestHeaders() {
+  if (import.meta.server) {
+    return useRequestHeaders(['cookie'])
+  }
+
+  return undefined
 }
 
 export async function fetchDesktopOnlineConfig(): Promise<DesktopOnlineConfigState | null> {

@@ -37,3 +37,37 @@ export const createToolRequestSchema = z.object({
 })
 
 export type CreateToolRequest = z.infer<typeof createToolRequestSchema>
+
+export const workbenchLayoutHeaderSchema = z.object({
+  visible: z.boolean(),
+  icon: z.boolean(),
+  title: z.boolean(),
+  description: z.boolean()
+})
+
+export type WorkbenchLayoutHeader = z.infer<typeof workbenchLayoutHeaderSchema>
+
+export const workbenchLayoutWidgetSchema = z.object({
+  id: z.string().min(1).max(120),
+  key: z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
+  order: z.number().int().min(0).max(23),
+  column: z.number().int().min(0).max(7),
+  row: z.number().int().min(0).max(7),
+  colSpan: z.number().int().min(1).max(8),
+  rowSpan: z.number().int().min(1).max(8),
+  chrome: z.enum(['card', 'bare']),
+  orientation: z.enum(['auto', 'horizontal', 'vertical']),
+  header: workbenchLayoutHeaderSchema
+})
+
+export type WorkbenchLayoutWidgetRecord = z.infer<typeof workbenchLayoutWidgetSchema>
+
+export const workbenchLayoutSchema = z.object({
+  version: z.literal(1),
+  rows: z.number().int().min(1).max(8),
+  columns: z.number().int().min(1).max(8),
+  gap: z.number().int().min(2).max(24),
+  widgets: z.array(workbenchLayoutWidgetSchema).max(24)
+})
+
+export type WorkbenchLayoutRecord = z.infer<typeof workbenchLayoutSchema>

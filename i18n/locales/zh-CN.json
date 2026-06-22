@@ -100,7 +100,7 @@
     "enabledToolsCount": "{count} 个已启用",
     "emptyTools": "还没有工具记录。",
     "loading": "正在加载工具箱数据",
-    "unavailable": "后端暂时不可用，已显示本地工具箱骨架。",
+    "unavailable": "后端暂时不可用，已显示空白工具箱。",
     "loadFailed": "工具箱数据暂时无法加载。",
     "toolEnabled": "启用",
     "toolDisabled": "停用",
@@ -221,7 +221,9 @@
       "showHeader": "显示标题区",
       "showIcon": "显示图标",
       "showTitle": "显示标题",
-      "showDescription": "显示描述"
+      "showDescription": "显示描述",
+      "loadFailed": "布局暂时无法加载。",
+      "saveFailed": "布局保存失败，请稍后重试。"
     }
   }
 }

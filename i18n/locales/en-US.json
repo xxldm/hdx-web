@@ -100,7 +100,7 @@
     "enabledToolsCount": "{count} enabled",
     "emptyTools": "No tool records yet.",
     "loading": "Loading toolbox data",
-    "unavailable": "Backend is unavailable, showing the local toolbox shell.",
+    "unavailable": "Backend is unavailable, showing an empty toolbox.",
     "loadFailed": "Toolbox data could not be loaded.",
     "toolEnabled": "Enabled",
     "toolDisabled": "Disabled",
@@ -221,7 +221,9 @@
       "showHeader": "Show header",
       "showIcon": "Show icon",
       "showTitle": "Show title",
-      "showDescription": "Show description"
+      "showDescription": "Show description",
+      "loadFailed": "Layout could not be loaded.",
+      "saveFailed": "Layout could not be saved. Try again later."
     }
   }
 }

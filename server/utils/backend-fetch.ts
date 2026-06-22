@@ -4,7 +4,7 @@ import { BoundaryError } from '~~/app/utils/api-error'
 import { getBackendConfig } from './backend-config'
 
 type BackendFetchOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   body?: Record<string, unknown>
   query?: Record<string, string | number | boolean | null | undefined>
   bearerToken?: string

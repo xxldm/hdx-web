@@ -12,7 +12,8 @@ import {
   backendApiErrorResponseSchema,
   createToolRequestSchema,
   runtimeInfoSchema,
-  toolRecordsSchema
+  toolRecordsSchema,
+  workbenchLayoutSchema
 } from '../../app/types/hdx-api'
 import { normalizeInternalRedirect } from '../../app/utils/internal-redirect'
 
@@ -50,6 +51,34 @@ describe('hdx api schemas', () => {
         updatedAt: '2026-05-26T00:00:00Z'
       }
     ])).toHaveLength(1)
+  })
+
+  it('parses workbench layout responses', () => {
+    expect(workbenchLayoutSchema.parse({
+      version: 1,
+      rows: 4,
+      columns: 4,
+      gap: 12,
+      widgets: [
+        {
+          id: 'default-quick-links',
+          key: 'quick-links',
+          order: 0,
+          column: 0,
+          row: 0,
+          colSpan: 2,
+          rowSpan: 1,
+          chrome: 'card',
+          orientation: 'auto',
+          header: {
+            visible: true,
+            icon: true,
+            title: true,
+            description: true
+          }
+        }
+      ]
+    }).widgets).toHaveLength(1)
   })
 
   it('parses auth token responses without exposing tokens in public session', () => {
