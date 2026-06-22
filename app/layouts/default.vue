@@ -10,6 +10,7 @@ import { workbenchNavigationItems } from '~/utils/workbench-navigation'
 const { t, locale } = useI18n()
 const route = useRoute()
 const layout = useWorkbenchLayoutStore()
+const workbench = useWorkbenchStore()
 const auth = useAuthStore()
 const navigation = useWorkbenchNavigationStore()
 const theme = useThemePreferenceStore()
@@ -82,7 +83,13 @@ async function logout() {
     return
   }
 
-  await auth.logout()
+  try {
+    await auth.logout()
+  } finally {
+    workbench.resetState()
+    layout.resetState()
+  }
+
   await navigateTo('/login')
 }
 

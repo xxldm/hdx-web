@@ -236,6 +236,26 @@ describe('workbench layout store', () => {
     expect(store.loading).toBe(false)
   })
 
+  it('clears loaded layout and edit state for account switching', async () => {
+    const store = await createLoadedStore()
+
+    store.startEditing()
+    store.beginDrag('default-runtime')
+    store.previewDragOverPosition(null, { column: 3, row: 3 })
+    store.beginResize('default-runtime')
+    store.resetState()
+
+    expect(store.initialized).toBe(false)
+    expect(store.editing).toBe(false)
+    expect(store.loading).toBe(false)
+    expect(store.saving).toBe(false)
+    expect(store.errorKey).toBeNull()
+    expect(store.widgets).toEqual([])
+    expect(store.draggedWidgetId).toBeNull()
+    expect(store.dropTargetWidgetId).toBeNull()
+    expect(store.resizingWidgetId).toBeNull()
+  })
+
   it('saves draft changes through backend persistence', async () => {
     const store = await createLoadedStore()
 

@@ -607,6 +607,18 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     clearDropTarget()
   }
 
+  function resetState() {
+    remoteLayout.value = null
+    initialized.value = false
+    loading.value = false
+    saving.value = false
+    errorKey.value = null
+    editing.value = false
+    draft.value = cloneLayout(emptyWorkbenchLayout)
+    resizingWidgetId.value = null
+    clearDragTarget()
+  }
+
   function currentPersistedLayout() {
     return remoteLayout.value ?? emptyWorkbenchLayout
   }
@@ -662,7 +674,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     beginResize,
     endResize,
     reorderWidgets,
-    moveWidget
+    moveWidget,
+    resetState
   }
 })
 

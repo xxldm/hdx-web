@@ -57,4 +57,17 @@ describe('workbench store', () => {
     expect(store.errorKey).toBe('workbench.loadFailed')
     expect(store.loading).toBe(false)
   })
+
+  it('clears overview data for account switching', async () => {
+    const store = useWorkbenchStore()
+
+    await store.loadOverview()
+    store.resetState()
+
+    expect(store.runtime).toBeNull()
+    expect(store.tools).toEqual([])
+    expect(store.enabledTools).toEqual([])
+    expect(store.errorKey).toBeNull()
+    expect(store.loading).toBe(false)
+  })
 })

@@ -50,6 +50,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     return tool
   }
 
+  function resetState() {
+    runtime.value = null
+    tools.value = []
+    loading.value = false
+    errorKey.value = null
+  }
+
   return {
     runtime,
     tools,
@@ -58,6 +65,7 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     enabledTools,
     snapshot,
     loadOverview,
-    createTool
+    createTool,
+    resetState
   }
 })

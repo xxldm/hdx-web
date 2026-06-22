@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import ToolboxGrid from '~/components/workbench/ToolboxGrid.vue'
 
 const { t } = useI18n()
+const auth = useAuthStore()
 const workbench = useWorkbenchStore()
 const layout = useWorkbenchLayoutStore()
 const { runtime, tools, loading, errorKey } = storeToRefs(workbench)
@@ -74,9 +75,11 @@ const layoutMenuItems = computed<WorkbenchMenuItem[]>(() => [
   }
 ])
 
+const actorScope = auth.session?.subject ?? 'anonymous'
+
 await Promise.all([
-  callOnce('workbench-overview', () => workbench.loadOverview()),
-  callOnce('workbench-layout', () => layout.loadLayout())
+  callOnce(`workbench-overview:${actorScope}`, () => workbench.loadOverview(), { mode: 'navigation' }),
+  callOnce(`workbench-layout:${actorScope}`, () => layout.loadLayout(), { mode: 'navigation' })
 ])
 
 function updateLayoutValue(setter: (value: number) => void, value: number, delta: number) {
