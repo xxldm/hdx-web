@@ -1,5 +1,5 @@
-import type { CreateToolRequest, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, UserPreferenceRecord, UserPreferenceSaveRequest, WorkbenchLayoutRecord } from '~/types/hdx-api'
-import { runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, userPreferenceSchema, workbenchLayoutSchema } from '~/types/hdx-api'
+import type { CreateToolRequest, HolidayRecord, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, UserPreferenceRecord, UserPreferenceSaveRequest, WorkbenchLayoutRecord } from '~/types/hdx-api'
+import { holidayRecordsSchema, runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, userPreferenceSchema, workbenchLayoutSchema } from '~/types/hdx-api'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthPublicSessionSchema } from '~/types/hdx-auth'
 import type {
@@ -98,6 +98,16 @@ export async function createTool(input: CreateToolRequest): Promise<ToolRecord> 
     method: 'POST',
     body: input
   }))
+}
+
+export async function fetchHolidays(): Promise<HolidayRecord[]> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(holidayRecordsSchema, await invoke<unknown>('hdx_holidays_list'))
+  }
+
+  return parseApiResponse(holidayRecordsSchema, await fetchHdxApi<unknown>('/holidays'))
 }
 
 export async function fetchWorkbenchLayout(): Promise<WorkbenchLayoutRecord> {

@@ -1,4 +1,5 @@
 import type { Component } from 'vue'
+import ToolboxDateCountdownWidget from '~/components/workbench/widgets/ToolboxDateCountdownWidget.vue'
 import ToolboxTimerWidget from '~/components/workbench/widgets/ToolboxTimerWidget.vue'
 import { workbenchWidgetMetadata, workbenchWidgetMetadataByKey, type WorkbenchWidgetKey, type WorkbenchWidgetMetadata } from '~/utils/workbench-widget-meta'
 
@@ -7,7 +8,8 @@ export interface WorkbenchWidgetDefinition extends WorkbenchWidgetMetadata {
 }
 
 const widgetComponents: Record<WorkbenchWidgetKey, Component> = {
-  timer: ToolboxTimerWidget
+  timer: ToolboxTimerWidget,
+  'date-countdown': ToolboxDateCountdownWidget
 }
 
 export const workbenchWidgetDefinitions = workbenchWidgetMetadata.map(definition => ({

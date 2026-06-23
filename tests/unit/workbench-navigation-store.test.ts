@@ -23,10 +23,10 @@ describe('workbench navigation store', () => {
   it('filters stale placeholder, unknown, duplicate, and non-pinnable menu ids', () => {
     const preference = readStoredWorkbenchNavigationPreference(JSON.stringify({
       version: 1,
-      pinnedItemIds: ['quick-links', 'timer', 'unknown', 'timer', 'home', 'settings', 'runtime']
+      pinnedItemIds: ['quick-links', 'timer', 'date-countdown', 'unknown', 'timer', 'home', 'settings', 'runtime']
     }))
 
-    expect(preference.pinnedItemIds).toEqual(['timer'])
+    expect(preference.pinnedItemIds).toEqual(['timer', 'date-countdown'])
   })
 
   it('toggles pinned menu items and persists the preference', async () => {
@@ -43,6 +43,11 @@ describe('workbench navigation store', () => {
 
     expect(store.pinnedItemIds).toEqual(['timer'])
     expect(readStoredWorkbenchNavigationPreference(localStorage.getItem(workbenchNavigationStorageKey) ?? '').pinnedItemIds).toEqual(['timer'])
+
+    store.pinItem('date-countdown')
+    await nextTick()
+
+    expect(store.pinnedItemIds).toEqual(['timer', 'date-countdown'])
   })
 
   it('does not pin non-pinnable menu items', () => {

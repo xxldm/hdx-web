@@ -147,7 +147,21 @@
       "timer": {
         "title": "Timer",
         "description": "Fixed duration presets that keep time in the background"
+      },
+      "dateCountdown": {
+        "title": "Date Countdown",
+        "description": "Reads holidays from the holiday table and shows the nearest countdown"
       }
+    },
+    "dateCountdown": {
+      "next": "Next holiday",
+      "loading": "Loading holidays",
+      "unavailable": "Holidays unavailable",
+      "loadFailed": "Failed to load holidays",
+      "empty": "No holidays to show",
+      "today": "Today",
+      "daysUnit": "days",
+      "daysLeft": "{count} days"
     },
     "timer": {
       "presets": "Presets",

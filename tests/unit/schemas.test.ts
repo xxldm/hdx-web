@@ -11,6 +11,7 @@ import {
 import {
   backendApiErrorResponseSchema,
   createToolRequestSchema,
+  holidayRecordsSchema,
   runtimeInfoSchema,
   timerPreferenceSaveSchema,
   timerPreferenceSchema,
@@ -57,6 +58,20 @@ describe('hdx api schemas', () => {
     ])).toHaveLength(1)
   })
 
+  it('parses holiday record arrays', () => {
+    expect(holidayRecordsSchema.parse([
+      {
+        id: 1,
+        holidayKey: 'national-day',
+        displayName: '国庆节',
+        description: null,
+        date: '2000-10-01',
+        recurring: true,
+        sortOrder: 20
+      }
+    ])).toHaveLength(1)
+  })
+
   it('parses workbench layout responses', () => {
     expect(workbenchLayoutSchema.parse({
       schemaVersion: 1,
@@ -81,9 +96,26 @@ describe('hdx api schemas', () => {
             title: true,
             description: true
           }
+        },
+        {
+          id: 'default-date-countdown',
+          key: 'date-countdown',
+          order: 1,
+          column: 1,
+          row: 0,
+          colSpan: 1,
+          rowSpan: 1,
+          chrome: 'card',
+          orientation: 'auto',
+          header: {
+            visible: true,
+            icon: true,
+            title: true,
+            description: true
+          }
         }
       ]
-    }).widgets).toHaveLength(1)
+    }).widgets).toHaveLength(2)
   })
 
   it('parses timer preference responses and save requests', () => {

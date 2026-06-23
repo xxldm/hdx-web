@@ -1,6 +1,9 @@
-export type WorkbenchWidgetKey = 'timer'
+export type WorkbenchWidgetKey = 'timer' | 'date-countdown'
 export type WorkbenchWidgetOrientation = 'auto' | 'horizontal' | 'vertical'
 export type ResolvedWorkbenchWidgetOrientation = Exclude<WorkbenchWidgetOrientation, 'auto'>
+export type WorkbenchWidgetModuleDataContract =
+  | { scope: 'none' }
+  | { scope: 'shared', endpoint: string }
 export type WorkbenchWidgetModulePreferenceContract =
   | { scope: 'none' }
   | { scope: 'account', endpoint: string }
@@ -28,6 +31,7 @@ export interface WorkbenchWidgetMetadata {
   constraints?: WorkbenchWidgetConstraints
   supportedOrientations?: readonly WorkbenchWidgetOrientation[]
   data: {
+    moduleData: WorkbenchWidgetModuleDataContract
     modulePreferences: WorkbenchWidgetModulePreferenceContract
     runtimeState: WorkbenchWidgetRuntimeStateContract
   }
@@ -48,6 +52,9 @@ export const workbenchWidgetMetadata = [
     },
     supportedOrientations: workbenchWidgetOrientations,
     data: {
+      moduleData: {
+        scope: 'none'
+      },
       modulePreferences: {
         scope: 'account',
         endpoint: '/api/v1/timer/preferences'
@@ -55,6 +62,30 @@ export const workbenchWidgetMetadata = [
       runtimeState: {
         scope: 'device',
         storage: 'localStorage'
+      }
+    }
+  },
+  {
+    key: 'date-countdown',
+    titleKey: 'workbench.widgets.dateCountdown.title',
+    descriptionKey: 'workbench.widgets.dateCountdown.description',
+    icon: 'i-lucide-calendar-days',
+    accentClass: 'from-sky-200/70 via-cyan-200/45 to-emerald-200/55 dark:from-sky-300/22 dark:via-cyan-300/16 dark:to-emerald-300/18',
+    defaultLayout: {
+      colSpan: 1,
+      rowSpan: 1
+    },
+    supportedOrientations: workbenchWidgetOrientations,
+    data: {
+      moduleData: {
+        scope: 'shared',
+        endpoint: '/api/v1/holidays'
+      },
+      modulePreferences: {
+        scope: 'none'
+      },
+      runtimeState: {
+        scope: 'none'
       }
     }
   }

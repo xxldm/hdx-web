@@ -38,6 +38,20 @@ export const createToolRequestSchema = z.object({
 
 export type CreateToolRequest = z.infer<typeof createToolRequestSchema>
 
+export const holidayRecordSchema = z.object({
+  id: z.number().int().nonnegative(),
+  holidayKey: z.string().min(1).max(80),
+  displayName: z.string().min(1).max(120),
+  description: z.string().max(500).nullable().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  recurring: z.boolean(),
+  sortOrder: z.number().int().min(0).max(9999)
+})
+
+export type HolidayRecord = z.infer<typeof holidayRecordSchema>
+
+export const holidayRecordsSchema = z.array(holidayRecordSchema)
+
 export const workbenchLayoutHeaderSchema = z.object({
   visible: z.boolean(),
   icon: z.boolean(),

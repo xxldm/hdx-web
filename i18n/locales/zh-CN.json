@@ -147,7 +147,21 @@
       "timer": {
         "title": "计时器",
         "description": "固定时长预设，离开页面也继续计时"
+      },
+      "dateCountdown": {
+        "title": "日期倒计时",
+        "description": "从节日表读取最近日期，显示还有多少天"
       }
+    },
+    "dateCountdown": {
+      "next": "下一个节日",
+      "loading": "正在读取节日",
+      "unavailable": "节日不可用",
+      "loadFailed": "节日读取失败",
+      "empty": "暂无可显示节日",
+      "today": "今天",
+      "daysUnit": "天",
+      "daysLeft": "{count} 天"
     },
     "timer": {
       "presets": "时长预设",

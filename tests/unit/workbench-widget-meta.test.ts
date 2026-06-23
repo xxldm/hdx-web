@@ -3,6 +3,7 @@ import { getWorkbenchWidgetMetadata, workbenchWidgetMetadata } from '../../app/u
 
 describe('workbench widget metadata', () => {
   it('declares a user data boundary for every widget', () => {
+    expect(workbenchWidgetMetadata.every(widget => Boolean(widget.data.moduleData.scope))).toBe(true)
     expect(workbenchWidgetMetadata.every(widget => Boolean(widget.data.modulePreferences.scope))).toBe(true)
     expect(workbenchWidgetMetadata.every(widget => Boolean(widget.data.runtimeState.scope))).toBe(true)
   })
@@ -17,6 +18,21 @@ describe('workbench widget metadata', () => {
     expect(timer?.data.runtimeState).toEqual({
       scope: 'device',
       storage: 'localStorage'
+    })
+  })
+
+  it('declares date countdown holidays as shared module data without user preferences or runtime state', () => {
+    const dateCountdown = getWorkbenchWidgetMetadata('date-countdown')
+
+    expect(dateCountdown?.data.moduleData).toEqual({
+      scope: 'shared',
+      endpoint: '/api/v1/holidays'
+    })
+    expect(dateCountdown?.data.modulePreferences).toEqual({
+      scope: 'none'
+    })
+    expect(dateCountdown?.data.runtimeState).toEqual({
+      scope: 'none'
     })
   })
 })

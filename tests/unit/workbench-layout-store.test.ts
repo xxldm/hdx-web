@@ -75,7 +75,7 @@ describe('workbench layout store', () => {
     expect(layout.schemaVersion).toBe(1)
     expect(layout.version).toBe(0)
     expect(layout.widgets.map(widget => widget.key)).toEqual([...defaultWorkbenchLayoutWidgetKeys])
-    expect(layout.widgets.map(widget => widget.id)).toEqual(['default-timer'])
+    expect(layout.widgets.map(widget => widget.id)).toEqual(['default-timer', 'default-date-countdown'])
   })
 
   it('migrates order-only widgets to explicit grid coordinates', () => {
@@ -269,8 +269,8 @@ describe('workbench layout store', () => {
   it('returns persisted layout state so Pinia can hydrate SSR-rendered widgets', async () => {
     const store = await createLoadedStore()
 
-    expect(store.remoteLayout?.widgets).toHaveLength(1)
-    expect(store.draft.widgets).toHaveLength(1)
+    expect(store.remoteLayout?.widgets).toHaveLength(defaultWorkbenchLayoutWidgetKeys.length)
+    expect(store.draft.widgets).toHaveLength(defaultWorkbenchLayoutWidgetKeys.length)
   })
 
   it('uses an empty layout when backend layout loading fails', async () => {
@@ -435,19 +435,19 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    expect(store.addWidgetAt('timer', { column: 1, row: 0 })).toBe(true)
+    expect(store.addWidgetAt('timer', { column: 2, row: 0 })).toBe(true)
 
-    const addedWidget = store.widgets.find(widget => widget.id !== 'default-timer')
+    const addedWidget = store.widgets.find(widget => widget.id.startsWith('timer-'))
     expect(addedWidget).toBeTruthy()
 
     store.moveWidget(addedWidget?.id ?? '', -1)
 
     expect(store.widgets.find(widget => widget.id === addedWidget?.id)).toMatchObject({
-      column: 0,
+      column: 1,
       row: 0
     })
-    expect(store.widgets.find(widget => widget.id === 'default-timer')).not.toMatchObject({
-      column: 0,
+    expect(store.widgets.find(widget => widget.id === 'default-date-countdown')).not.toMatchObject({
+      column: 1,
       row: 0
     })
     expect(store.placedWidgets).toHaveLength(store.widgets.length)
@@ -555,6 +555,7 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
+    store.removeWidget('default-date-countdown')
     store.updateWidgetSpan('default-timer', { colSpan: 4, rowSpan: 4 })
 
     expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({
@@ -567,7 +568,7 @@ describe('workbench layout store', () => {
     const store = await createLoadedStore()
 
     store.startEditing()
-    expect(store.addWidgetAt('timer', { column: 1, row: 0 })).toBe(true)
+    expect(store.addWidgetAt('timer', { column: 2, row: 0 })).toBe(true)
     store.updateWidgetSpan('default-timer', { colSpan: 4, rowSpan: 4 })
 
     expect(store.widgets.find(widget => widget.id === 'default-timer')).toMatchObject({

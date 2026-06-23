@@ -118,7 +118,7 @@ export interface WorkbenchLayoutConflict {
   serverLayout: WorkbenchLayout
 }
 
-export const defaultWorkbenchLayoutWidgetKeys = ['timer'] as const satisfies readonly WorkbenchWidgetKey[]
+export const defaultWorkbenchLayoutWidgetKeys = ['timer', 'date-countdown'] as const satisfies readonly WorkbenchWidgetKey[]
 export const emptyWorkbenchLayout = createEmptyWorkbenchLayout()
 export const defaultWorkbenchLayout = createDefaultWorkbenchLayout()
 

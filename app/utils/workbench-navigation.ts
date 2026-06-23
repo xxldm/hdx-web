@@ -1,7 +1,7 @@
 import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
 
 export type WorkbenchNavigationGroupKey = 'toolbox' | 'space'
-export type WorkbenchNavigationItemId = 'home' | 'timer' | 'settings'
+export type WorkbenchNavigationItemId = 'home' | 'timer' | 'date-countdown' | 'settings'
 
 export interface WorkbenchNavigationGroup {
   key: WorkbenchNavigationGroupKey
@@ -50,6 +50,15 @@ export const workbenchNavigationItems: readonly WorkbenchNavigationItem[] = [
     widgetKey: 'timer',
     pinnable: true,
     defaultPinned: true
+  },
+  {
+    id: 'date-countdown',
+    groupKey: 'toolbox',
+    titleKey: 'workbench.widgets.dateCountdown.title',
+    descriptionKey: 'workbench.widgets.dateCountdown.description',
+    icon: 'i-lucide-calendar-days',
+    widgetKey: 'date-countdown',
+    pinnable: true
   },
   {
     id: 'settings',
