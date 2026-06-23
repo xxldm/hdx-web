@@ -55,6 +55,7 @@ describe('hdx api schemas', () => {
 
   it('parses workbench layout responses', () => {
     expect(workbenchLayoutSchema.parse({
+      schemaVersion: 1,
       version: 1,
       rows: 4,
       columns: 4,

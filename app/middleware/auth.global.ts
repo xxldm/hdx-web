@@ -1,3 +1,4 @@
+import { createLoginRedirectTarget } from '~/utils/auth-redirect'
 import { normalizeInternalRedirect } from '~/utils/internal-redirect'
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -9,7 +10,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   if (to.path === '/login') {
-    if (auth.authenticated) {
+    if (auth.authenticated && auth.errorKey !== 'auth.sessionExpired') {
       return navigateTo(normalizeInternalRedirect(to.query.redirect))
     }
 
@@ -17,11 +18,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   if (!auth.authenticated) {
-    return navigateTo({
-      path: '/login',
-      query: {
-        redirect: to.fullPath
-      }
-    })
+    return navigateTo(createLoginRedirectTarget(to.fullPath))
   }
 })

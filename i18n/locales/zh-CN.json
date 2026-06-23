@@ -73,6 +73,7 @@
     },
     "csrfFailed": "登录校验已过期，请刷新页面后重试。",
     "logoutFailed": "退出登录未完全完成，请刷新页面确认状态。",
+    "sessionExpired": "登录已过期，请重新登录。",
     "sessionFailed": "登录状态暂时无法确认，请稍后重试。"
   },
   "desktopOnline": {
@@ -145,15 +146,30 @@
     "widgets": {
       "timer": {
         "title": "计时器",
-        "description": "默认 10 分钟，离开页面也继续计时"
+        "description": "固定时长预设，离开页面也继续计时"
       }
     },
     "timer": {
+      "presets": "时长预设",
+      "addPreset": "添加时长",
+      "newPreset": "新时长",
+      "runningCount": "{count} 个计时中",
+      "actionsByLabel": "{label} 的更多操作",
+      "presetActionByLabel": "{action}{label}",
+      "deletePresetByLabel": "删除 {label}",
+      "lastPresetHint": "至少保留一个时长",
+      "runningPresetDeleteHint": "计时中不能删除",
       "durationMinutes": "时长",
+      "secondsUnit": "秒",
       "minutesUnit": "分钟",
+      "hoursUnit": "小时",
+      "presetSeconds": "{count} 秒",
+      "presetMinutes": "{count} 分",
+      "presetHours": "{count} 小时",
       "start": "开始",
       "pause": "暂停",
       "resume": "继续",
+      "restart": "重新开始",
       "reset": "重置",
       "status": {
         "idle": "准备开始",
@@ -196,7 +212,13 @@
       "showTitle": "显示标题",
       "showDescription": "显示描述",
       "loadFailed": "布局暂时无法加载。",
-      "saveFailed": "布局保存失败，请稍后重试。"
+      "saveFailed": "布局保存失败，请稍后重试。",
+      "conflictTitle": "布局有新版本。",
+      "conflictDescription": "服务器当前版本是 {current}，你的草稿已保留。",
+      "previewServer": "预览服务器版本",
+      "previewingServer": "正在预览服务器版本",
+      "useServer": "使用服务器版本",
+      "overwriteServer": "用我的版本覆盖"
     }
   }
 }

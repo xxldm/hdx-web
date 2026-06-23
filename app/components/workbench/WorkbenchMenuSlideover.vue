@@ -139,6 +139,8 @@ function getPinLabel(item: WorkbenchNavigationItem) {
 <style scoped>
 :global(.workbench-menu-slideover) {
   width: min(26rem, calc(100vw - 1rem));
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
 }
 
 .workbench-menu-row {

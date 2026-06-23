@@ -128,6 +128,15 @@ export async function clearAuthSession(event: HdxEvent) {
   })
 }
 
+export async function invalidateWebAuthSession(event: HdxEvent) {
+  if (isAllInOneRequest(event)) {
+    return
+  }
+
+  await clearAuthSession(event)
+  event.context.hdxAuthSessionInvalidated = true
+}
+
 export async function refreshAuthSession(event: HdxEvent) {
   if (isAllInOneRequest(event)) {
     throw new BoundaryError('invalid-input', '本机模式不需要刷新登录态。', 400)
@@ -136,6 +145,7 @@ export async function refreshAuthSession(event: HdxEvent) {
   const data = await readAuthSessionData(event)
 
   if (!data) {
+    await invalidateWebAuthSession(event)
     throw new BoundaryError('auth-required', '登录已过期，请重新登录。', 401)
   }
 
@@ -150,7 +160,7 @@ export async function refreshAuthSession(event: HdxEvent) {
     return tokenResponse
   } catch (error) {
     if (error instanceof BoundaryError && error.statusCode === 401) {
-      await clearAuthSession(event)
+      await invalidateWebAuthSession(event)
     }
 
     throw error
@@ -194,6 +204,7 @@ export async function requireBackendAccessToken(event: HdxEvent) {
   const data = await readAuthSessionData(event)
 
   if (!data) {
+    await invalidateWebAuthSession(event)
     throw new BoundaryError('auth-required', '请先登录。', 401)
   }
 

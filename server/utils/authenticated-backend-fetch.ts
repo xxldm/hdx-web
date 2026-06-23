@@ -1,6 +1,7 @@
 import type { z } from 'zod'
+import { BoundaryError } from '~~/app/utils/api-error'
 import { fetchBackend } from './backend-fetch'
-import { requireBackendAccessToken } from './auth-session'
+import { invalidateWebAuthSession, refreshAuthSession, requireBackendAccessToken } from './auth-session'
 
 type AuthenticatedBackendFetchOptions = {
   method?: 'GET' | 'POST' | 'PUT'
@@ -16,8 +17,41 @@ export async function fetchAuthenticatedBackend<T>(
 ): Promise<T> {
   const bearerToken = await requireBackendAccessToken(event)
 
-  return await fetchBackend(event, path, schema, {
-    ...options,
-    bearerToken: bearerToken ?? undefined
-  })
+  try {
+    return await fetchBackend(event, path, schema, {
+      ...options,
+      bearerToken: bearerToken ?? undefined
+    })
+  } catch (error) {
+    if (!bearerToken || !shouldTryRefreshAfterBackendAuthError(error)) {
+      throw error
+    }
+
+    const refreshedToken = await refreshAuthSession(event)
+
+    try {
+      return await fetchBackend(event, path, schema, {
+        ...options,
+        bearerToken: refreshedToken.accessToken
+      })
+    } catch (retryError) {
+      if (shouldInvalidateAfterRefreshRetryError(retryError)) {
+        await invalidateWebAuthSession(event)
+      }
+
+      throw retryError
+    }
+  }
+}
+
+function shouldTryRefreshAfterBackendAuthError(error: unknown) {
+  return error instanceof BoundaryError
+    && error.code === 'auth-required'
+    && error.statusCode === 401
+}
+
+function shouldInvalidateAfterRefreshRetryError(error: unknown) {
+  return error instanceof BoundaryError
+    && error.code === 'auth-required'
+    && error.statusCode === 401
 }

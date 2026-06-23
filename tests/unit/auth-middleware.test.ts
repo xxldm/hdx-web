@@ -9,6 +9,7 @@ interface AuthRoute {
 interface AuthStoreStub {
   initialized: boolean
   authenticated: boolean
+  errorKey: string | null
   loadSession: ReturnType<typeof vi.fn>
 }
 
@@ -69,6 +70,25 @@ describe('auth route middleware', () => {
     expect(navigateToMock).toHaveBeenCalledWith('/settings')
   })
 
+  it('keeps users on login when the current client session was marked expired', async () => {
+    const auth = createAuthStoreStub({
+      initialized: true,
+      authenticated: true,
+      errorKey: 'auth.sessionExpired'
+    })
+    const { middleware, navigateToMock } = await loadAuthMiddleware(auth)
+
+    await middleware({
+      path: '/login',
+      fullPath: '/login?redirect=/',
+      query: {
+        redirect: '/'
+      }
+    })
+
+    expect(navigateToMock).not.toHaveBeenCalled()
+  })
+
   it('sanitizes external login redirect targets', async () => {
     const auth = createAuthStoreStub({ initialized: true, authenticated: true })
     const { middleware, navigateToMock } = await loadAuthMiddleware(auth)
@@ -85,9 +105,10 @@ describe('auth route middleware', () => {
   })
 })
 
-function createAuthStoreStub(options: Pick<AuthStoreStub, 'initialized' | 'authenticated'>): AuthStoreStub {
+function createAuthStoreStub(options: Pick<AuthStoreStub, 'initialized' | 'authenticated'> & Partial<Pick<AuthStoreStub, 'errorKey'>>): AuthStoreStub {
   return {
     ...options,
+    errorKey: options.errorKey ?? null,
     loadSession: vi.fn(async () => null)
   }
 }

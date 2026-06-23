@@ -18,7 +18,19 @@ const addMenuOpen = ref(false)
 const manualFlipTransition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
 const manualFlipCleanupDelayMs = 260
 const manualFlipCleanupTimers = new Map<string, number>()
-const activeEmptyPosition = computed(() => hoverPosition.value ?? pinnedPosition.value)
+const activeEmptyPosition = computed(() => {
+  if (layout.serverPreviewActive) {
+    return null
+  }
+
+  const candidate = hoverPosition.value ?? pinnedPosition.value
+
+  if (!candidate || !isPositionAvailable(candidate)) {
+    return null
+  }
+
+  return candidate
+})
 const renderedWidgets = computed(() => {
   const stableOrder = new Map(layout.widgets.map((widget, index) => [widget.id, index]))
 
@@ -54,12 +66,19 @@ const hoveredEmptyCellStyle = computed(() => {
 })
 
 function onGridPointerMove(event: PointerEvent) {
-  if (!layout.editing || layout.draggedWidgetId || layout.resizingWidgetId) {
+  if (!layout.editing || layout.serverPreviewActive || layout.draggedWidgetId || layout.resizingWidgetId) {
     hoverPosition.value = null
     return
   }
 
   if (event.pointerType && event.pointerType !== 'mouse') {
+    return
+  }
+
+  const target = event.target
+
+  if (target instanceof Element && target.closest('[data-workbench-widget-id]')) {
+    hoverPosition.value = null
     return
   }
 
@@ -75,7 +94,7 @@ function onGridPointerLeave() {
 }
 
 function onGridPointerDown(event: PointerEvent) {
-  if (!layout.editing || layout.draggedWidgetId || layout.resizingWidgetId) {
+  if (!layout.editing || layout.serverPreviewActive || layout.draggedWidgetId || layout.resizingWidgetId) {
     return
   }
 
@@ -108,11 +127,16 @@ function getEmptyPositionFromPointer(clientX: number, clientY: number) {
 
   const position = projectPointerToGrid(clientX, clientY, gridRect)
 
-  if (!position || isPositionOccupied(position)) {
+  if (!position || !isPositionAvailable(position)) {
     return null
   }
 
   return position
+}
+
+function isPositionAvailable(position: WorkbenchGridPosition) {
+  return !isPositionOccupied(position)
+    && workbenchWidgetDefinitions.some(definition => layout.canAddWidgetAt(definition.key as WorkbenchWidgetKey, position))
 }
 
 function projectPointerToGrid(clientX: number, clientY: number, gridRect: DOMRect): WorkbenchGridPosition | null {
@@ -333,7 +357,7 @@ if (import.meta.client) {
           v-for="widget in renderedWidgets"
           :key="widget.id"
           :widget="widget"
-          :editing="layout.editing"
+          :editing="layout.editing && !layout.serverPreviewActive"
           :selected="selectedWidgetId === widget.id"
           :highlighted="highlightedWidgetKey === widget.key"
           @select="onSelectWidget"
@@ -343,7 +367,7 @@ if (import.meta.client) {
 
       <Transition name="toolbox-empty-cell">
         <div
-          v-if="layout.editing && activeEmptyPosition"
+          v-if="layout.editing && !layout.serverPreviewActive && activeEmptyPosition"
           class="toolbox-empty-cell-hover pointer-events-none relative z-0 min-h-0 border border-dashed border-cyan-300/80 bg-cyan-50/32 shadow-inner shadow-cyan-900/6 hdx-radius-card dark:border-cyan-200/30 dark:bg-cyan-300/8"
           :style="hoveredEmptyCellStyle"
         >
@@ -452,14 +476,4 @@ if (import.meta.client) {
   background: rgba(103, 232, 249, 0.14);
 }
 
-@media (max-width: 767px) {
-  .toolbox-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .toolbox-grid > * {
-    grid-column: span 1 / span 1 !important;
-    grid-row: span 1 / span 1 !important;
-  }
-}
 </style>

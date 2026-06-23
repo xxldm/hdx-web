@@ -1,10 +1,27 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createDefaultWorkbenchLayout, defaultWorkbenchLayoutWidgetKeys, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
+import { useAuthStore } from '../../app/stores/auth'
+import { createDefaultWorkbenchLayout, defaultWorkbenchLayoutWidgetKeys, moveLayoutWidget, placeWorkbenchWidgets, readStoredLayout, useWorkbenchLayoutStore, type WorkbenchLayout, type WorkbenchLayoutWidget } from '../../app/stores/workbench-layout'
+import type { WebAuthPublicSession } from '../../app/types/hdx-auth'
 import { constrainWorkbenchWidgetSpan } from '../../app/utils/workbench-widget-meta'
 
 const fetchWorkbenchLayoutMock = vi.hoisted(() => vi.fn())
 const saveWorkbenchLayoutMock = vi.hoisted(() => vi.fn())
+const authenticatedSession = {
+  authenticated: true,
+  csrfToken: 'a'.repeat(64),
+  accessTokenExpiresAt: '2026-06-06T10:15:00Z',
+  refreshTokenExpiresAt: '2026-06-13T10:00:00Z',
+  sid: 'session-id',
+  actorType: 'USER',
+  subject: 'USER:1',
+  user: {
+    id: 1,
+    displayName: '用户'
+  },
+  roles: ['USER'],
+  permissions: ['workbench:read']
+} satisfies WebAuthPublicSession
 
 vi.mock('../../app/utils/hdx-api-client', () => ({
   fetchWorkbenchLayout: fetchWorkbenchLayoutMock,
@@ -55,13 +72,16 @@ describe('workbench layout store', () => {
   it('keeps the default layout as an explicit curated set of real widgets', () => {
     const layout = createDefaultWorkbenchLayout()
 
+    expect(layout.schemaVersion).toBe(1)
+    expect(layout.version).toBe(0)
     expect(layout.widgets.map(widget => widget.key)).toEqual([...defaultWorkbenchLayoutWidgetKeys])
     expect(layout.widgets.map(widget => widget.id)).toEqual(['default-timer'])
   })
 
   it('migrates order-only widgets to explicit grid coordinates', () => {
     const layout = {
-      version: 1 as const,
+      schemaVersion: 1 as const,
+      version: 0,
       rows: 3,
       columns: 3,
       gap: 8,
@@ -88,7 +108,8 @@ describe('workbench layout store', () => {
 
   it('preserves explicit empty cells instead of compacting widgets', () => {
     const layout = {
-      version: 1 as const,
+      schemaVersion: 1 as const,
+      version: 0,
       rows: 3,
       columns: 3,
       gap: 8,
@@ -245,6 +266,13 @@ describe('workbench layout store', () => {
     expect(localStorage.getItem('hdx:web:workbench-layout:v1')).toBeNull()
   })
 
+  it('returns persisted layout state so Pinia can hydrate SSR-rendered widgets', async () => {
+    const store = await createLoadedStore()
+
+    expect(store.remoteLayout?.widgets).toHaveLength(1)
+    expect(store.draft.widgets).toHaveLength(1)
+  })
+
   it('uses an empty layout when backend layout loading fails', async () => {
     fetchWorkbenchLayoutMock.mockRejectedValueOnce(new Error('offline'))
     const store = useWorkbenchLayoutStore()
@@ -253,6 +281,23 @@ describe('workbench layout store', () => {
 
     expect(store.widgets).toEqual([])
     expect(store.errorKey).toBe('workbench.layout.loadFailed')
+    expect(store.loading).toBe(false)
+  })
+
+  it('clears auth state when backend layout loading requires login', async () => {
+    const auth = useAuthStore()
+    auth.session = authenticatedSession
+    fetchWorkbenchLayoutMock.mockRejectedValueOnce(createAuthRequiredError())
+    const store = useWorkbenchLayoutStore()
+
+    const result = await store.loadLayout()
+
+    expect(result).toBe('auth-expired')
+    expect(auth.authenticated).toBe(false)
+    expect(auth.errorKey).toBe('auth.sessionExpired')
+    expect(store.widgets).toEqual([])
+    expect(store.errorKey).toBe('auth.sessionExpired')
+    expect(store.initialized).toBe(true)
     expect(store.loading).toBe(false)
   })
 
@@ -285,9 +330,105 @@ describe('workbench layout store', () => {
 
     expect(store.columns).toBe(3)
     expect(saveWorkbenchLayoutMock).toHaveBeenCalledWith(expect.objectContaining({
+      schemaVersion: 1,
+      version: 0,
       columns: 3
     }))
     expect(localStorage.getItem('hdx:web:workbench-layout:v1')).toBeNull()
+  })
+
+  it('keeps the user draft and previews the server layout after a save conflict', async () => {
+    const store = await createLoadedStore()
+    const serverLayout = {
+      ...createDefaultWorkbenchLayout(),
+      version: 2,
+      columns: 4
+    }
+    store.startEditing()
+    store.setColumns(3)
+    saveWorkbenchLayoutMock.mockRejectedValueOnce(createWorkbenchLayoutConflictError(serverLayout))
+
+    const result = await store.saveEditing()
+
+    expect(result).toBe('conflict')
+    expect(store.editing).toBe(true)
+    expect(store.columns).toBe(3)
+    expect(store.layoutConflict).toMatchObject({
+      currentVersion: 2,
+      serverLayout: expect.objectContaining({ columns: 4 })
+    })
+
+    store.beginServerLayoutPreview()
+    expect(store.serverPreviewActive).toBe(true)
+    expect(store.columns).toBe(4)
+
+    store.endServerLayoutPreview()
+    expect(store.serverPreviewActive).toBe(false)
+    expect(store.columns).toBe(3)
+  })
+
+  it('resubmits the user draft with the conflict current version when overwriting', async () => {
+    const store = await createLoadedStore()
+    const serverLayout = {
+      ...createDefaultWorkbenchLayout(),
+      version: 2
+    }
+    store.startEditing()
+    store.setColumns(3)
+    saveWorkbenchLayoutMock.mockRejectedValueOnce(createWorkbenchLayoutConflictError(serverLayout))
+    saveWorkbenchLayoutMock.mockImplementationOnce(async value => ({
+      ...value,
+      version: 3
+    }))
+
+    await store.saveEditing()
+    const result = await store.overwriteLayoutConflict()
+
+    expect(result).toBe('success')
+    expect(saveWorkbenchLayoutMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      version: 2,
+      columns: 3
+    }))
+    expect(store.editing).toBe(false)
+    expect(store.remoteLayout?.version).toBe(3)
+    expect(store.layoutConflict).toBeNull()
+  })
+
+  it('can discard the draft and keep the server layout after a save conflict', async () => {
+    const store = await createLoadedStore()
+    const serverLayout = {
+      ...createDefaultWorkbenchLayout(),
+      version: 2,
+      columns: 4
+    }
+    store.startEditing()
+    store.setColumns(3)
+    saveWorkbenchLayoutMock.mockRejectedValueOnce(createWorkbenchLayoutConflictError(serverLayout))
+
+    await store.saveEditing()
+
+    expect(store.applyServerLayoutFromConflict()).toBe(true)
+    expect(store.editing).toBe(false)
+    expect(store.columns).toBe(4)
+    expect(store.remoteLayout?.version).toBe(2)
+    expect(store.layoutConflict).toBeNull()
+  })
+
+  it('clears edit state when saving layout requires login', async () => {
+    const auth = useAuthStore()
+    auth.session = authenticatedSession
+    const store = await createLoadedStore()
+    store.startEditing()
+    saveWorkbenchLayoutMock.mockRejectedValueOnce(createAuthRequiredError())
+
+    const result = await store.saveEditing()
+
+    expect(result).toBe('auth-expired')
+    expect(auth.authenticated).toBe(false)
+    expect(store.editing).toBe(false)
+    expect(store.widgets).toEqual([])
+    expect(store.errorKey).toBe('auth.sessionExpired')
+    expect(store.saving).toBe(false)
   })
 
   it('moves a widget earlier or later through the current layout rules', async () => {
@@ -481,5 +622,30 @@ function createHeader() {
     icon: true,
     title: true,
     description: true
+  }
+}
+
+function createAuthRequiredError() {
+  return {
+    statusCode: 401,
+    data: {
+      code: 'auth-required'
+    }
+  }
+}
+
+function createWorkbenchLayoutConflictError(serverLayout: WorkbenchLayout) {
+  return {
+    statusCode: 409,
+    data: {
+      code: 'WORKBENCH_LAYOUT_CONFLICT',
+      message: '工作台布局已在其他位置更新，请处理冲突。',
+      resourceType: 'workbenchLayout',
+      baseVersion: Math.max(serverLayout.version - 1, 0),
+      currentVersion: serverLayout.version,
+      updatedAt: '2026-06-23T12:00:00Z',
+      updatedByUserId: 'USER:2',
+      serverLayout
+    }
   }
 }

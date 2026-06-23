@@ -67,6 +67,14 @@ export default defineNuxtConfig({
         { name: 'description', content: 'HDX 工具箱 Web 工作台' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
       ],
+      link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+        { rel: 'icon', type: 'image/png', href: '/favicon-32x32.png', sizes: '32x32' },
+        { rel: 'icon', type: 'image/png', href: '/favicon-64x64.png', sizes: '64x64' },
+        { rel: 'icon', type: 'image/png', href: '/icon-128x128.png', sizes: '128x128' },
+        { rel: 'icon', type: 'image/png', href: '/icon-256x256.png', sizes: '256x256' },
+        { rel: 'icon', type: 'image/png', href: '/icon-512x512.png', sizes: '512x512' }
+      ],
       script: [
         {
           innerHTML: themePreferenceHeadScript,
@@ -123,6 +131,9 @@ export default defineNuxtConfig({
     storageKey: 'hdx-color-mode'
   },
   ui: {
+    experimental: {
+      componentDetection: true
+    },
     theme: {
       colors: ['primary', 'secondary', 'success', 'info', 'warning', 'error', 'neutral']
     }

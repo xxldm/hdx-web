@@ -1,6 +1,8 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { useAuthStore } from './auth'
 import { z } from 'zod'
+import { extractWorkbenchLayoutConflict, isAuthRequiredApiError } from '~/utils/api-error'
 import { fetchWorkbenchLayout, saveWorkbenchLayout } from '~/utils/hdx-api-client'
 import {
   constrainWorkbenchWidgetSpan,
@@ -19,6 +21,8 @@ const maxWidgetCount = 24
 export type WorkbenchDropPlacement = 'before' | 'after'
 export type WorkbenchPushDirection = 'up' | 'down' | 'left' | 'right'
 export type WorkbenchWidgetChrome = 'card' | 'bare'
+export type WorkbenchLayoutPersistenceResult = 'success' | 'failed' | 'auth-expired' | 'conflict'
+type WorkbenchLayoutConflictPreviewMode = 'off' | 'hover' | 'pinned'
 
 export interface WorkbenchWidgetHeaderPreference {
   visible: boolean
@@ -61,7 +65,8 @@ export const workbenchLayoutWidgetSchema = z.object({
 })
 
 export const workbenchLayoutSchema = z.object({
-  version: z.literal(1),
+  schemaVersion: z.literal(1).default(1),
+  version: z.number().int().nonnegative().default(0),
   rows: z.number().int().min(minGridSize).max(maxGridSize),
   columns: z.number().int().min(minGridSize).max(maxGridSize),
   gap: z.number().int().min(minGap).max(maxGap),
@@ -85,7 +90,8 @@ export interface WorkbenchLayoutWidget {
 }
 
 export interface WorkbenchLayout {
-  version: 1
+  schemaVersion: 1
+  version: number
   rows: number
   columns: number
   gap: number
@@ -103,6 +109,15 @@ export interface WorkbenchLayoutSummary {
   occupiedCells: number
 }
 
+export interface WorkbenchLayoutConflict {
+  message: string
+  baseVersion: number
+  currentVersion: number
+  updatedAt: string
+  updatedByUserId: string
+  serverLayout: WorkbenchLayout
+}
+
 export const defaultWorkbenchLayoutWidgetKeys = ['timer'] as const satisfies readonly WorkbenchWidgetKey[]
 export const emptyWorkbenchLayout = createEmptyWorkbenchLayout()
 export const defaultWorkbenchLayout = createDefaultWorkbenchLayout()
@@ -115,6 +130,8 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const errorKey = ref<string | null>(null)
   const editing = ref(false)
   const draft = ref<WorkbenchLayout>(cloneLayout(emptyWorkbenchLayout))
+  const layoutConflict = ref<WorkbenchLayoutConflict | null>(null)
+  const conflictPreviewMode = ref<WorkbenchLayoutConflictPreviewMode>('off')
   const draggedWidgetId = ref<string | null>(null)
   const dropTargetWidgetId = ref<string | null>(null)
   const dropTargetPlacement = ref<WorkbenchDropPlacement>('before')
@@ -123,9 +140,16 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   const dropTargetRow = ref<number | null>(null)
   const resizingWidgetId = ref<string | null>(null)
 
-  const layout = computed(() => editing.value ? draft.value : remoteLayout.value ?? emptyWorkbenchLayout)
+  const serverPreviewActive = computed(() => Boolean(layoutConflict.value && conflictPreviewMode.value !== 'off'))
+  const layout = computed(() => {
+    if (serverPreviewActive.value && layoutConflict.value) {
+      return layoutConflict.value.serverLayout
+    }
+
+    return editing.value ? draft.value : remoteLayout.value ?? emptyWorkbenchLayout
+  })
   const previewLayout = computed(() => {
-    if (!editing.value || !draggedWidgetId.value || dropTargetColumn.value === null || dropTargetRow.value === null) {
+    if (serverPreviewActive.value || !editing.value || !draggedWidgetId.value || dropTargetColumn.value === null || dropTargetRow.value === null) {
       return layout.value
     }
 
@@ -161,16 +185,28 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   }))
 
   async function loadLayout() {
+    const auth = useAuthStore()
+
     loading.value = true
     errorKey.value = null
+    clearLayoutConflict()
 
     try {
       remoteLayout.value = normalizeLayout(await fetchWorkbenchLayout())
       draft.value = cloneLayout(remoteLayout.value)
-    } catch {
+      return 'success' satisfies WorkbenchLayoutPersistenceResult
+    } catch (error) {
       remoteLayout.value = null
       draft.value = cloneLayout(emptyWorkbenchLayout)
+
+      if (isAuthRequiredApiError(error)) {
+        markLayoutUnavailableAfterAuthExpired()
+        auth.markSessionExpired()
+        return 'auth-expired' satisfies WorkbenchLayoutPersistenceResult
+      }
+
       errorKey.value = 'workbench.layout.loadFailed'
+      return 'failed' satisfies WorkbenchLayoutPersistenceResult
     } finally {
       initialized.value = true
       loading.value = false
@@ -180,6 +216,7 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   function startEditing() {
     draft.value = cloneLayout(currentPersistedLayout())
     clearDragTarget()
+    clearLayoutConflict()
     resizingWidgetId.value = null
     editing.value = true
   }
@@ -187,11 +224,14 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
   function cancelEditing() {
     draft.value = cloneLayout(currentPersistedLayout())
     clearDragTarget()
+    clearLayoutConflict()
     resizingWidgetId.value = null
     editing.value = false
   }
 
   async function saveEditing() {
+    const auth = useAuthStore()
+
     saving.value = true
     errorKey.value = null
 
@@ -199,18 +239,50 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
       remoteLayout.value = normalizeLayout(await saveWorkbenchLayout(normalizeLayout(draft.value)))
       draft.value = cloneLayout(remoteLayout.value)
       clearDragTarget()
+      clearLayoutConflict()
       resizingWidgetId.value = null
       editing.value = false
-    } catch {
+      return 'success' satisfies WorkbenchLayoutPersistenceResult
+    } catch (error) {
+      if (isAuthRequiredApiError(error)) {
+        markLayoutUnavailableAfterAuthExpired()
+        auth.markSessionExpired()
+        return 'auth-expired' satisfies WorkbenchLayoutPersistenceResult
+      }
+
+      const conflict = extractWorkbenchLayoutConflict(error)
+
+      if (conflict) {
+        layoutConflict.value = {
+          message: conflict.message,
+          baseVersion: conflict.baseVersion,
+          currentVersion: conflict.currentVersion,
+          updatedAt: conflict.updatedAt,
+          updatedByUserId: conflict.updatedByUserId,
+          serverLayout: normalizeLayout(conflict.serverLayout)
+        }
+        conflictPreviewMode.value = 'off'
+        clearDragTarget()
+        resizingWidgetId.value = null
+        errorKey.value = null
+        return 'conflict' satisfies WorkbenchLayoutPersistenceResult
+      }
+
       errorKey.value = 'workbench.layout.saveFailed'
+      return 'failed' satisfies WorkbenchLayoutPersistenceResult
     } finally {
       saving.value = false
     }
   }
 
   function resetLayout() {
-    draft.value = cloneLayout(defaultWorkbenchLayout)
+    draft.value = {
+      ...cloneLayout(defaultWorkbenchLayout),
+      schemaVersion: draft.value.schemaVersion,
+      version: draft.value.version
+    }
     clearDragTarget()
+    clearLayoutConflict()
     resizingWidgetId.value = null
   }
 
@@ -607,6 +679,61 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     clearDropTarget()
   }
 
+  function beginServerLayoutPreview() {
+    if (layoutConflict.value && conflictPreviewMode.value !== 'pinned') {
+      conflictPreviewMode.value = 'hover'
+    }
+  }
+
+  function endServerLayoutPreview() {
+    if (conflictPreviewMode.value === 'hover') {
+      conflictPreviewMode.value = 'off'
+    }
+  }
+
+  function toggleServerLayoutPreview() {
+    if (!layoutConflict.value) {
+      conflictPreviewMode.value = 'off'
+      return
+    }
+
+    conflictPreviewMode.value = conflictPreviewMode.value === 'pinned' ? 'off' : 'pinned'
+  }
+
+  function applyServerLayoutFromConflict() {
+    if (!layoutConflict.value) {
+      return false
+    }
+
+    remoteLayout.value = cloneLayout(layoutConflict.value.serverLayout)
+    draft.value = cloneLayout(remoteLayout.value)
+    editing.value = false
+    resizingWidgetId.value = null
+    clearDragTarget()
+    clearLayoutConflict()
+    return true
+  }
+
+  async function overwriteLayoutConflict() {
+    if (!layoutConflict.value) {
+      return await saveEditing()
+    }
+
+    draft.value = {
+      ...cloneLayout(draft.value),
+      schemaVersion: layoutConflict.value.serverLayout.schemaVersion,
+      version: layoutConflict.value.currentVersion
+    }
+    conflictPreviewMode.value = 'off'
+
+    return await saveEditing()
+  }
+
+  function clearLayoutConflict() {
+    layoutConflict.value = null
+    conflictPreviewMode.value = 'off'
+  }
+
   function resetState() {
     remoteLayout.value = null
     initialized.value = false
@@ -615,8 +742,19 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     errorKey.value = null
     editing.value = false
     draft.value = cloneLayout(emptyWorkbenchLayout)
+    clearLayoutConflict()
     resizingWidgetId.value = null
     clearDragTarget()
+  }
+
+  function markLayoutUnavailableAfterAuthExpired() {
+    remoteLayout.value = null
+    draft.value = cloneLayout(emptyWorkbenchLayout)
+    editing.value = false
+    clearLayoutConflict()
+    resizingWidgetId.value = null
+    clearDragTarget()
+    errorKey.value = 'auth.sessionExpired'
   }
 
   function currentPersistedLayout() {
@@ -629,9 +767,17 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     saving,
     errorKey,
     editing,
+    remoteLayout,
+    draft,
+    layoutConflict,
+    conflictPreviewMode,
+    serverPreviewActive,
     draggedWidgetId,
     dropTargetWidgetId,
     dropTargetPlacement,
+    dropTargetPushDirection,
+    dropTargetColumn,
+    dropTargetRow,
     resizingWidgetId,
     layout,
     previewLayout,
@@ -675,13 +821,19 @@ export const useWorkbenchLayoutStore = defineStore('workbench-layout', () => {
     endResize,
     reorderWidgets,
     moveWidget,
+    beginServerLayoutPreview,
+    endServerLayoutPreview,
+    toggleServerLayoutPreview,
+    applyServerLayoutFromConflict,
+    overwriteLayoutConflict,
     resetState
   }
 })
 
 export function createDefaultWorkbenchLayout(): WorkbenchLayout {
   return normalizeLayout({
-    version: 1,
+    schemaVersion: 1,
+    version: 0,
     rows: 4,
     columns: 4,
     gap: 12,
@@ -708,7 +860,8 @@ export function createDefaultWorkbenchLayout(): WorkbenchLayout {
 
 export function createEmptyWorkbenchLayout(): WorkbenchLayout {
   return normalizeLayout({
-    version: 1,
+    schemaVersion: 1,
+    version: 0,
     rows: 4,
     columns: 4,
     gap: 12,
@@ -739,7 +892,8 @@ export function normalizeLayout(value: unknown): WorkbenchLayout {
   const columns = clampInteger(parsed.data.columns, minGridSize, maxGridSize)
 
   return {
-    version: 1,
+    schemaVersion: 1,
+    version: parsed.data.version,
     rows,
     columns,
     gap: clampInteger(parsed.data.gap, minGap, maxGap),

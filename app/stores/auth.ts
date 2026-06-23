@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthLoginRequestSchema } from '~/types/hdx-auth'
+import { extractFetchStatus } from '~/utils/api-error'
 import { fetchAuthSession, loginWithPassword, logoutSession } from '~/utils/hdx-api-client'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -77,6 +78,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function markSessionExpired() {
+    const currentCsrfToken = csrfToken.value
+
+    session.value = currentCsrfToken ? createAnonymousSession(currentCsrfToken) : null
+    initialized.value = true
+    loading.value = false
+    loginLoading.value = false
+    errorKey.value = 'auth.sessionExpired'
+  }
+
   return {
     session,
     loading,
@@ -89,9 +100,25 @@ export const useAuthStore = defineStore('auth', () => {
     isLocalAdmin,
     loadSession,
     login,
-    logout
+    logout,
+    markSessionExpired
   }
 })
+
+function createAnonymousSession(csrfToken: string): WebAuthPublicSession {
+  return {
+    authenticated: false,
+    csrfToken,
+    accessTokenExpiresAt: null,
+    refreshTokenExpiresAt: null,
+    sid: null,
+    actorType: null,
+    subject: null,
+    user: null,
+    roles: [],
+    permissions: []
+  }
+}
 
 function resolveAuthErrorKey(error: unknown, fallback: string) {
   const upstreamCode = extractUpstreamCode(error)
@@ -144,39 +171,6 @@ function extractUpstreamCode(error: unknown) {
 
   if (typeof record.data?.data?.code === 'string' && record.data.data.code.startsWith('AUTH_')) {
     return record.data.data.code
-  }
-
-  return null
-}
-
-function extractFetchStatus(error: unknown) {
-  if (!error || typeof error !== 'object') {
-    return null
-  }
-
-  const record = error as {
-    status?: unknown
-    statusCode?: unknown
-    data?: {
-      status?: unknown
-      statusCode?: unknown
-    }
-  }
-
-  if (typeof record.statusCode === 'number') {
-    return record.statusCode
-  }
-
-  if (typeof record.status === 'number') {
-    return record.status
-  }
-
-  if (typeof record.data?.statusCode === 'number') {
-    return record.data.statusCode
-  }
-
-  if (typeof record.data?.status === 'number') {
-    return record.data.status
   }
 
   return null

@@ -1,6 +1,6 @@
 import type { z } from 'zod'
-import { backendApiErrorResponseSchema } from '~~/app/types/hdx-api'
-import { BoundaryError } from '~~/app/utils/api-error'
+import { backendApiErrorResponseSchema, workbenchLayoutConflictResponseSchema } from '~~/app/types/hdx-api'
+import { BoundaryError, PassthroughApiError } from '~~/app/utils/api-error'
 import { getBackendConfig } from './backend-config'
 
 type BackendFetchOptions = {
@@ -91,6 +91,21 @@ async function fetchHdxService<T>(
         )
       }
 
+      if (fetchError.statusCode === 409) {
+        const parsedConflict = workbenchLayoutConflictResponseSchema.safeParse(fetchError.data)
+
+        if (parsedConflict.success) {
+          throw new PassthroughApiError(409, parsedConflict.data, parsedConflict.data.message)
+        }
+
+        throw new BoundaryError(
+          'upstream-failed',
+          fetchError.message ?? '请求发生冲突，请刷新后重试。',
+          409,
+          fetchError.code
+        )
+      }
+
       if (fetchError.statusCode === 401) {
         throw new BoundaryError(
           'auth-required',
@@ -132,7 +147,7 @@ async function fetchHdxService<T>(
   }
 }
 
-function normalizeFetchError(error: unknown): { statusCode: number, message?: string, code?: string } | null {
+function normalizeFetchError(error: unknown): { statusCode: number, message?: string, code?: string, data?: unknown } | null {
   if (!error || typeof error !== 'object') {
     return null
   }
@@ -162,5 +177,5 @@ function normalizeFetchError(error: unknown): { statusCode: number, message?: st
       : undefined
   const code = parsedError.success ? parsedError.data.code : undefined
 
-  return { statusCode, message, code }
+  return { statusCode, message, code, data }
 }

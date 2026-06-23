@@ -63,7 +63,8 @@ export const workbenchLayoutWidgetSchema = z.object({
 export type WorkbenchLayoutWidgetRecord = z.infer<typeof workbenchLayoutWidgetSchema>
 
 export const workbenchLayoutSchema = z.object({
-  version: z.literal(1),
+  schemaVersion: z.literal(1),
+  version: z.number().int().nonnegative(),
   rows: z.number().int().min(1).max(8),
   columns: z.number().int().min(1).max(8),
   gap: z.number().int().min(2).max(24),
@@ -71,3 +72,16 @@ export const workbenchLayoutSchema = z.object({
 })
 
 export type WorkbenchLayoutRecord = z.infer<typeof workbenchLayoutSchema>
+
+export const workbenchLayoutConflictResponseSchema = z.object({
+  code: z.literal('WORKBENCH_LAYOUT_CONFLICT'),
+  message: z.string().min(1),
+  resourceType: z.literal('workbenchLayout'),
+  baseVersion: z.number().int().nonnegative(),
+  currentVersion: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime(),
+  updatedByUserId: z.string().min(1),
+  serverLayout: workbenchLayoutSchema
+})
+
+export type WorkbenchLayoutConflictResponse = z.infer<typeof workbenchLayoutConflictResponseSchema>

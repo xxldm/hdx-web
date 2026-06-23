@@ -73,6 +73,7 @@
     },
     "csrfFailed": "The sign-in check has expired. Refresh the page and try again.",
     "logoutFailed": "Sign-out was not fully completed. Refresh the page to confirm the state.",
+    "sessionExpired": "Your session has expired. Sign in again.",
     "sessionFailed": "The sign-in state could not be confirmed. Try again later."
   },
   "desktopOnline": {
@@ -145,15 +146,30 @@
     "widgets": {
       "timer": {
         "title": "Timer",
-        "description": "Starts at 10 minutes and keeps time in the background"
+        "description": "Fixed duration presets that keep time in the background"
       }
     },
     "timer": {
+      "presets": "Presets",
+      "addPreset": "Add duration",
+      "newPreset": "New duration",
+      "runningCount": "{count} running",
+      "actionsByLabel": "More actions for {label}",
+      "presetActionByLabel": "{action} {label}",
+      "deletePresetByLabel": "Delete {label}",
+      "lastPresetHint": "Keep at least one duration",
+      "runningPresetDeleteHint": "Cannot delete a running timer",
       "durationMinutes": "Duration",
+      "secondsUnit": "sec",
       "minutesUnit": "min",
+      "hoursUnit": "hr",
+      "presetSeconds": "{count} sec",
+      "presetMinutes": "{count} min",
+      "presetHours": "{count} hr",
       "start": "Start",
       "pause": "Pause",
       "resume": "Resume",
+      "restart": "Restart",
       "reset": "Reset",
       "status": {
         "idle": "Ready",
@@ -196,7 +212,13 @@
       "showTitle": "Show title",
       "showDescription": "Show description",
       "loadFailed": "Layout could not be loaded.",
-      "saveFailed": "Layout could not be saved. Try again later."
+      "saveFailed": "Layout could not be saved. Try again later.",
+      "conflictTitle": "A newer layout exists.",
+      "conflictDescription": "The server is on version {current}; your draft is still kept.",
+      "previewServer": "Preview server version",
+      "previewingServer": "Previewing server version",
+      "useServer": "Use server version",
+      "overwriteServer": "Overwrite with mine"
     }
   }
 }

@@ -1,5 +1,13 @@
 <script setup lang="ts">
+import ToolboxTimerPresetChip from '~/components/workbench/widgets/ToolboxTimerPresetChip.vue'
+import {
+  maxWorkbenchTimerDurationSeconds,
+  minWorkbenchTimerDurationSeconds,
+  type WorkbenchTimerPreset
+} from '~/stores/workbench-timer'
 import type { ResolvedWorkbenchWidgetOrientation } from '~/utils/workbench-widget-meta'
+
+type TimerPresetUnit = 'seconds' | 'minutes' | 'hours'
 
 const props = withDefaults(defineProps<{
   orientation?: ResolvedWorkbenchWidgetOrientation
@@ -7,161 +15,260 @@ const props = withDefaults(defineProps<{
   orientation: 'horizontal'
 })
 
+const timerPresetUnitMultipliers: Record<TimerPresetUnit, number> = {
+  seconds: 1,
+  minutes: 60,
+  hours: 60 * 60
+}
+
 const { t } = useI18n()
 const timer = useWorkbenchTimerStore()
+const addPresetOpen = shallowRef(false)
+const newPresetValue = shallowRef<number | null>(10)
+const newPresetUnit = shallowRef<TimerPresetUnit>('minutes')
+const alarmAudio = shallowRef<HTMLAudioElement | null>(null)
 
 const isHorizontal = computed(() => props.orientation === 'horizontal')
-const durationMinutes = computed({
-  get: () => timer.durationMinutes,
-  set: (value: number | null | undefined) => timer.setDurationMinutes(value)
-})
-const statusLabel = computed(() => t(`workbench.timer.status.${timer.status}`))
-const primaryActionLabel = computed(() => timer.running ? t('workbench.timer.pause') : timer.paused ? t('workbench.timer.resume') : t('workbench.timer.start'))
-const primaryActionIcon = computed(() => timer.running ? 'i-lucide-pause' : 'i-lucide-play')
-const primaryActionColor = computed(() => timer.running ? 'warning' : 'primary')
-const canReset = computed(() => timer.remainingSeconds !== timer.durationSeconds || timer.finished || timer.running)
+const runningSummary = computed(() => timer.runningPresetCount > 0
+  ? t('workbench.timer.runningCount', { count: timer.runningPresetCount })
+  : t('workbench.timer.presets')
+)
+const presetUnitItems = computed(() => [
+  {
+    label: t('workbench.timer.secondsUnit'),
+    value: 'seconds'
+  },
+  {
+    label: t('workbench.timer.minutesUnit'),
+    value: 'minutes'
+  },
+  {
+    label: t('workbench.timer.hoursUnit'),
+    value: 'hours'
+  }
+])
+const maxNewPresetValue = computed(() => Math.floor(maxWorkbenchTimerDurationSeconds / timerPresetUnitMultipliers[newPresetUnit.value]))
+const hasNewPresetValue = computed(() => typeof newPresetValue.value === 'number' && Number.isFinite(newPresetValue.value))
+const newPresetSeconds = computed(() => normalizeNewPresetValue(newPresetValue.value) * timerPresetUnitMultipliers[newPresetUnit.value])
+const canAddPreset = computed(() => hasNewPresetValue.value && newPresetSeconds.value >= minWorkbenchTimerDurationSeconds && newPresetSeconds.value <= maxWorkbenchTimerDurationSeconds)
 
-function onPrimaryAction() {
-  if (timer.running) {
-    timer.pause()
+function onAddPreset() {
+  if (!canAddPreset.value) {
     return
   }
 
-  timer.start()
+  const addedPreset = timer.addPresetSeconds(newPresetSeconds.value)
+
+  if (addedPreset) {
+    addPresetOpen.value = false
+  }
+}
+
+function onRemovePreset(id: string) {
+  timer.removePreset(id)
+}
+
+function formatPresetDuration(seconds: number) {
+  if (seconds % timerPresetUnitMultipliers.hours === 0) {
+    return t('workbench.timer.presetHours', { count: seconds / timerPresetUnitMultipliers.hours })
+  }
+
+  if (seconds % timerPresetUnitMultipliers.minutes === 0) {
+    return t('workbench.timer.presetMinutes', { count: seconds / timerPresetUnitMultipliers.minutes })
+  }
+
+  return t('workbench.timer.presetSeconds', { count: seconds })
+}
+
+function canResetPreset(preset: WorkbenchTimerPreset) {
+  return timer.getPresetStatusById(preset.id) !== 'idle'
+    || timer.getPresetRemainingSecondsById(preset.id) !== preset.durationSeconds
+}
+
+function normalizeNewPresetValue(value: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 1
+  }
+
+  return Math.min(Math.max(Math.trunc(value), 1), maxNewPresetValue.value)
+}
+
+function playAlarm() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const audio = alarmAudio.value ?? new Audio('/闹钟.mp3')
+  alarmAudio.value = audio
+  audio.currentTime = 0
+
+  void audio.play().catch(() => {
+    // 浏览器可能因为自动播放策略拒绝播放；计时状态仍然需要确认，避免持续重复触发。
+  })
+}
+
+function handleDueAlarms() {
+  const duePresets = timer.dueAlarmPresets
+
+  if (duePresets.length === 0) {
+    return
+  }
+
+  playAlarm()
+
+  for (const preset of duePresets) {
+    if (preset.endsAt !== null) {
+      timer.acknowledgePresetAlarm(preset.id, preset.endsAt)
+    }
+  }
+}
+
+watch(newPresetUnit, () => {
+  newPresetValue.value = normalizeNewPresetValue(newPresetValue.value)
+})
+
+if (import.meta.client) {
+  watch(
+    () => timer.dueAlarmPresets.map(preset => `${preset.id}:${preset.endsAt}`).join('|'),
+    handleDueAlarms,
+    { flush: 'post' }
+  )
+
+  onMounted(handleDueAlarms)
 }
 </script>
 
 <template>
-  <ClientOnly>
-    <div
-      class="timer-widget grid h-full min-h-0 gap-3"
-      :class="isHorizontal ? 'timer-widget-horizontal' : 'timer-widget-vertical'"
-    >
-      <section class="timer-face grid min-w-0 content-center gap-2 border border-white/55 bg-white/48 p-3 shadow-sm shadow-slate-900/5 backdrop-blur-xl hdx-radius-card dark:border-white/12 dark:bg-white/8 dark:shadow-black/20">
-        <div class="flex min-w-0 items-center justify-between gap-2">
-          <span class="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-white/58">
-            <UIcon name="i-lucide-hourglass" class="size-3.5 shrink-0" />
-            <span class="truncate">{{ statusLabel }}</span>
-          </span>
-          <span class="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-100">
-            {{ timer.progressPercent }}%
-          </span>
-        </div>
+  <div
+    class="timer-widget grid h-full min-h-0 gap-3"
+    :class="isHorizontal ? 'timer-widget-horizontal' : 'timer-widget-vertical'"
+  >
+    <div class="timer-widget-summary flex min-w-0 items-center justify-between gap-2">
+      <span class="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-[color:var(--ui-text-muted)]">
+        <UIcon name="i-lucide-hourglass" class="size-3.5 shrink-0" />
+        <span class="truncate">{{ runningSummary }}</span>
+      </span>
 
-        <strong class="timer-time block truncate text-center font-semibold tabular-nums tracking-normal text-slate-950 dark:text-white">
-          {{ timer.remainingLabel }}
-        </strong>
+      <UPopover
+        v-model:open="addPresetOpen"
+        mode="click"
+        :content="{ align: 'end', side: 'bottom', sideOffset: 8 }"
+        :ui="{ content: 'hdx-floating-menu hdx-radius-popover' }"
+      >
+        <UTooltip :text="t('workbench.timer.addPreset')">
+          <UButton
+            type="button"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-lucide-plus"
+            class="timer-add-button cursor-pointer hdx-radius-card"
+            :aria-label="t('workbench.timer.addPreset')"
+          />
+        </UTooltip>
 
-        <UProgress
-          :model-value="timer.progressPercent"
-          :max="100"
-          color="primary"
-          size="sm"
-          :ui="{
-            base: 'bg-white/60 dark:bg-white/12',
-            indicator: 'bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300 dark:from-amber-200 dark:via-orange-300 dark:to-rose-300'
-          }"
-        />
-      </section>
-
-      <section class="timer-controls grid min-w-0 content-center gap-2">
-        <label class="grid min-w-0 gap-1.5 text-xs font-medium text-slate-500 dark:text-white/58">
-          <span>{{ t('workbench.timer.durationMinutes') }}</span>
-          <span class="grid grid-cols-[minmax(0,5.5rem)_auto] items-center gap-2">
-            <UInputNumber
-              v-model="durationMinutes"
-              :min="1"
-              :max="1440"
-              :step="1"
-              :increment="false"
-              :decrement="false"
-              :disabled="timer.running"
-              size="xs"
-              variant="subtle"
-              class="min-w-0"
-              :ui="{ base: 'hdx-radius-card text-center tabular-nums' }"
-            />
-            <span class="text-xs text-slate-500 dark:text-white/58">
-              {{ t('workbench.timer.minutesUnit') }}
-            </span>
-          </span>
-        </label>
-
-        <div class="grid grid-cols-2 gap-2">
-          <UTooltip :text="primaryActionLabel">
+        <template #content>
+          <form class="timer-add-form grid w-56 gap-3 p-3" @submit.prevent="onAddPreset">
+            <label class="grid gap-1.5 text-xs font-medium text-[color:var(--ui-text-muted)]">
+              <span>{{ t('workbench.timer.newPreset') }}</span>
+              <span class="grid grid-cols-[minmax(0,1fr)_5.75rem] gap-2">
+                <UInputNumber
+                  v-model="newPresetValue"
+                  :min="1"
+                  :max="maxNewPresetValue"
+                  :step="1"
+                  :increment="true"
+                  :decrement="true"
+                  size="sm"
+                  variant="subtle"
+                  class="min-w-0"
+                  :ui="{ base: 'hdx-radius-card text-center tabular-nums' }"
+                />
+                <USelect
+                  v-model="newPresetUnit"
+                  :items="presetUnitItems"
+                  size="sm"
+                  variant="subtle"
+                  class="min-w-0"
+                  :ui="{ base: 'hdx-radius-card' }"
+                />
+              </span>
+            </label>
             <UButton
-              type="button"
-              :color="primaryActionColor"
+              type="submit"
+              color="primary"
               variant="soft"
-              :icon="primaryActionIcon"
-              class="timer-action-button cursor-pointer justify-center hdx-radius-card"
-              :aria-label="primaryActionLabel"
-              @click="onPrimaryAction"
+              icon="i-lucide-plus"
+              block
+              class="cursor-pointer justify-center hdx-radius-card"
+              :disabled="!canAddPreset"
             >
-              {{ primaryActionLabel }}
+              {{ t('workbench.timer.addPreset') }}
             </UButton>
-          </UTooltip>
-
-          <UTooltip :text="t('workbench.timer.reset')">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-rotate-ccw"
-              class="timer-action-button cursor-pointer justify-center hdx-radius-card"
-              :disabled="!canReset"
-              :aria-label="t('workbench.timer.reset')"
-              @click="timer.reset"
-            >
-              {{ t('workbench.timer.reset') }}
-            </UButton>
-          </UTooltip>
-        </div>
-      </section>
+          </form>
+        </template>
+      </UPopover>
     </div>
 
-    <template #fallback>
-      <div class="grid h-full place-items-center border border-white/55 bg-white/48 p-3 shadow-sm shadow-slate-900/5 hdx-radius-card dark:border-white/12 dark:bg-white/8 dark:shadow-black/20">
-        <strong class="text-3xl font-semibold tabular-nums text-slate-950 dark:text-white">
-          10:00
-        </strong>
-      </div>
-    </template>
-  </ClientOnly>
+    <div class="timer-preset-list min-w-0">
+      <ToolboxTimerPresetChip
+        v-for="preset in timer.presets"
+        :key="preset.id"
+        :preset="preset"
+        :status="timer.getPresetStatusById(preset.id)"
+        :duration-label="formatPresetDuration(preset.durationSeconds)"
+        :remaining-label="timer.getPresetRemainingLabelById(preset.id)"
+        :progress-percent="timer.getPresetProgressPercentById(preset.id)"
+        :can-remove="timer.canRemovePreset(preset.id)"
+        :can-reset="canResetPreset(preset)"
+        @toggle="timer.togglePreset"
+        @reset="timer.resetPreset"
+        @remove="onRemovePreset"
+      />
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .timer-widget {
   container-type: inline-size;
+  align-content: start;
 }
 
 .timer-widget-horizontal {
-  grid-template-columns: minmax(0, 1fr);
-  align-content: center;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .timer-widget-vertical {
-  align-content: space-between;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.timer-time {
-  font-size: clamp(2rem, 26cqi, 4.25rem);
-  line-height: 0.95;
+.timer-widget-summary {
+  min-height: 2rem;
 }
 
-.timer-action-button {
+.timer-preset-list {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.timer-add-button {
   min-width: 0;
 }
 
-@container (min-width: 22rem) {
-  .timer-widget-horizontal {
-    grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 0.58fr);
-    align-items: center;
+@container (min-width: 19rem) {
+  .timer-widget-horizontal .timer-preset-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   }
+}
 
-  .timer-widget-horizontal .timer-face,
-  .timer-widget-horizontal .timer-controls {
-    height: 100%;
+@container (max-width: 18.99rem) {
+  .timer-widget-horizontal .timer-preset-list,
+  .timer-widget-vertical .timer-preset-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

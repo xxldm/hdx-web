@@ -43,7 +43,7 @@ onMounted(() => {
 
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     window.requestAnimationFrame(() => {
-      loginPanelElement.value?.querySelector<HTMLInputElement>('input[name="identifier"]')?.focus()
+      loginPanelElement.value?.querySelector<HTMLInputElement>('input[autocomplete="username"]')?.focus()
     })
   }
 })
@@ -279,11 +279,15 @@ useSeoMeta({
             </dl>
           </section>
 
-          <form class="grid gap-4" @submit.prevent="submitLogin">
+          <form
+            class="grid gap-4"
+            method="post"
+            action="/login"
+            @submit.prevent="submitLogin"
+          >
             <UFormField :label="t('auth.identifier')">
               <UInput
                 v-model="form.identifier"
-                name="identifier"
                 type="text"
                 autocomplete="username"
                 :placeholder="t('auth.identifierPlaceholder')"
@@ -296,7 +300,6 @@ useSeoMeta({
             <UFormField :label="t('auth.password')">
               <UInput
                 v-model="form.password"
-                name="password"
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 :placeholder="t('auth.passwordPlaceholder')"

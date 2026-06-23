@@ -195,4 +195,18 @@ describe('auth store', () => {
     expect(store.authenticated).toBe(false)
     expect(store.errorKey).toBe('auth.logoutFailed')
   })
+
+  it('marks the current public session as expired without dropping csrf state', () => {
+    const store = useAuthStore()
+    store.session = userSession
+
+    store.markSessionExpired()
+
+    expect(store.authenticated).toBe(false)
+    expect(store.csrfToken).toBe(userSession.csrfToken)
+    expect(store.initialized).toBe(true)
+    expect(store.loading).toBe(false)
+    expect(store.loginLoading).toBe(false)
+    expect(store.errorKey).toBe('auth.sessionExpired')
+  })
 })
