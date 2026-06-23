@@ -91,6 +91,61 @@
     "authCheck": "Auth service",
     "gatewayCheck": "Gateway"
   },
+  "admin": {
+    "title": "Admin",
+    "holidays": {
+      "title": "Holiday Admin",
+      "description": "Maintain the fixed Gregorian holidays used by Date Countdown. Lunar dates, make-up days, and complex calendar rules will be designed later.",
+      "create": "Add holiday",
+      "createTitle": "Add holiday",
+      "createDescription": "The holiday key stays stable after creation so data references remain predictable.",
+      "edit": "Edit",
+      "editTitle": "Edit holiday",
+      "editDescription": "Update the display name, date, and enabled state.",
+      "delete": "Delete",
+      "deleteTitle": "Delete holiday",
+      "deleteDescription": "Delete \"{name}\"? It will be hidden from countdown lists.",
+      "refresh": "Refresh holidays",
+      "save": "Save",
+      "cancel": "Cancel",
+      "search": "Search holidays",
+      "empty": "No holiday records yet.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "recurring": "Yearly",
+      "oneOff": "One-off",
+      "loadFailed": "Holiday list could not be loaded.",
+      "saveFailed": "Holiday could not be saved. Try again later.",
+      "deleteFailed": "Holiday could not be deleted. Try again later.",
+      "authExpired": "Your session has expired. Sign in again.",
+      "conflictTitle": "A newer holiday exists.",
+      "conflictDescription": "\"{name}\" is now on version {version}. The table and form are showing the server version.",
+      "filters": {
+        "all": "All",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "fields": {
+        "key": "Key",
+        "name": "Name",
+        "description": "Description",
+        "date": "Date",
+        "recurring": "Recurring",
+        "recurringHint": "Repeats every year",
+        "enabled": "Enabled",
+        "enabledHint": "Show in countdown",
+        "sortOrder": "Sort",
+        "updatedAt": "Updated"
+      },
+      "validation": {
+        "key": "Use lowercase letters, numbers, and hyphens only.",
+        "name": "Enter a holiday name.",
+        "nameLength": "Holiday name must be 120 characters or fewer.",
+        "descriptionLength": "Description must be 500 characters or fewer.",
+        "date": "Choose a valid date."
+      }
+    }
+  },
   "workbench": {
     "title": "HDX Toolbox",
     "heroTitle": "Arrange what you need today",
@@ -116,6 +171,7 @@
       "pinLimit": "Pin up to {count}",
       "groups": {
         "toolbox": "Toolbox",
+        "admin": "Admin",
         "status": "Status",
         "space": "Space"
       },
@@ -127,6 +183,10 @@
         "settings": {
           "title": "Settings",
           "description": "Themes, account, and preferences later"
+        },
+        "holidayAdmin": {
+          "title": "Holiday Admin",
+          "description": "Maintain countdown holidays"
         }
       }
     },

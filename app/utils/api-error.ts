@@ -1,7 +1,9 @@
 import {
+  holidayConflictResponseSchema,
   timerPreferenceConflictResponseSchema,
   userPreferenceConflictResponseSchema,
   workbenchLayoutConflictResponseSchema,
+  type HolidayConflictResponse,
   type TimerPreferenceConflictResponse,
   type UserPreferenceConflictResponse,
   type WorkbenchLayoutConflictResponse
@@ -108,6 +110,24 @@ export function extractTimerPreferenceConflict(error: unknown): TimerPreferenceC
 
 export function isTimerPreferenceConflictApiError(error: unknown) {
   return extractFetchStatus(error) === 409 && Boolean(extractTimerPreferenceConflict(error))
+}
+
+export function extractHolidayConflict(error: unknown): HolidayConflictResponse | null {
+  const candidates = extractApiPayloadCandidates(error)
+
+  for (const candidate of candidates) {
+    const parsed = holidayConflictResponseSchema.safeParse(candidate)
+
+    if (parsed.success) {
+      return parsed.data
+    }
+  }
+
+  return null
+}
+
+export function isHolidayConflictApiError(error: unknown) {
+  return extractFetchStatus(error) === 409 && Boolean(extractHolidayConflict(error))
 }
 
 export function extractUserPreferenceConflict(error: unknown): UserPreferenceConflictResponse | null {

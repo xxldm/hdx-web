@@ -1,5 +1,5 @@
-import type { CreateToolRequest, HolidayRecord, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, UserPreferenceRecord, UserPreferenceSaveRequest, WorkbenchLayoutRecord } from '~/types/hdx-api'
-import { holidayRecordsSchema, runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, userPreferenceSchema, workbenchLayoutSchema } from '~/types/hdx-api'
+import type { CreateToolRequest, HolidayAdminRecord, HolidayCreateRequest, HolidayRecord, HolidayUpdateRequest, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, UserPreferenceRecord, UserPreferenceSaveRequest, WorkbenchLayoutRecord } from '~/types/hdx-api'
+import { holidayAdminRecordSchema, holidayAdminRecordsSchema, holidayRecordsSchema, runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, userPreferenceSchema, workbenchLayoutSchema } from '~/types/hdx-api'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthPublicSessionSchema } from '~/types/hdx-auth'
 import type {
@@ -108,6 +108,55 @@ export async function fetchHolidays(): Promise<HolidayRecord[]> {
   }
 
   return parseApiResponse(holidayRecordsSchema, await fetchHdxApi<unknown>('/holidays'))
+}
+
+export async function fetchAdminHolidays(): Promise<HolidayAdminRecord[]> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(holidayAdminRecordsSchema, await invoke<unknown>('hdx_admin_holidays_list'))
+  }
+
+  return parseApiResponse(holidayAdminRecordsSchema, await fetchHdxApi<unknown>('/admin/holidays'))
+}
+
+export async function createAdminHoliday(input: HolidayCreateRequest): Promise<HolidayAdminRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(holidayAdminRecordSchema, await invoke<unknown>('hdx_admin_holidays_create', { input }))
+  }
+
+  return parseApiResponse(holidayAdminRecordSchema, await fetchHdxApi<unknown>('/admin/holidays', {
+    method: 'POST',
+    body: input
+  }))
+}
+
+export async function updateAdminHoliday(id: number, input: HolidayUpdateRequest): Promise<HolidayAdminRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(holidayAdminRecordSchema, await invoke<unknown>('hdx_admin_holidays_update', { id, input }))
+  }
+
+  return parseApiResponse(holidayAdminRecordSchema, await fetchHdxApi<unknown>(`/admin/holidays/${id}`, {
+    method: 'PUT',
+    body: input
+  }))
+}
+
+export async function deleteAdminHoliday(id: number, version: number): Promise<HolidayAdminRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(holidayAdminRecordSchema, await invoke<unknown>('hdx_admin_holidays_delete', { id, version }))
+  }
+
+  return parseApiResponse(holidayAdminRecordSchema, await fetchHdxApi<unknown>(`/admin/holidays/${id}`, {
+    method: 'DELETE',
+    query: { version }
+  }))
 }
 
 export async function fetchWorkbenchLayout(): Promise<WorkbenchLayoutRecord> {

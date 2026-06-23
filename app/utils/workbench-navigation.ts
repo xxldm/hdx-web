@@ -1,7 +1,7 @@
 import type { WorkbenchWidgetKey } from '~/utils/workbench-widget-meta'
 
-export type WorkbenchNavigationGroupKey = 'toolbox' | 'space'
-export type WorkbenchNavigationItemId = 'home' | 'timer' | 'date-countdown' | 'settings'
+export type WorkbenchNavigationGroupKey = 'toolbox' | 'admin' | 'space'
+export type WorkbenchNavigationItemId = 'home' | 'timer' | 'date-countdown' | 'holiday-admin' | 'settings'
 
 export interface WorkbenchNavigationGroup {
   key: WorkbenchNavigationGroupKey
@@ -25,6 +25,10 @@ export const workbenchNavigationGroups: readonly WorkbenchNavigationGroup[] = [
   {
     key: 'toolbox',
     titleKey: 'workbench.navigation.groups.toolbox'
+  },
+  {
+    key: 'admin',
+    titleKey: 'workbench.navigation.groups.admin'
   },
   {
     key: 'space',
@@ -67,6 +71,15 @@ export const workbenchNavigationItems: readonly WorkbenchNavigationItem[] = [
     descriptionKey: 'workbench.navigation.items.settings.description',
     icon: 'i-lucide-settings',
     to: '/settings'
+  },
+  {
+    id: 'holiday-admin',
+    groupKey: 'admin',
+    titleKey: 'workbench.navigation.items.holidayAdmin.title',
+    descriptionKey: 'workbench.navigation.items.holidayAdmin.description',
+    icon: 'i-lucide-calendar-cog',
+    to: '/admin/holidays',
+    pinnable: true
   }
 ] as const
 

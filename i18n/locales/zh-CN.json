@@ -91,6 +91,61 @@
     "authCheck": "认证中心",
     "gatewayCheck": "业务网关"
   },
+  "admin": {
+    "title": "管理",
+    "holidays": {
+      "title": "节日管理",
+      "description": "维护日期倒计时使用的固定公历节日。农历、调休和复杂日历规则后续单独设计。",
+      "create": "新增节日",
+      "createTitle": "新增节日",
+      "createDescription": "节日标识创建后不再修改，用来保持数据引用稳定。",
+      "edit": "编辑",
+      "editTitle": "编辑节日",
+      "editDescription": "修改节日展示名称、日期和启用状态。",
+      "delete": "删除",
+      "deleteTitle": "删除节日",
+      "deleteDescription": "确认删除“{name}”？删除后会从倒计时列表中隐藏。",
+      "refresh": "刷新节日",
+      "save": "保存",
+      "cancel": "取消",
+      "search": "搜索节日",
+      "empty": "还没有节日记录。",
+      "enabled": "启用",
+      "disabled": "停用",
+      "recurring": "每年重复",
+      "oneOff": "一次性",
+      "loadFailed": "节日列表暂时无法加载。",
+      "saveFailed": "节日保存失败，请稍后重试。",
+      "deleteFailed": "节日删除失败，请稍后重试。",
+      "authExpired": "登录已过期，请重新登录。",
+      "conflictTitle": "节日有新版本。",
+      "conflictDescription": "“{name}”已更新到版本 {version}，表格和编辑表单已显示服务器版本。",
+      "filters": {
+        "all": "全部",
+        "enabled": "启用",
+        "disabled": "停用"
+      },
+      "fields": {
+        "key": "标识",
+        "name": "名称",
+        "description": "说明",
+        "date": "日期",
+        "recurring": "重复",
+        "recurringHint": "每年重复",
+        "enabled": "启用",
+        "enabledHint": "显示在倒计时",
+        "sortOrder": "排序",
+        "updatedAt": "更新时间"
+      },
+      "validation": {
+        "key": "标识只能使用小写字母、数字和连字符。",
+        "name": "请输入节日名称。",
+        "nameLength": "节日名称不能超过 120 个字符。",
+        "descriptionLength": "节日说明不能超过 500 个字符。",
+        "date": "请选择有效日期。"
+      }
+    }
+  },
   "workbench": {
     "title": "HDX 工具箱",
     "heroTitle": "把今天要用的东西摆顺手",
@@ -116,6 +171,7 @@
       "pinLimit": "最多固定 {count} 个",
       "groups": {
         "toolbox": "工具箱",
+        "admin": "管理",
         "status": "状态",
         "space": "空间"
       },
@@ -127,6 +183,10 @@
         "settings": {
           "title": "设置",
           "description": "后续放主题、账户和偏好"
+        },
+        "holidayAdmin": {
+          "title": "节日管理",
+          "description": "维护日期倒计时节日"
         }
       }
     },

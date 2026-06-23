@@ -4,7 +4,7 @@ import { fetchBackend } from './backend-fetch'
 import { invalidateWebAuthSession, refreshAuthSession, requireBackendAccessToken } from './auth-session'
 
 type AuthenticatedBackendFetchOptions = {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: Record<string, unknown>
   query?: Record<string, string | number | boolean | null | undefined>
 }

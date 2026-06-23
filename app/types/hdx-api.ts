@@ -52,6 +52,54 @@ export type HolidayRecord = z.infer<typeof holidayRecordSchema>
 
 export const holidayRecordsSchema = z.array(holidayRecordSchema)
 
+export const holidayAdminRecordSchema = holidayRecordSchema.extend({
+  version: z.number().int().positive(),
+  enabled: z.boolean(),
+  updatedAt: z.string().datetime(),
+  updatedByUserId: z.string().min(1).max(160)
+})
+
+export type HolidayAdminRecord = z.infer<typeof holidayAdminRecordSchema>
+
+export const holidayAdminRecordsSchema = z.array(holidayAdminRecordSchema)
+
+export const holidayCreateSchema = z.object({
+  holidayKey: z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
+  displayName: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).nullable().optional().transform(value => value || null),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  recurring: z.boolean(),
+  enabled: z.boolean(),
+  sortOrder: z.number().int().min(0).max(9999)
+})
+
+export type HolidayCreateRequest = z.infer<typeof holidayCreateSchema>
+
+export const holidayUpdateSchema = holidayCreateSchema.omit({ holidayKey: true }).extend({
+  version: z.number().int().positive()
+})
+
+export type HolidayUpdateRequest = z.infer<typeof holidayUpdateSchema>
+
+export const holidayDeleteQuerySchema = z.object({
+  version: z.coerce.number().int().positive()
+})
+
+export const holidayConflictResponseSchema = z.object({
+  code: z.literal('HOLIDAY_CONFLICT'),
+  message: z.string().min(1),
+  resourceType: z.literal('holiday'),
+  resourceId: z.number().int().nonnegative(),
+  resourceLabel: z.string().min(1),
+  baseVersion: z.number().int().positive(),
+  currentVersion: z.number().int().positive(),
+  updatedAt: z.string().datetime(),
+  updatedByUserId: z.string().min(1),
+  serverHoliday: holidayAdminRecordSchema
+})
+
+export type HolidayConflictResponse = z.infer<typeof holidayConflictResponseSchema>
+
 export const workbenchLayoutHeaderSchema = z.object({
   visible: z.boolean(),
   icon: z.boolean(),

@@ -1,6 +1,7 @@
 import type { z } from 'zod'
 import {
   backendApiErrorResponseSchema,
+  holidayConflictResponseSchema,
   timerPreferenceConflictResponseSchema,
   userPreferenceConflictResponseSchema,
   workbenchLayoutConflictResponseSchema
@@ -9,7 +10,7 @@ import { BoundaryError, PassthroughApiError } from '~~/app/utils/api-error'
 import { getBackendConfig } from './backend-config'
 
 type BackendFetchOptions = {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: Record<string, unknown>
   query?: Record<string, string | number | boolean | null | undefined>
   bearerToken?: string
@@ -99,6 +100,7 @@ async function fetchHdxService<T>(
       if (fetchError.statusCode === 409) {
         const parsedConflict = [
           workbenchLayoutConflictResponseSchema,
+          holidayConflictResponseSchema,
           timerPreferenceConflictResponseSchema,
           userPreferenceConflictResponseSchema
         ]

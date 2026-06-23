@@ -11,7 +11,10 @@ import {
 import {
   backendApiErrorResponseSchema,
   createToolRequestSchema,
+  holidayAdminRecordsSchema,
+  holidayCreateSchema,
   holidayRecordsSchema,
+  holidayUpdateSchema,
   runtimeInfoSchema,
   timerPreferenceSaveSchema,
   timerPreferenceSchema,
@@ -70,6 +73,47 @@ describe('hdx api schemas', () => {
         sortOrder: 20
       }
     ])).toHaveLength(1)
+  })
+
+  it('parses holiday admin records and requests', () => {
+    expect(holidayAdminRecordsSchema.parse([
+      {
+        id: 1,
+        version: 1,
+        holidayKey: 'national-day',
+        displayName: '国庆节',
+        description: null,
+        date: '2000-10-01',
+        recurring: true,
+        enabled: true,
+        sortOrder: 20,
+        updatedAt: '2026-06-23T12:00:00Z',
+        updatedByUserId: 'USER:1'
+      }
+    ])).toHaveLength(1)
+
+    expect(holidayCreateSchema.parse({
+      holidayKey: ' demo-holiday ',
+      displayName: ' 测试节日 ',
+      description: ' ',
+      date: '2026-06-23',
+      recurring: false,
+      enabled: true,
+      sortOrder: 42
+    })).toMatchObject({
+      holidayKey: 'demo-holiday',
+      displayName: '测试节日',
+      description: null
+    })
+
+    expect(holidayUpdateSchema.safeParse({
+      version: 0,
+      displayName: '测试节日',
+      date: '2026-06-23',
+      recurring: false,
+      enabled: true,
+      sortOrder: 42
+    }).success).toBe(false)
   })
 
   it('parses workbench layout responses', () => {
