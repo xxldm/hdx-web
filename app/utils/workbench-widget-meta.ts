@@ -1,6 +1,12 @@
 export type WorkbenchWidgetKey = 'timer'
 export type WorkbenchWidgetOrientation = 'auto' | 'horizontal' | 'vertical'
 export type ResolvedWorkbenchWidgetOrientation = Exclude<WorkbenchWidgetOrientation, 'auto'>
+export type WorkbenchWidgetModulePreferenceContract =
+  | { scope: 'none' }
+  | { scope: 'account', endpoint: string }
+export type WorkbenchWidgetRuntimeStateContract =
+  | { scope: 'none' }
+  | { scope: 'device', storage: 'localStorage' }
 
 export interface WorkbenchWidgetConstraints {
   minColSpan?: number
@@ -21,6 +27,10 @@ export interface WorkbenchWidgetMetadata {
   }
   constraints?: WorkbenchWidgetConstraints
   supportedOrientations?: readonly WorkbenchWidgetOrientation[]
+  data: {
+    modulePreferences: WorkbenchWidgetModulePreferenceContract
+    runtimeState: WorkbenchWidgetRuntimeStateContract
+  }
 }
 
 export const workbenchWidgetOrientations = ['auto', 'horizontal', 'vertical'] as const satisfies readonly WorkbenchWidgetOrientation[]
@@ -36,7 +46,17 @@ export const workbenchWidgetMetadata = [
       colSpan: 1,
       rowSpan: 1
     },
-    supportedOrientations: workbenchWidgetOrientations
+    supportedOrientations: workbenchWidgetOrientations,
+    data: {
+      modulePreferences: {
+        scope: 'account',
+        endpoint: '/api/v1/timer/preferences'
+      },
+      runtimeState: {
+        scope: 'device',
+        storage: 'localStorage'
+      }
+    }
   }
 ] as const satisfies readonly WorkbenchWidgetMetadata[]
 
