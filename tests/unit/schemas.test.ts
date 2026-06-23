@@ -15,6 +15,8 @@ import {
   timerPreferenceSaveSchema,
   timerPreferenceSchema,
   toolRecordsSchema,
+  userPreferenceSaveSchema,
+  userPreferenceSchema,
   workbenchLayoutSchema
 } from '../../app/types/hdx-api'
 import { normalizeInternalRedirect } from '../../app/utils/internal-redirect'
@@ -109,6 +111,30 @@ describe('hdx api schemas', () => {
         }
       ]
     }).presets[0]?.durationSeconds).toBe(60)
+  })
+
+  it('parses user preference responses and save requests', () => {
+    const preference = {
+      schemaVersion: 1,
+      version: 1,
+      locale: 'zh-CN',
+      colorMode: 'dark',
+      theme: {
+        primaryMode: 'custom',
+        primary: 'green',
+        customPrimary: '#3366ff',
+        neutralMode: 'preset',
+        neutral: 'slate',
+        customNeutral: '#64748b',
+        radius: '0.375'
+      },
+      navigation: {
+        pinnedItemIds: ['timer', 'settings']
+      }
+    }
+
+    expect(userPreferenceSchema.parse(preference).theme.customPrimary).toBe('#3366ff')
+    expect(userPreferenceSaveSchema.parse(preference).navigation.pinnedItemIds).toEqual(['timer', 'settings'])
   })
 
   it('parses auth token responses without exposing tokens in public session', () => {

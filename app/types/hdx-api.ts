@@ -128,3 +128,68 @@ export const timerPreferenceConflictResponseSchema = z.object({
 })
 
 export type TimerPreferenceConflictResponse = z.infer<typeof timerPreferenceConflictResponseSchema>
+
+export const userPreferenceThemeSchema = z.object({
+  primaryMode: z.enum(['preset', 'custom']),
+  primary: z.enum([
+    'black',
+    'red',
+    'orange',
+    'amber',
+    'yellow',
+    'lime',
+    'green',
+    'emerald',
+    'teal',
+    'cyan',
+    'sky',
+    'blue',
+    'indigo',
+    'violet',
+    'purple',
+    'fuchsia',
+    'pink',
+    'rose'
+  ]),
+  customPrimary: z.string().regex(/^#[0-9a-f]{6}$/i),
+  neutralMode: z.enum(['preset', 'custom']),
+  neutral: z.enum(['slate', 'gray', 'zinc', 'neutral', 'stone', 'taupe', 'mauve', 'mist', 'olive']),
+  customNeutral: z.string().regex(/^#[0-9a-f]{6}$/i),
+  radius: z.enum(['0', '0.125', '0.25', '0.375', '0.5'])
+})
+
+export type UserPreferenceThemeRecord = z.infer<typeof userPreferenceThemeSchema>
+
+export const userPreferenceNavigationSchema = z.object({
+  pinnedItemIds: z.array(z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/)).max(6)
+})
+
+export type UserPreferenceNavigationRecord = z.infer<typeof userPreferenceNavigationSchema>
+
+export const userPreferenceSchema = z.object({
+  schemaVersion: z.literal(1),
+  version: z.number().int().nonnegative(),
+  locale: z.enum(['zh-CN', 'en-US']),
+  colorMode: z.enum(['system', 'light', 'dark']),
+  theme: userPreferenceThemeSchema,
+  navigation: userPreferenceNavigationSchema
+})
+
+export type UserPreferenceRecord = z.infer<typeof userPreferenceSchema>
+
+export const userPreferenceSaveSchema = userPreferenceSchema
+
+export type UserPreferenceSaveRequest = z.infer<typeof userPreferenceSaveSchema>
+
+export const userPreferenceConflictResponseSchema = z.object({
+  code: z.literal('USER_PREFERENCE_CONFLICT'),
+  message: z.string().min(1),
+  resourceType: z.literal('userPreferences'),
+  baseVersion: z.number().int().nonnegative(),
+  currentVersion: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime(),
+  updatedByUserId: z.string().min(1),
+  serverPreference: userPreferenceSchema
+})
+
+export type UserPreferenceConflictResponse = z.infer<typeof userPreferenceConflictResponseSchema>

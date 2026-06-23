@@ -16,7 +16,9 @@ const navigation = useWorkbenchNavigationStore()
 const theme = useThemePreferenceStore()
 const { authenticated, displayName, isLocalAdmin } = storeToRefs(auth)
 const { pinnedItems } = storeToRefs(navigation)
-const { setPreferredLocale } = useLocalePreference()
+const localePreference = useLocalePreference()
+const { setPreferredLocale } = localePreference
+useUserPreferenceSync(localePreference)
 const { active: routeProgressActive, progress: routeProgress } = useRouteProgressState()
 const { highlightWorkbenchWidget, stopWorkbenchWidgetHighlight } = useWorkbenchWidgetHighlight()
 

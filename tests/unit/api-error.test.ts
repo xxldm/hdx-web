@@ -3,9 +3,11 @@ import {
   extractBoundaryErrorCode,
   extractFetchStatus,
   extractTimerPreferenceConflict,
+  extractUserPreferenceConflict,
   extractWorkbenchLayoutConflict,
   isAuthRequiredApiError,
   isTimerPreferenceConflictApiError,
+  isUserPreferenceConflictApiError,
   isWorkbenchLayoutConflictApiError
 } from '../../app/utils/api-error'
 
@@ -80,6 +82,16 @@ describe('api error helpers', () => {
     expect(isTimerPreferenceConflictApiError(error)).toBe(true)
     expect(extractTimerPreferenceConflict(error)?.serverPreference.presets[0]?.durationSeconds).toBe(60)
   })
+
+  it('extracts user preference conflict payloads', () => {
+    const error = {
+      statusCode: 409,
+      data: createUserPreferenceConflictPayload()
+    }
+
+    expect(isUserPreferenceConflictApiError(error)).toBe(true)
+    expect(extractUserPreferenceConflict(error)?.serverPreference.theme.radius).toBe('0.375')
+  })
 })
 
 function createWorkbenchLayoutConflictPayload() {
@@ -122,6 +134,36 @@ function createTimerPreferenceConflictPayload() {
           createdAt: '2026-06-23T12:00:00Z'
         }
       ]
+    }
+  }
+}
+
+function createUserPreferenceConflictPayload() {
+  return {
+    code: 'USER_PREFERENCE_CONFLICT',
+    message: '用户偏好已在其他位置更新，请处理冲突。',
+    resourceType: 'userPreferences',
+    baseVersion: 1,
+    currentVersion: 2,
+    updatedAt: '2026-06-23T12:00:00Z',
+    updatedByUserId: 'USER:2',
+    serverPreference: {
+      schemaVersion: 1,
+      version: 2,
+      locale: 'zh-CN',
+      colorMode: 'dark',
+      theme: {
+        primaryMode: 'custom',
+        primary: 'green',
+        customPrimary: '#3366ff',
+        neutralMode: 'preset',
+        neutral: 'slate',
+        customNeutral: '#64748b',
+        radius: '0.375'
+      },
+      navigation: {
+        pinnedItemIds: ['timer']
+      }
     }
   }
 }

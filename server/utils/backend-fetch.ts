@@ -2,6 +2,7 @@ import type { z } from 'zod'
 import {
   backendApiErrorResponseSchema,
   timerPreferenceConflictResponseSchema,
+  userPreferenceConflictResponseSchema,
   workbenchLayoutConflictResponseSchema
 } from '~~/app/types/hdx-api'
 import { BoundaryError, PassthroughApiError } from '~~/app/utils/api-error'
@@ -98,7 +99,8 @@ async function fetchHdxService<T>(
       if (fetchError.statusCode === 409) {
         const parsedConflict = [
           workbenchLayoutConflictResponseSchema,
-          timerPreferenceConflictResponseSchema
+          timerPreferenceConflictResponseSchema,
+          userPreferenceConflictResponseSchema
         ]
           .map(conflictSchema => conflictSchema.safeParse(fetchError.data))
           .find(result => result.success)

@@ -186,6 +186,34 @@ describe('authenticated backend fetch', () => {
       })
     })
   })
+
+  it('passes through user preference conflicts with the server preference payload', async () => {
+    stubRuntimeConfig()
+    vi.stubGlobal('useSession', async () => ({
+      id: 'session-id',
+      data: createSessionData(),
+      update: vi.fn(),
+      clear: vi.fn()
+    }))
+    vi.stubGlobal('$fetch', vi.fn()
+      .mockRejectedValueOnce({
+        statusCode: 409,
+        data: createUserPreferenceConflictPayload()
+      }))
+
+    await expect(fetchAuthenticatedBackend({ context: {} } as never, '/api/v1/user/preferences', responseSchema, {
+      method: 'PUT',
+      body: {}
+    })).rejects.toMatchObject({
+      statusCode: 409,
+      data: expect.objectContaining({
+        code: 'USER_PREFERENCE_CONFLICT',
+        serverPreference: expect.objectContaining({
+          version: 2
+        })
+      })
+    })
+  })
 })
 
 function createSessionData() {
@@ -271,6 +299,36 @@ function createTimerPreferenceConflictPayload() {
           createdAt: '2026-06-23T12:00:00Z'
         }
       ]
+    }
+  }
+}
+
+function createUserPreferenceConflictPayload() {
+  return {
+    code: 'USER_PREFERENCE_CONFLICT',
+    message: '用户偏好已在其他位置更新，请处理冲突。',
+    resourceType: 'userPreferences',
+    baseVersion: 1,
+    currentVersion: 2,
+    updatedAt: '2026-06-23T12:00:00Z',
+    updatedByUserId: 'USER:2',
+    serverPreference: {
+      schemaVersion: 1,
+      version: 2,
+      locale: 'zh-CN',
+      colorMode: 'dark',
+      theme: {
+        primaryMode: 'custom',
+        primary: 'green',
+        customPrimary: '#3366ff',
+        neutralMode: 'preset',
+        neutral: 'slate',
+        customNeutral: '#64748b',
+        radius: '0.375'
+      },
+      navigation: {
+        pinnedItemIds: ['timer']
+      }
     }
   }
 }

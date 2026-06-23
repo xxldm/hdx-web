@@ -4,6 +4,10 @@ const supportedLocales = ['zh-CN', 'en-US'] as const
 
 type SupportedLocale = typeof supportedLocales[number]
 
+interface SetPreferredLocaleOptions {
+  persistLocal?: boolean
+}
+
 function isSupportedLocale(value: string): value is SupportedLocale {
   return supportedLocales.includes(value as SupportedLocale)
 }
@@ -15,7 +19,7 @@ export function useLocalePreference() {
     default: () => 'zh-CN'
   })
 
-  const setPreferredLocale = async (code: string) => {
+  const setPreferredLocale = async (code: string, options: SetPreferredLocaleOptions = {}) => {
     if (!isSupportedLocale(code)) {
       return
     }
@@ -23,7 +27,7 @@ export function useLocalePreference() {
     await setLocale(code)
     localeCookie.value = code
 
-    if (import.meta.client) {
+    if (import.meta.client && options.persistLocal !== false) {
       window.localStorage.setItem(localeStorageKey, code)
     }
   }

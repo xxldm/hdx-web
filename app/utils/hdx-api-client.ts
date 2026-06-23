@@ -1,5 +1,5 @@
-import type { CreateToolRequest, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, WorkbenchLayoutRecord } from '~/types/hdx-api'
-import { runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, workbenchLayoutSchema } from '~/types/hdx-api'
+import type { CreateToolRequest, RuntimeInfo, TimerPreferenceRecord, TimerPreferenceSaveRequest, ToolRecord, UserPreferenceRecord, UserPreferenceSaveRequest, WorkbenchLayoutRecord } from '~/types/hdx-api'
+import { runtimeInfoSchema, timerPreferenceSchema, toolRecordSchema, toolRecordsSchema, userPreferenceSchema, workbenchLayoutSchema } from '~/types/hdx-api'
 import type { WebAuthLoginRequest, WebAuthPublicSession } from '~/types/hdx-auth'
 import { webAuthPublicSessionSchema } from '~/types/hdx-auth'
 import type {
@@ -141,6 +141,29 @@ export async function saveTimerPreferences(input: TimerPreferenceSaveRequest): P
   }
 
   return parseApiResponse(timerPreferenceSchema, await fetchHdxApi<unknown>('/timer/preferences', {
+    method: 'PUT',
+    body: input
+  }))
+}
+
+export async function fetchUserPreferences(): Promise<UserPreferenceRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(userPreferenceSchema, await invoke<unknown>('hdx_user_preferences_get'))
+  }
+
+  return parseApiResponse(userPreferenceSchema, await fetchHdxApi<unknown>('/user/preferences'))
+}
+
+export async function saveUserPreferences(input: UserPreferenceSaveRequest): Promise<UserPreferenceRecord> {
+  const invoke = getTauriInvoke()
+
+  if (invoke) {
+    return parseApiResponse(userPreferenceSchema, await invoke<unknown>('hdx_user_preferences_save', { input }))
+  }
+
+  return parseApiResponse(userPreferenceSchema, await fetchHdxApi<unknown>('/user/preferences', {
     method: 'PUT',
     body: input
   }))

@@ -1,7 +1,9 @@
 import {
   timerPreferenceConflictResponseSchema,
+  userPreferenceConflictResponseSchema,
   workbenchLayoutConflictResponseSchema,
   type TimerPreferenceConflictResponse,
+  type UserPreferenceConflictResponse,
   type WorkbenchLayoutConflictResponse
 } from '../types/hdx-api'
 
@@ -106,6 +108,24 @@ export function extractTimerPreferenceConflict(error: unknown): TimerPreferenceC
 
 export function isTimerPreferenceConflictApiError(error: unknown) {
   return extractFetchStatus(error) === 409 && Boolean(extractTimerPreferenceConflict(error))
+}
+
+export function extractUserPreferenceConflict(error: unknown): UserPreferenceConflictResponse | null {
+  const candidates = extractApiPayloadCandidates(error)
+
+  for (const candidate of candidates) {
+    const parsed = userPreferenceConflictResponseSchema.safeParse(candidate)
+
+    if (parsed.success) {
+      return parsed.data
+    }
+  }
+
+  return null
+}
+
+export function isUserPreferenceConflictApiError(error: unknown) {
+  return extractFetchStatus(error) === 409 && Boolean(extractUserPreferenceConflict(error))
 }
 
 export function extractBoundaryErrorCode(error: unknown): BoundaryErrorCode | null {

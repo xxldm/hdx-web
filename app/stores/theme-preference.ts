@@ -119,6 +119,15 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
     colorMode.preference = value
   }
 
+  function applyUserPreferenceTheme(nextPreference: ThemePreference, nextColorMode: 'system' | 'light' | 'dark') {
+    preference.value = storedThemeSchema.parse({
+      ...defaultThemePreference,
+      ...nextPreference
+    })
+    colorMode.preference = nextColorMode
+    commitTheme()
+  }
+
   function resetTheme() {
     preference.value = { ...defaultThemePreference }
     commitTheme()
@@ -177,6 +186,7 @@ export const useThemePreferenceStore = defineStore('theme-preference', () => {
     activePrimaryOption,
     activateCustomNeutralColor,
     activateCustomPrimaryColor,
+    applyUserPreferenceTheme,
     hydrate,
     neutralColorOptions,
     preference,

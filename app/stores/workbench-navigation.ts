@@ -88,6 +88,13 @@ export const useWorkbenchNavigationStore = defineStore('workbench-navigation', (
     pinItem(itemId)
   }
 
+  function setPinnedItems(itemIds: readonly string[]) {
+    preference.value = normalizeWorkbenchNavigationPreference({
+      version: 1,
+      pinnedItemIds: [...itemIds]
+    })
+  }
+
   function resetPinnedItems() {
     preference.value = clonePreference(defaultWorkbenchNavigationPreference)
   }
@@ -101,6 +108,7 @@ export const useWorkbenchNavigationStore = defineStore('workbench-navigation', (
     preference,
     pinItem,
     resetPinnedItems,
+    setPinnedItems,
     togglePinnedItem,
     unpinItem
   }
