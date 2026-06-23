@@ -151,6 +151,11 @@
     },
     "timer": {
       "presets": "时长预设",
+      "loading": "正在读取预设",
+      "unavailable": "预设不可用",
+      "loadFailed": "预设读取失败",
+      "saveFailed": "预设保存失败",
+      "conflict": "预设已在其他位置更新",
       "addPreset": "添加时长",
       "newPreset": "新时长",
       "runningCount": "{count} 个计时中",

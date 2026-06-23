@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { extractBoundaryErrorCode, extractFetchStatus, extractWorkbenchLayoutConflict, isAuthRequiredApiError, isWorkbenchLayoutConflictApiError } from '../../app/utils/api-error'
+import {
+  extractBoundaryErrorCode,
+  extractFetchStatus,
+  extractTimerPreferenceConflict,
+  extractWorkbenchLayoutConflict,
+  isAuthRequiredApiError,
+  isTimerPreferenceConflictApiError,
+  isWorkbenchLayoutConflictApiError
+} from '../../app/utils/api-error'
 
 describe('api error helpers', () => {
   it('detects direct auth-required boundary errors', () => {
@@ -62,6 +70,16 @@ describe('api error helpers', () => {
     expect(isWorkbenchLayoutConflictApiError(error)).toBe(true)
     expect(extractWorkbenchLayoutConflict(error)?.currentVersion).toBe(2)
   })
+
+  it('extracts timer preference conflict payloads', () => {
+    const error = {
+      statusCode: 409,
+      data: createTimerPreferenceConflictPayload()
+    }
+
+    expect(isTimerPreferenceConflictApiError(error)).toBe(true)
+    expect(extractTimerPreferenceConflict(error)?.serverPreference.presets[0]?.durationSeconds).toBe(60)
+  })
 })
 
 function createWorkbenchLayoutConflictPayload() {
@@ -80,6 +98,30 @@ function createWorkbenchLayoutConflictPayload() {
       columns: 4,
       gap: 12,
       widgets: []
+    }
+  }
+}
+
+function createTimerPreferenceConflictPayload() {
+  return {
+    code: 'TIMER_PREFERENCE_CONFLICT',
+    message: '计时器预设已在其他位置更新，请处理冲突。',
+    resourceType: 'timerPreferences',
+    baseVersion: 1,
+    currentVersion: 2,
+    updatedAt: '2026-06-23T12:00:00Z',
+    updatedByUserId: 'USER:2',
+    serverPreference: {
+      schemaVersion: 1,
+      version: 2,
+      presets: [
+        {
+          id: 'timer-60',
+          order: 0,
+          durationSeconds: 60,
+          createdAt: '2026-06-23T12:00:00Z'
+        }
+      ]
     }
   }
 }

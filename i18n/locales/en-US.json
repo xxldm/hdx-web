@@ -151,6 +151,11 @@
     },
     "timer": {
       "presets": "Presets",
+      "loading": "Loading presets",
+      "unavailable": "Presets unavailable",
+      "loadFailed": "Failed to load presets",
+      "saveFailed": "Failed to save presets",
+      "conflict": "Presets were updated elsewhere",
       "addPreset": "Add duration",
       "newPreset": "New duration",
       "runningCount": "{count} running",

@@ -85,3 +85,46 @@ export const workbenchLayoutConflictResponseSchema = z.object({
 })
 
 export type WorkbenchLayoutConflictResponse = z.infer<typeof workbenchLayoutConflictResponseSchema>
+
+export const timerPreferencePresetRequestSchema = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,119}$/),
+  order: z.number().int().min(0).max(23),
+  durationSeconds: z.number().int().min(1).max(24 * 60 * 60)
+})
+
+export type TimerPreferencePresetRequest = z.infer<typeof timerPreferencePresetRequestSchema>
+
+export const timerPreferencePresetSchema = timerPreferencePresetRequestSchema.extend({
+  createdAt: z.string().datetime()
+})
+
+export type TimerPreferencePresetRecord = z.infer<typeof timerPreferencePresetSchema>
+
+export const timerPreferenceSchema = z.object({
+  schemaVersion: z.literal(1),
+  version: z.number().int().nonnegative(),
+  presets: z.array(timerPreferencePresetSchema).min(1).max(24)
+})
+
+export type TimerPreferenceRecord = z.infer<typeof timerPreferenceSchema>
+
+export const timerPreferenceSaveSchema = z.object({
+  schemaVersion: z.literal(1),
+  version: z.number().int().nonnegative(),
+  presets: z.array(timerPreferencePresetRequestSchema).min(1).max(24)
+})
+
+export type TimerPreferenceSaveRequest = z.infer<typeof timerPreferenceSaveSchema>
+
+export const timerPreferenceConflictResponseSchema = z.object({
+  code: z.literal('TIMER_PREFERENCE_CONFLICT'),
+  message: z.string().min(1),
+  resourceType: z.literal('timerPreferences'),
+  baseVersion: z.number().int().nonnegative(),
+  currentVersion: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime(),
+  updatedByUserId: z.string().min(1),
+  serverPreference: timerPreferenceSchema
+})
+
+export type TimerPreferenceConflictResponse = z.infer<typeof timerPreferenceConflictResponseSchema>

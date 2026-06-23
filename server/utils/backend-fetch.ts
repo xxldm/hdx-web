@@ -1,5 +1,9 @@
 import type { z } from 'zod'
-import { backendApiErrorResponseSchema, workbenchLayoutConflictResponseSchema } from '~~/app/types/hdx-api'
+import {
+  backendApiErrorResponseSchema,
+  timerPreferenceConflictResponseSchema,
+  workbenchLayoutConflictResponseSchema
+} from '~~/app/types/hdx-api'
 import { BoundaryError, PassthroughApiError } from '~~/app/utils/api-error'
 import { getBackendConfig } from './backend-config'
 
@@ -92,9 +96,14 @@ async function fetchHdxService<T>(
       }
 
       if (fetchError.statusCode === 409) {
-        const parsedConflict = workbenchLayoutConflictResponseSchema.safeParse(fetchError.data)
+        const parsedConflict = [
+          workbenchLayoutConflictResponseSchema,
+          timerPreferenceConflictResponseSchema
+        ]
+          .map(conflictSchema => conflictSchema.safeParse(fetchError.data))
+          .find(result => result.success)
 
-        if (parsedConflict.success) {
+        if (parsedConflict?.success) {
           throw new PassthroughApiError(409, parsedConflict.data, parsedConflict.data.message)
         }
 

@@ -1,7 +1,12 @@
 import { useStorage, useTimestamp } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import { useAuthStore } from './auth'
 import { z } from 'zod'
+import type { TimerPreferenceRecord, TimerPreferenceSaveRequest } from '~/types/hdx-api'
+import { timerPreferenceSchema } from '~/types/hdx-api'
+import { extractTimerPreferenceConflict, isAuthRequiredApiError } from '~/utils/api-error'
+import { fetchTimerPreferences, saveTimerPreferences } from '~/utils/hdx-api-client'
 
 export const workbenchTimerStorageKey = 'hdx:web:workbench-timer:v1'
 export const defaultWorkbenchTimerPresetId = 'default-10-minutes'
@@ -10,14 +15,21 @@ export const minWorkbenchTimerDurationSeconds = 1
 export const maxWorkbenchTimerDurationSeconds = 24 * 60 * 60
 
 export type WorkbenchTimerStatus = 'idle' | 'running' | 'paused' | 'finished'
+export type WorkbenchTimerPersistenceResult = 'success' | 'failed' | 'auth-expired' | 'conflict'
 
-export interface WorkbenchTimerPreset {
+export interface WorkbenchTimerPresetDefinition {
   id: string
   durationSeconds: number
   createdAt: number
+}
+
+export interface WorkbenchTimerPresetRuntime {
   remainingSeconds: number
   endsAt: number | null
   alarmedAt: number | null
+}
+
+export interface WorkbenchTimerPreset extends WorkbenchTimerPresetDefinition, WorkbenchTimerPresetRuntime {
 }
 
 interface LegacyWorkbenchTimerPreference {
@@ -36,8 +48,23 @@ interface SingleTimerWorkbenchTimerPreference {
 }
 
 export interface WorkbenchTimerPreference {
-  version: 3
-  presets: WorkbenchTimerPreset[]
+  schemaVersion: 1
+  version: number
+  presets: WorkbenchTimerPresetDefinition[]
+}
+
+export interface WorkbenchTimerRuntimePreference {
+  version: 4
+  runtimes: Record<string, WorkbenchTimerPresetRuntime>
+}
+
+export interface WorkbenchTimerConflict {
+  message: string
+  baseVersion: number
+  currentVersion: number
+  updatedAt: string
+  updatedByUserId: string
+  serverPreference: WorkbenchTimerPreference
 }
 
 const baseWorkbenchTimerPresetSchema = z.object({
@@ -46,10 +73,21 @@ const baseWorkbenchTimerPresetSchema = z.object({
   createdAt: z.number().int().nonnegative()
 })
 
-const workbenchTimerPresetSchema = baseWorkbenchTimerPresetSchema.extend({
+const legacyWorkbenchTimerPresetSchema = baseWorkbenchTimerPresetSchema.extend({
   remainingSeconds: z.number().int().min(0).max(maxWorkbenchTimerDurationSeconds).optional(),
   endsAt: z.number().int().positive().nullable().optional(),
   alarmedAt: z.number().int().positive().nullable().optional()
+})
+
+const workbenchTimerRuntimeSchema = z.object({
+  remainingSeconds: z.number().int().min(0).max(maxWorkbenchTimerDurationSeconds),
+  endsAt: z.number().int().positive().nullable(),
+  alarmedAt: z.number().int().positive().nullable()
+})
+
+const workbenchTimerRuntimePreferenceSchema = z.object({
+  version: z.literal(4),
+  runtimes: z.record(z.string().min(1), workbenchTimerRuntimeSchema)
 })
 
 const legacyWorkbenchTimerPreferenceSchema = z.object({
@@ -67,7 +105,7 @@ const singleTimerWorkbenchTimerPreferenceSchema = z.object({
   endsAt: z.number().int().positive().nullable().default(null)
 })
 
-const workbenchTimerPreferenceSchema = z.object({
+const legacyPresetListWorkbenchTimerPreferenceSchema = z.object({
   version: z.literal(3),
   presets: z.array(z.unknown())
 })
@@ -82,30 +120,90 @@ export const defaultWorkbenchTimerPreset: WorkbenchTimerPreset = {
 }
 
 export const defaultWorkbenchTimerPreference: WorkbenchTimerPreference = {
-  version: 3,
-  presets: [clonePreset(defaultWorkbenchTimerPreset)]
+  schemaVersion: 1,
+  version: 0,
+  presets: [
+    {
+      id: defaultWorkbenchTimerPresetId,
+      durationSeconds: defaultWorkbenchTimerDurationSeconds,
+      createdAt: 0
+    }
+  ]
+}
+
+export const emptyWorkbenchTimerPreference: WorkbenchTimerPreference = {
+  schemaVersion: 1,
+  version: 0,
+  presets: []
+}
+
+export const defaultWorkbenchTimerRuntimePreference: WorkbenchTimerRuntimePreference = {
+  version: 4,
+  runtimes: {}
 }
 
 export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
-  const preference = useStorage<WorkbenchTimerPreference>(
+  const remotePreference = ref<WorkbenchTimerPreference | null>(null)
+  const runtimePreference = useStorage<WorkbenchTimerRuntimePreference>(
     workbenchTimerStorageKey,
-    clonePreference(defaultWorkbenchTimerPreference),
+    cloneRuntimePreference(defaultWorkbenchTimerRuntimePreference),
     undefined,
     {
       deep: true,
       mergeDefaults: false,
       serializer: {
-        read: readStoredWorkbenchTimerPreference,
-        write: value => JSON.stringify(normalizeWorkbenchTimerPreference(value))
+        read: readStoredWorkbenchTimerRuntimePreference,
+        write: value => JSON.stringify(normalizeWorkbenchTimerRuntimePreference(value))
       }
     }
   )
   const timestamp = useTimestamp({ interval: 1000 })
+  const initialized = shallowRef(false)
+  const loading = shallowRef(false)
+  const saving = shallowRef(false)
+  const errorKey = shallowRef<string | null>(null)
+  const timerConflict = ref<WorkbenchTimerConflict | null>(null)
 
-  const presets = computed(() => preference.value.presets)
+  const preference = computed(() => remotePreference.value ?? emptyWorkbenchTimerPreference)
+  const presets = computed(() => preference.value.presets.map(preset => mergePresetRuntime(preset, runtimePreference.value.runtimes[preset.id])))
   const dueAlarmPresets = computed(() => presets.value.filter(preset => isPresetAlarmDue(preset, timestamp.value)))
   const runningPresetCount = computed(() => presets.value.filter(preset => getPresetStatus(preset, timestamp.value) === 'running').length)
   const hasRunningPresets = computed(() => runningPresetCount.value > 0)
+  const unavailable = computed(() => initialized.value && !remotePreference.value)
+
+  async function ensurePreferencesLoaded() {
+    if (initialized.value || loading.value) {
+      return remotePreference.value ? 'success' satisfies WorkbenchTimerPersistenceResult : 'failed' satisfies WorkbenchTimerPersistenceResult
+    }
+
+    return await loadPreferences()
+  }
+
+  async function loadPreferences() {
+    const auth = useAuthStore()
+
+    loading.value = true
+    errorKey.value = null
+    timerConflict.value = null
+
+    try {
+      remotePreference.value = normalizeWorkbenchTimerPreference(await fetchTimerPreferences())
+      return 'success' satisfies WorkbenchTimerPersistenceResult
+    } catch (error) {
+      remotePreference.value = null
+
+      if (isAuthRequiredApiError(error)) {
+        auth.markSessionExpired()
+        return 'auth-expired' satisfies WorkbenchTimerPersistenceResult
+      }
+
+      errorKey.value = 'workbench.timer.loadFailed'
+      return 'failed' satisfies WorkbenchTimerPersistenceResult
+    } finally {
+      initialized.value = true
+      loading.value = false
+    }
+  }
 
   function getPresetById(id: string) {
     return presets.value.find(preset => preset.id === id) ?? null
@@ -155,8 +253,14 @@ export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
       && getPresetStatusById(id) !== 'running'
   }
 
-  function addPresetSeconds(seconds: number | null | undefined) {
+  async function addPresetSeconds(seconds: number | null | undefined) {
     if (typeof seconds !== 'number' || !Number.isFinite(seconds)) {
+      return null
+    }
+
+    const loaded = await ensurePreferencesLoaded()
+
+    if (loaded !== 'success' || !remotePreference.value) {
       return null
     }
 
@@ -167,39 +271,44 @@ export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
       return existingPreset
     }
 
-    const preset = createStoredPreset(durationSeconds, createPresetId(durationSeconds), Date.now())
-
-    preference.value = normalizeWorkbenchTimerPreference({
-      version: 3,
+    const preset = createPresetDefinition(durationSeconds, createPresetId(durationSeconds), Date.now())
+    const nextPreference = normalizeInternalPreference({
+      ...remotePreference.value,
       presets: [
-        ...presets.value,
+        ...remotePreference.value.presets,
         preset
       ]
     })
+    const result = await savePreference(nextPreference)
 
-    return preset
+    return result === 'success' ? getPresetById(preset.id) : null
   }
 
-  function addPresetMinutes(minutes: number | null | undefined) {
-    return addPresetSeconds(typeof minutes === 'number' ? minutes * 60 : minutes)
+  async function addPresetMinutes(minutes: number | null | undefined) {
+    return await addPresetSeconds(typeof minutes === 'number' ? minutes * 60 : minutes)
   }
 
-  function removePreset(id: string) {
-    if (!canRemovePreset(id)) {
+  async function removePreset(id: string) {
+    if (!canRemovePreset(id) || !remotePreference.value) {
       return false
     }
 
-    const nextPresets = presets.value.filter(preset => preset.id !== id)
+    const nextPresets = remotePreference.value.presets.filter(preset => preset.id !== id)
 
-    if (nextPresets.length === presets.value.length || nextPresets.length === 0) {
+    if (nextPresets.length === remotePreference.value.presets.length || nextPresets.length === 0) {
       return false
     }
 
-    preference.value = normalizeWorkbenchTimerPreference({
-      version: 3,
+    const result = await savePreference(normalizeInternalPreference({
+      ...remotePreference.value,
       presets: nextPresets
-    })
+    }))
 
+    if (result !== 'success') {
+      return false
+    }
+
+    removePresetRuntime(id)
     return true
   }
 
@@ -214,8 +323,7 @@ export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
       ? getPresetRemainingSeconds(preset, timestamp.value)
       : preset.durationSeconds
 
-    return updatePreset(id, current => ({
-      ...current,
+    return updatePresetRuntime(id, preset.durationSeconds, () => ({
       remainingSeconds: secondsToRun,
       endsAt: Date.now() + secondsToRun * 1000,
       alarmedAt: null
@@ -223,24 +331,27 @@ export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
   }
 
   function pausePreset(id: string) {
-    if (getPresetStatusById(id) !== 'running') {
+    const preset = getPresetById(id)
+
+    if (!preset || getPresetStatusById(id) !== 'running') {
       return false
     }
 
-    return updatePreset(id, current => ({
-      ...current,
-      remainingSeconds: getPresetRemainingSeconds(current, timestamp.value),
-      endsAt: null
+    return updatePresetRuntime(id, preset.durationSeconds, () => ({
+      remainingSeconds: getPresetRemainingSeconds(preset, timestamp.value),
+      endsAt: null,
+      alarmedAt: preset.alarmedAt
     }))
   }
 
   function resetPreset(id: string) {
-    return updatePreset(id, current => ({
-      ...current,
-      remainingSeconds: current.durationSeconds,
-      endsAt: null,
-      alarmedAt: null
-    }))
+    const preset = getPresetById(id)
+
+    if (!preset) {
+      return false
+    }
+
+    return updatePresetRuntime(id, preset.durationSeconds, () => createDefaultRuntime(preset.durationSeconds))
   }
 
   function togglePreset(id: string) {
@@ -256,76 +367,149 @@ export const useWorkbenchTimerStore = defineStore('workbench-timer', () => {
       return false
     }
 
-    return updatePreset(id, current => ({
-      ...current,
+    return updatePresetRuntime(id, preset.durationSeconds, () => ({
+      remainingSeconds: getPresetRemainingSeconds(preset, timestamp.value),
+      endsAt: preset.endsAt,
       alarmedAt: endsAt
     }))
   }
 
-  function updatePreset(id: string, updater: (preset: WorkbenchTimerPreset) => WorkbenchTimerPreset) {
-    let changed = false
-    const nextPresets = presets.value.map((preset) => {
-      if (preset.id !== id) {
-        return preset
+  function updatePresetRuntime(
+    id: string,
+    durationSeconds: number,
+    updater: (runtime: WorkbenchTimerPresetRuntime) => WorkbenchTimerPresetRuntime
+  ) {
+    const currentRuntime = runtimePreference.value.runtimes[id] ?? createDefaultRuntime(durationSeconds)
+    const nextRuntime = normalizeRuntime(updater(currentRuntime), durationSeconds)
+
+    runtimePreference.value = normalizeWorkbenchTimerRuntimePreference({
+      version: 4,
+      runtimes: {
+        ...runtimePreference.value.runtimes,
+        [id]: nextRuntime
       }
-
-      changed = true
-      return normalizePreset(updater(preset))
-    })
-
-    if (!changed) {
-      return false
-    }
-
-    preference.value = normalizeWorkbenchTimerPreference({
-      version: 3,
-      presets: nextPresets
     })
 
     return true
   }
 
+  function removePresetRuntime(id: string) {
+    runtimePreference.value = normalizeWorkbenchTimerRuntimePreference({
+      version: 4,
+      runtimes: Object.fromEntries(Object.entries(runtimePreference.value.runtimes)
+        .filter(([runtimeId]) => runtimeId !== id))
+    })
+  }
+
+  async function savePreference(nextPreference: WorkbenchTimerPreference) {
+    const auth = useAuthStore()
+
+    saving.value = true
+    errorKey.value = null
+    timerConflict.value = null
+
+    try {
+      remotePreference.value = normalizeWorkbenchTimerPreference(await saveTimerPreferences(toTimerPreferenceSaveRequest(nextPreference)))
+      return 'success' satisfies WorkbenchTimerPersistenceResult
+    } catch (error) {
+      if (isAuthRequiredApiError(error)) {
+        remotePreference.value = null
+        auth.markSessionExpired()
+        return 'auth-expired' satisfies WorkbenchTimerPersistenceResult
+      }
+
+      const conflict = extractTimerPreferenceConflict(error)
+
+      if (conflict) {
+        timerConflict.value = {
+          message: conflict.message,
+          baseVersion: conflict.baseVersion,
+          currentVersion: conflict.currentVersion,
+          updatedAt: conflict.updatedAt,
+          updatedByUserId: conflict.updatedByUserId,
+          serverPreference: normalizeWorkbenchTimerPreference(conflict.serverPreference)
+        }
+        remotePreference.value = clonePreference(timerConflict.value.serverPreference)
+        errorKey.value = 'workbench.timer.conflict'
+        return 'conflict' satisfies WorkbenchTimerPersistenceResult
+      }
+
+      errorKey.value = 'workbench.timer.saveFailed'
+      return 'failed' satisfies WorkbenchTimerPersistenceResult
+    } finally {
+      saving.value = false
+    }
+  }
+
+  function resetState() {
+    remotePreference.value = null
+    initialized.value = false
+    loading.value = false
+    saving.value = false
+    errorKey.value = null
+    timerConflict.value = null
+  }
+
   return {
     dueAlarmPresets,
+    errorKey,
     hasRunningPresets,
+    initialized,
+    loading,
     preference,
     presets,
     runningPresetCount,
+    runtimePreference,
+    saving,
+    timerConflict,
+    unavailable,
     acknowledgePresetAlarm,
     addPresetMinutes,
     addPresetSeconds,
     canRemovePreset,
+    ensurePreferencesLoaded,
     getPresetById,
     getPresetElapsedSecondsById,
     getPresetProgressPercentById,
     getPresetRemainingLabelById,
     getPresetRemainingSecondsById,
     getPresetStatusById,
+    loadPreferences,
     pausePreset,
     removePreset,
     resetPreset,
+    resetState,
     startPreset,
     togglePreset
   }
 })
 
-export function readStoredWorkbenchTimerPreference(value: string): WorkbenchTimerPreference {
+export function readStoredWorkbenchTimerRuntimePreference(value: string): WorkbenchTimerRuntimePreference {
   if (!value) {
-    return clonePreference(defaultWorkbenchTimerPreference)
+    return cloneRuntimePreference(defaultWorkbenchTimerRuntimePreference)
   }
 
   try {
-    return normalizeWorkbenchTimerPreference(JSON.parse(value))
+    return normalizeWorkbenchTimerRuntimePreference(JSON.parse(value))
   } catch {
-    return clonePreference(defaultWorkbenchTimerPreference)
+    return cloneRuntimePreference(defaultWorkbenchTimerRuntimePreference)
   }
 }
 
-export function normalizeWorkbenchTimerPreference(value: unknown): WorkbenchTimerPreference {
-  const parsed = workbenchTimerPreferenceSchema.safeParse(value)
+export function normalizeWorkbenchTimerRuntimePreference(value: unknown): WorkbenchTimerRuntimePreference {
+  const parsed = workbenchTimerRuntimePreferenceSchema.safeParse(value)
 
   if (parsed.success) {
-    return normalizeCurrentPreference(parsed.data)
+    return {
+      version: 4,
+      runtimes: normalizeRuntimeMap(parsed.data.runtimes)
+    }
+  }
+
+  const presetListParsed = legacyPresetListWorkbenchTimerPreferenceSchema.safeParse(value)
+
+  if (presetListParsed.success) {
+    return migrateLegacyPresetListPreference(presetListParsed.data)
   }
 
   const singleTimerParsed = singleTimerWorkbenchTimerPreferenceSchema.safeParse(value)
@@ -340,7 +524,17 @@ export function normalizeWorkbenchTimerPreference(value: unknown): WorkbenchTime
     return migrateLegacyPreference(legacyParsed.data)
   }
 
-  return clonePreference(defaultWorkbenchTimerPreference)
+  return cloneRuntimePreference(defaultWorkbenchTimerRuntimePreference)
+}
+
+export function normalizeWorkbenchTimerPreference(value: unknown): WorkbenchTimerPreference {
+  const parsed = timerPreferenceSchema.safeParse(value)
+
+  if (!parsed.success) {
+    return clonePreference(defaultWorkbenchTimerPreference)
+  }
+
+  return normalizeTimerPreferenceRecord(parsed.data)
 }
 
 export function getPresetRemainingSeconds(preset: WorkbenchTimerPreset, timestamp: number) {
@@ -383,71 +577,115 @@ export function formatWorkbenchTimerSeconds(totalSeconds: number) {
   return `${minutes}:${paddedSeconds}`
 }
 
-function normalizeCurrentPreference(preference: z.infer<typeof workbenchTimerPreferenceSchema>): WorkbenchTimerPreference {
+function normalizeTimerPreferenceRecord(record: TimerPreferenceRecord): WorkbenchTimerPreference {
+  return normalizeInternalPreference({
+    schemaVersion: 1,
+    version: record.version,
+    presets: record.presets.map(preset => createPresetDefinition(
+      preset.durationSeconds,
+      preset.id,
+      Date.parse(preset.createdAt)
+    ))
+  })
+}
+
+function normalizeInternalPreference(preference: WorkbenchTimerPreference): WorkbenchTimerPreference {
+  const presets: WorkbenchTimerPresetDefinition[] = []
+  const seenIds = new Set<string>()
+  const seenDurations = new Set<number>()
+
+  for (const preset of preference.presets) {
+    if (seenIds.has(preset.id)) {
+      continue
+    }
+
+    const durationSeconds = normalizeDurationSeconds(preset.durationSeconds)
+
+    if (seenDurations.has(durationSeconds)) {
+      continue
+    }
+
+    presets.push(createPresetDefinition(durationSeconds, preset.id, preset.createdAt))
+    seenIds.add(preset.id)
+    seenDurations.add(durationSeconds)
+  }
+
   return {
-    version: 3,
-    presets: normalizePresets(preference.presets)
+    schemaVersion: 1,
+    version: clampInteger(preference.version, 0, Number.MAX_SAFE_INTEGER),
+    presets: presets.length > 0 ? presets : clonePreference(defaultWorkbenchTimerPreference).presets
   }
 }
 
-function migrateSingleTimerPreference(preference: SingleTimerWorkbenchTimerPreference): WorkbenchTimerPreference {
-  const presets = normalizeLegacyPresets(preference.presets)
+function toTimerPreferenceSaveRequest(preference: WorkbenchTimerPreference): TimerPreferenceSaveRequest {
+  return {
+    schemaVersion: 1,
+    version: preference.version,
+    presets: preference.presets.map((preset, index) => ({
+      id: preset.id,
+      order: index,
+      durationSeconds: preset.durationSeconds
+    }))
+  }
+}
+
+function migrateLegacyPresetListPreference(preference: z.infer<typeof legacyPresetListWorkbenchTimerPreferenceSchema>): WorkbenchTimerRuntimePreference {
+  return {
+    version: 4,
+    runtimes: normalizeRuntimeMap(Object.fromEntries(normalizeLegacyPresets(preference.presets).map(preset => [
+      preset.id,
+      pickPresetRuntime(preset)
+    ])))
+  }
+}
+
+function migrateSingleTimerPreference(preference: SingleTimerWorkbenchTimerPreference): WorkbenchTimerRuntimePreference {
+  const presets = normalizeLegacyBasePresets(preference.presets)
   const fallbackPreset = presets[0] ?? clonePreset(defaultWorkbenchTimerPreset)
   const selectedPreset = presets.find(preset => preset.id === preference.selectedPresetId) ?? fallbackPreset
 
   return {
-    version: 3,
-    presets: presets.map((preset) => {
-      if (preset.id !== selectedPreset.id) {
-        return preset
-      }
-
-      return createStoredPreset(
-        preset.durationSeconds,
-        preset.id,
-        preset.createdAt,
-        {
-          remainingSeconds: preference.remainingSeconds,
-          endsAt: preference.endsAt,
-          alarmedAt: null
-        }
-      )
+    version: 4,
+    runtimes: normalizeRuntimeMap({
+      [selectedPreset.id]: normalizeRuntime({
+        remainingSeconds: preference.remainingSeconds,
+        endsAt: preference.endsAt,
+        alarmedAt: null
+      }, selectedPreset.durationSeconds)
     })
   }
 }
 
-function migrateLegacyPreference(preference: LegacyWorkbenchTimerPreference): WorkbenchTimerPreference {
+function migrateLegacyPreference(preference: LegacyWorkbenchTimerPreference): WorkbenchTimerRuntimePreference {
   const durationSeconds = normalizeDurationSeconds(preference.durationSeconds)
+  const presetId = durationSeconds === defaultWorkbenchTimerDurationSeconds
+    ? defaultWorkbenchTimerPresetId
+    : `migrated-${durationSeconds}-seconds`
 
   return {
-    version: 3,
-    presets: [
-      createStoredPreset(
-        durationSeconds,
-        durationSeconds === defaultWorkbenchTimerDurationSeconds ? defaultWorkbenchTimerPresetId : `migrated-${durationSeconds}-seconds`,
-        0,
-        {
-          remainingSeconds: preference.remainingSeconds,
-          endsAt: preference.endsAt,
-          alarmedAt: null
-        }
-      )
-    ]
+    version: 4,
+    runtimes: normalizeRuntimeMap({
+      [presetId]: normalizeRuntime({
+        remainingSeconds: preference.remainingSeconds,
+        endsAt: preference.endsAt,
+        alarmedAt: null
+      }, durationSeconds)
+    })
   }
 }
 
-function normalizePresets(value: unknown[]) {
+function normalizeLegacyPresets(value: unknown[]) {
   const presets: WorkbenchTimerPreset[] = []
   const seenIds = new Set<string>()
 
   for (const item of value) {
-    const parsed = workbenchTimerPresetSchema.safeParse(item)
+    const parsed = legacyWorkbenchTimerPresetSchema.safeParse(item)
 
     if (!parsed.success || seenIds.has(parsed.data.id)) {
       continue
     }
 
-    const preset = normalizePreset(parsed.data)
+    const preset = normalizeLegacyPreset(parsed.data)
 
     presets.push(preset)
     seenIds.add(preset.id)
@@ -456,7 +694,7 @@ function normalizePresets(value: unknown[]) {
   return presets.length > 0 ? presets : [clonePreset(defaultWorkbenchTimerPreset)]
 }
 
-function normalizeLegacyPresets(value: unknown[]) {
+function normalizeLegacyBasePresets(value: unknown[]) {
   const presets: WorkbenchTimerPreset[] = []
   const seenIds = new Set<string>()
 
@@ -467,10 +705,9 @@ function normalizeLegacyPresets(value: unknown[]) {
       continue
     }
 
-    const preset = createStoredPreset(
-      parsed.data.durationSeconds,
-      parsed.data.id,
-      parsed.data.createdAt
+    const preset = mergePresetRuntime(
+      createPresetDefinition(parsed.data.durationSeconds, parsed.data.id, parsed.data.createdAt),
+      null
     )
 
     presets.push(preset)
@@ -480,37 +717,97 @@ function normalizeLegacyPresets(value: unknown[]) {
   return presets.length > 0 ? presets : [clonePreset(defaultWorkbenchTimerPreset)]
 }
 
-function normalizePreset(value: z.infer<typeof workbenchTimerPresetSchema>): WorkbenchTimerPreset {
-  const durationSeconds = normalizeDurationSeconds(value.durationSeconds)
-  const endsAt = value.endsAt ?? null
-  const alarmedAt = endsAt === null ? null : value.alarmedAt ?? null
+function normalizeLegacyPreset(value: z.infer<typeof legacyWorkbenchTimerPresetSchema>): WorkbenchTimerPreset {
+  const definition = createPresetDefinition(value.durationSeconds, value.id, value.createdAt)
 
   return {
-    id: value.id,
-    durationSeconds,
-    createdAt: clampInteger(value.createdAt, 0, Number.MAX_SAFE_INTEGER),
-    remainingSeconds: clampInteger(value.remainingSeconds ?? durationSeconds, 0, durationSeconds),
-    endsAt,
-    alarmedAt
+    ...definition,
+    ...normalizeRuntime({
+      remainingSeconds: value.remainingSeconds ?? definition.durationSeconds,
+      endsAt: value.endsAt ?? null,
+      alarmedAt: value.alarmedAt ?? null
+    }, definition.durationSeconds)
   }
 }
 
-function createStoredPreset(
+function mergePresetRuntime(definition: WorkbenchTimerPresetDefinition, runtime: WorkbenchTimerPresetRuntime | null | undefined): WorkbenchTimerPreset {
+  return {
+    ...definition,
+    ...normalizeRuntime(runtime ?? createDefaultRuntime(definition.durationSeconds), definition.durationSeconds)
+  }
+}
+
+function createPresetDefinition(
   durationSeconds: number,
   id = durationSeconds === defaultWorkbenchTimerDurationSeconds ? defaultWorkbenchTimerPresetId : `migrated-${durationSeconds}-seconds`,
-  createdAt = 0,
-  runtime: Partial<Pick<WorkbenchTimerPreset, 'remainingSeconds' | 'endsAt' | 'alarmedAt'>> = {}
-): WorkbenchTimerPreset {
+  createdAt = 0
+): WorkbenchTimerPresetDefinition {
+  return {
+    id,
+    durationSeconds: normalizeDurationSeconds(durationSeconds),
+    createdAt: clampInteger(createdAt, 0, Number.MAX_SAFE_INTEGER)
+  }
+}
+
+function createDefaultRuntime(durationSeconds: number): WorkbenchTimerPresetRuntime {
   const normalizedDurationSeconds = normalizeDurationSeconds(durationSeconds)
 
-  return normalizePreset({
-    id,
-    durationSeconds: normalizedDurationSeconds,
-    createdAt: clampInteger(createdAt, 0, Number.MAX_SAFE_INTEGER),
-    remainingSeconds: runtime.remainingSeconds ?? normalizedDurationSeconds,
-    endsAt: runtime.endsAt ?? null,
-    alarmedAt: runtime.alarmedAt ?? null
-  })
+  return {
+    remainingSeconds: normalizedDurationSeconds,
+    endsAt: null,
+    alarmedAt: null
+  }
+}
+
+function normalizeRuntime(value: WorkbenchTimerPresetRuntime, durationSeconds: number): WorkbenchTimerPresetRuntime {
+  const normalizedDurationSeconds = normalizeDurationSeconds(durationSeconds)
+  const endsAt = value.endsAt ?? null
+
+  return {
+    remainingSeconds: clampInteger(value.remainingSeconds, 0, normalizedDurationSeconds),
+    endsAt,
+    alarmedAt: endsAt === null ? null : value.alarmedAt ?? null
+  }
+}
+
+function normalizeRuntimeMap(value: Record<string, WorkbenchTimerPresetRuntime>) {
+  const runtimes: Record<string, WorkbenchTimerPresetRuntime> = {}
+
+  for (const [id, runtime] of Object.entries(value)) {
+    if (!id.trim()) {
+      continue
+    }
+
+    runtimes[id] = normalizeRuntime(runtime, maxWorkbenchTimerDurationSeconds)
+  }
+
+  return runtimes
+}
+
+function pickPresetRuntime(preset: WorkbenchTimerPreset): WorkbenchTimerPresetRuntime {
+  return {
+    remainingSeconds: preset.remainingSeconds,
+    endsAt: preset.endsAt,
+    alarmedAt: preset.alarmedAt
+  }
+}
+
+function clonePreference(preference: WorkbenchTimerPreference): WorkbenchTimerPreference {
+  return {
+    ...preference,
+    presets: preference.presets.map(preset => ({ ...preset }))
+  }
+}
+
+function cloneRuntimePreference(preference: WorkbenchTimerRuntimePreference): WorkbenchTimerRuntimePreference {
+  return {
+    version: 4,
+    runtimes: Object.fromEntries(Object.entries(preference.runtimes).map(([id, runtime]) => [id, { ...runtime }]))
+  }
+}
+
+function clonePreset(preset: WorkbenchTimerPreset): WorkbenchTimerPreset {
+  return { ...preset }
 }
 
 function createPresetId(durationSeconds: number) {
@@ -525,17 +822,6 @@ function isPresetAlarmDue(preset: WorkbenchTimerPreset, timestamp: number) {
 
 function normalizeDurationSeconds(value: number) {
   return clampInteger(value, minWorkbenchTimerDurationSeconds, maxWorkbenchTimerDurationSeconds)
-}
-
-function clonePreference(preference: WorkbenchTimerPreference): WorkbenchTimerPreference {
-  return {
-    ...preference,
-    presets: preference.presets.map(clonePreset)
-  }
-}
-
-function clonePreset(preset: WorkbenchTimerPreset): WorkbenchTimerPreset {
-  return { ...preset }
 }
 
 function clampInteger(value: number, min: number, max: number) {

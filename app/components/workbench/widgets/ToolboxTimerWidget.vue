@@ -24,6 +24,7 @@ const timerPresetUnitMultipliers: Record<TimerPresetUnit, number> = {
 const { t } = useI18n()
 const timer = useWorkbenchTimerStore()
 const addPresetOpen = shallowRef(false)
+const addingPreset = shallowRef(false)
 const newPresetValue = shallowRef<number | null>(10)
 const newPresetUnit = shallowRef<TimerPresetUnit>('minutes')
 const alarmAudio = shallowRef<HTMLAudioElement | null>(null)
@@ -31,7 +32,11 @@ const alarmAudio = shallowRef<HTMLAudioElement | null>(null)
 const isHorizontal = computed(() => props.orientation === 'horizontal')
 const runningSummary = computed(() => timer.runningPresetCount > 0
   ? t('workbench.timer.runningCount', { count: timer.runningPresetCount })
-  : t('workbench.timer.presets')
+  : timer.loading && !timer.initialized
+    ? t('workbench.timer.loading')
+    : timer.unavailable
+      ? t('workbench.timer.unavailable')
+      : t('workbench.timer.presets')
 )
 const presetUnitItems = computed(() => [
   {
@@ -50,22 +55,28 @@ const presetUnitItems = computed(() => [
 const maxNewPresetValue = computed(() => Math.floor(maxWorkbenchTimerDurationSeconds / timerPresetUnitMultipliers[newPresetUnit.value]))
 const hasNewPresetValue = computed(() => typeof newPresetValue.value === 'number' && Number.isFinite(newPresetValue.value))
 const newPresetSeconds = computed(() => normalizeNewPresetValue(newPresetValue.value) * timerPresetUnitMultipliers[newPresetUnit.value])
-const canAddPreset = computed(() => hasNewPresetValue.value && newPresetSeconds.value >= minWorkbenchTimerDurationSeconds && newPresetSeconds.value <= maxWorkbenchTimerDurationSeconds)
+const canAddPreset = computed(() => !timer.loading && !timer.saving && !timer.unavailable && hasNewPresetValue.value && newPresetSeconds.value >= minWorkbenchTimerDurationSeconds && newPresetSeconds.value <= maxWorkbenchTimerDurationSeconds)
 
-function onAddPreset() {
-  if (!canAddPreset.value) {
+async function onAddPreset() {
+  if (!canAddPreset.value || addingPreset.value) {
     return
   }
 
-  const addedPreset = timer.addPresetSeconds(newPresetSeconds.value)
+  addingPreset.value = true
 
-  if (addedPreset) {
-    addPresetOpen.value = false
+  try {
+    const addedPreset = await timer.addPresetSeconds(newPresetSeconds.value)
+
+    if (addedPreset) {
+      addPresetOpen.value = false
+    }
+  } finally {
+    addingPreset.value = false
   }
 }
 
-function onRemovePreset(id: string) {
-  timer.removePreset(id)
+async function onRemovePreset(id: string) {
+  await timer.removePreset(id)
 }
 
 function formatPresetDuration(seconds: number) {
@@ -135,6 +146,9 @@ if (import.meta.client) {
   )
 
   onMounted(handleDueAlarms)
+  onMounted(() => {
+    void timer.ensurePreferencesLoaded()
+  })
 }
 </script>
 
@@ -164,6 +178,7 @@ if (import.meta.client) {
             icon="i-lucide-plus"
             class="timer-add-button cursor-pointer hdx-radius-card"
             :aria-label="t('workbench.timer.addPreset')"
+            :disabled="timer.loading || timer.saving || timer.unavailable"
           />
         </UTooltip>
 
@@ -202,6 +217,7 @@ if (import.meta.client) {
               block
               class="cursor-pointer justify-center hdx-radius-card"
               :disabled="!canAddPreset"
+              :loading="addingPreset || timer.saving"
             >
               {{ t('workbench.timer.addPreset') }}
             </UButton>
@@ -211,20 +227,36 @@ if (import.meta.client) {
     </div>
 
     <div class="timer-preset-list min-w-0">
-      <ToolboxTimerPresetChip
-        v-for="preset in timer.presets"
-        :key="preset.id"
-        :preset="preset"
-        :status="timer.getPresetStatusById(preset.id)"
-        :duration-label="formatPresetDuration(preset.durationSeconds)"
-        :remaining-label="timer.getPresetRemainingLabelById(preset.id)"
-        :progress-percent="timer.getPresetProgressPercentById(preset.id)"
-        :can-remove="timer.canRemovePreset(preset.id)"
-        :can-reset="canResetPreset(preset)"
-        @toggle="timer.togglePreset"
-        @reset="timer.resetPreset"
-        @remove="onRemovePreset"
-      />
+      <div
+        v-if="timer.loading && timer.presets.length === 0"
+        class="timer-state-message hdx-radius-card"
+      >
+        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
+        <span>{{ t('workbench.timer.loading') }}</span>
+      </div>
+      <div
+        v-else-if="timer.unavailable"
+        class="timer-state-message hdx-radius-card"
+      >
+        <UIcon name="i-lucide-circle-alert" class="size-4" />
+        <span>{{ t(timer.errorKey ?? 'workbench.timer.unavailable') }}</span>
+      </div>
+      <template v-else>
+        <ToolboxTimerPresetChip
+          v-for="preset in timer.presets"
+          :key="preset.id"
+          :preset="preset"
+          :status="timer.getPresetStatusById(preset.id)"
+          :duration-label="formatPresetDuration(preset.durationSeconds)"
+          :remaining-label="timer.getPresetRemainingLabelById(preset.id)"
+          :progress-percent="timer.getPresetProgressPercentById(preset.id)"
+          :can-remove="timer.canRemovePreset(preset.id) && !timer.saving"
+          :can-reset="canResetPreset(preset)"
+          @toggle="timer.togglePreset"
+          @reset="timer.resetPreset"
+          @remove="onRemovePreset"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -257,6 +289,24 @@ if (import.meta.client) {
 
 .timer-add-button {
   min-width: 0;
+}
+
+.timer-state-message {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(var(--hdx-theme-neutral-rgb), 0.18);
+  background: rgba(255, 255, 255, 0.34);
+  padding: 0.65rem 0.75rem;
+  color: var(--ui-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+:global(.dark) .timer-state-message {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 @container (min-width: 19rem) {

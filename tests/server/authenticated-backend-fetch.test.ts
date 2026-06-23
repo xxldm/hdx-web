@@ -158,6 +158,34 @@ describe('authenticated backend fetch', () => {
       })
     })
   })
+
+  it('passes through timer preference conflicts with the server preference payload', async () => {
+    stubRuntimeConfig()
+    vi.stubGlobal('useSession', async () => ({
+      id: 'session-id',
+      data: createSessionData(),
+      update: vi.fn(),
+      clear: vi.fn()
+    }))
+    vi.stubGlobal('$fetch', vi.fn()
+      .mockRejectedValueOnce({
+        statusCode: 409,
+        data: createTimerPreferenceConflictPayload()
+      }))
+
+    await expect(fetchAuthenticatedBackend({ context: {} } as never, '/api/v1/timer/preferences', responseSchema, {
+      method: 'PUT',
+      body: {}
+    })).rejects.toMatchObject({
+      statusCode: 409,
+      data: expect.objectContaining({
+        code: 'TIMER_PREFERENCE_CONFLICT',
+        serverPreference: expect.objectContaining({
+          version: 2
+        })
+      })
+    })
+  })
 })
 
 function createSessionData() {
@@ -219,6 +247,30 @@ function createWorkbenchLayoutConflictPayload() {
       columns: 4,
       gap: 12,
       widgets: []
+    }
+  }
+}
+
+function createTimerPreferenceConflictPayload() {
+  return {
+    code: 'TIMER_PREFERENCE_CONFLICT',
+    message: '计时器预设已在其他位置更新，请处理冲突。',
+    resourceType: 'timerPreferences',
+    baseVersion: 1,
+    currentVersion: 2,
+    updatedAt: '2026-06-23T12:00:00Z',
+    updatedByUserId: 'USER:2',
+    serverPreference: {
+      schemaVersion: 1,
+      version: 2,
+      presets: [
+        {
+          id: 'timer-60',
+          order: 0,
+          durationSeconds: 60,
+          createdAt: '2026-06-23T12:00:00Z'
+        }
+      ]
     }
   }
 }

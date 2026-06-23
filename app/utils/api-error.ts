@@ -1,4 +1,9 @@
-import { workbenchLayoutConflictResponseSchema, type WorkbenchLayoutConflictResponse } from '../types/hdx-api'
+import {
+  timerPreferenceConflictResponseSchema,
+  workbenchLayoutConflictResponseSchema,
+  type TimerPreferenceConflictResponse,
+  type WorkbenchLayoutConflictResponse
+} from '../types/hdx-api'
 
 export type BoundaryErrorCode =
   | 'auth-required'
@@ -68,11 +73,7 @@ export function isAuthRequiredApiError(error: unknown) {
 }
 
 export function extractWorkbenchLayoutConflict(error: unknown): WorkbenchLayoutConflictResponse | null {
-  const candidates = [
-    extractNestedValue(error, ['data']),
-    extractNestedValue(error, ['data', 'data']),
-    extractNestedValue(error, ['data', 'upstreamData'])
-  ]
+  const candidates = extractApiPayloadCandidates(error)
 
   for (const candidate of candidates) {
     const parsed = workbenchLayoutConflictResponseSchema.safeParse(candidate)
@@ -87,6 +88,24 @@ export function extractWorkbenchLayoutConflict(error: unknown): WorkbenchLayoutC
 
 export function isWorkbenchLayoutConflictApiError(error: unknown) {
   return extractFetchStatus(error) === 409 && Boolean(extractWorkbenchLayoutConflict(error))
+}
+
+export function extractTimerPreferenceConflict(error: unknown): TimerPreferenceConflictResponse | null {
+  const candidates = extractApiPayloadCandidates(error)
+
+  for (const candidate of candidates) {
+    const parsed = timerPreferenceConflictResponseSchema.safeParse(candidate)
+
+    if (parsed.success) {
+      return parsed.data
+    }
+  }
+
+  return null
+}
+
+export function isTimerPreferenceConflictApiError(error: unknown) {
+  return extractFetchStatus(error) === 409 && Boolean(extractTimerPreferenceConflict(error))
 }
 
 export function extractBoundaryErrorCode(error: unknown): BoundaryErrorCode | null {
@@ -112,6 +131,14 @@ function isBoundaryErrorCode(value: string | null): value is BoundaryErrorCode {
     || value === 'invalid-input'
     || value === 'invalid-response'
     || value === 'upstream-failed'
+}
+
+function extractApiPayloadCandidates(error: unknown) {
+  return [
+    extractNestedValue(error, ['data']),
+    extractNestedValue(error, ['data', 'data']),
+    extractNestedValue(error, ['data', 'upstreamData'])
+  ]
 }
 
 function extractNestedString(value: unknown, path: string[]) {

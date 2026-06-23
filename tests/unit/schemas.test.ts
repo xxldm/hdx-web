@@ -12,6 +12,8 @@ import {
   backendApiErrorResponseSchema,
   createToolRequestSchema,
   runtimeInfoSchema,
+  timerPreferenceSaveSchema,
+  timerPreferenceSchema,
   toolRecordsSchema,
   workbenchLayoutSchema
 } from '../../app/types/hdx-api'
@@ -80,6 +82,33 @@ describe('hdx api schemas', () => {
         }
       ]
     }).widgets).toHaveLength(1)
+  })
+
+  it('parses timer preference responses and save requests', () => {
+    expect(timerPreferenceSchema.parse({
+      schemaVersion: 1,
+      version: 1,
+      presets: [
+        {
+          id: 'default-10-minutes',
+          order: 0,
+          durationSeconds: 600,
+          createdAt: '2026-06-23T12:00:00Z'
+        }
+      ]
+    }).presets).toHaveLength(1)
+
+    expect(timerPreferenceSaveSchema.parse({
+      schemaVersion: 1,
+      version: 1,
+      presets: [
+        {
+          id: 'timer-60',
+          order: 0,
+          durationSeconds: 60
+        }
+      ]
+    }).presets[0]?.durationSeconds).toBe(60)
   })
 
   it('parses auth token responses without exposing tokens in public session', () => {
